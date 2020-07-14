@@ -6,7 +6,7 @@ import (
 )
 
 func Test_DefaultValue(t *testing.T) {
-	result := ExpandText("${CIRRUS_TAG:latest}", make(map[string]string))
+	result := ExpandText("${TAG:latest}", make(map[string]string))
 	if result == "latest" {
 		t.Log("Passed")
 	} else {
@@ -15,7 +15,7 @@ func Test_DefaultValue(t *testing.T) {
 }
 
 func Test_Simple(t *testing.T) {
-	result := ExpandText("${CIRRUS_TAG:latest}", map[string]string{"CIRRUS_TAG": "foo"})
+	result := ExpandText("${TAG:latest}", map[string]string{"TAG": "foo"})
 	if result == "foo" {
 		t.Log("Passed")
 	} else {
@@ -24,7 +24,7 @@ func Test_Simple(t *testing.T) {
 }
 
 func Test_Simple_Windows_Style(t *testing.T) {
-	result := ExpandText("%CIRRUS_TAG%", map[string]string{"CIRRUS_TAG": "foo"})
+	result := ExpandText("%TAG%", map[string]string{"TAG": "foo"})
 	if result == "foo" {
 		t.Log("Passed")
 	} else {
