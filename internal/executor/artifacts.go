@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 )
 
-func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.CommandsResponse_ArtifactsInstruction, customEnv map[string]string) bool {
+func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.ArtifactsInstruction, customEnv map[string]string) bool {
 	logUploader, err := NewLogUploader(executor, name)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
