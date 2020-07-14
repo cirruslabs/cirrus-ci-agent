@@ -177,19 +177,19 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(env map[string]string, currentStep *api.CommandsResponse_Command) string {
+func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) string {
 	success := false
 	signaledToExit := false
 	start := time.Now()
 
 	switch instruction := currentStep.Instruction.(type) {
-	case *api.CommandsResponse_Command_ExitInstruction:
+	case *api.Command_ExitInstruction:
 		os.Exit(0)
-	case *api.CommandsResponse_Command_CloneInstruction:
+	case *api.Command_CloneInstruction:
 		success = executor.CloneRepository(env)
-	case *api.CommandsResponse_Command_FileInstruction:
+	case *api.Command_FileInstruction:
 		success = executor.CreateFile(currentStep.Name, instruction.FileInstruction, env)
-	case *api.CommandsResponse_Command_ScriptInstruction:
+	case *api.Command_ScriptInstruction:
 		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(currentStep.Name, instruction.ScriptInstruction.Scripts, env)
 		success = err == nil && cmd.ProcessState.Success()
 		if cmd != nil {
@@ -200,7 +200,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		if err == TimeOutError {
 			signaledToExit = false
 		}
-	case *api.CommandsResponse_Command_BackgroundScriptInstruction:
+	case *api.Command_BackgroundScriptInstruction:
 		cmd, logClient, err := executor.ExecuteScriptsAndStreamLogs(currentStep.Name, instruction.BackgroundScriptInstruction.Scripts, env)
 		if err == nil {
 			executor.backgroundCommands = append(executor.backgroundCommands, CommandAndLogs{
@@ -216,11 +216,11 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 			logClient.Finilize()
 			success = false
 		}
-	case *api.CommandsResponse_Command_CacheInstruction:
+	case *api.Command_CacheInstruction:
 		success = DownloadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
-	case *api.CommandsResponse_Command_UploadCacheInstruction:
+	case *api.Command_UploadCacheInstruction:
 		success = UploadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction)
-	case *api.CommandsResponse_Command_ArtifactsInstruction:
+	case *api.Command_ArtifactsInstruction:
 		success = UploadArtifacts(executor, currentStep.Name, instruction.ArtifactsInstruction, env)
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
@@ -288,7 +288,7 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 
 func (executor *Executor) CreateFile(
 	commandName string,
-	instruction *api.CommandsResponse_FileInstruction,
+	instruction *api.FileInstruction,
 	env map[string]string,
 ) bool {
 	logUploader, err := NewLogUploader(executor, commandName)
@@ -303,7 +303,7 @@ func (executor *Executor) CreateFile(
 	defer logUploader.Finilize()
 
 	switch source := instruction.GetSource().(type) {
-	case *api.CommandsResponse_FileInstruction_FromEnvironmentVariable:
+	case *api.FileInstruction_FromEnvironmentVariable:
 		envName := source.FromEnvironmentVariable
 		content, is_provided := env[envName]
 		if !is_provided {
