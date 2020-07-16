@@ -143,7 +143,7 @@ EXECUTION_LOOP:
 		if err != nil {
 			backgroundCommand.Logs.Write([]byte(fmt.Sprintf("\nFailed to stop background script %s: %s!", backgroundCommand.Name, err)))
 		}
-		backgroundCommand.Logs.Finilize()
+		backgroundCommand.Logs.Finalize()
 	}
 }
 
@@ -213,7 +213,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		} else {
 			log.Printf("Failed to create command line for background command %s: %s\n", currentStep.Name, err)
 			_, _ = logClient.Write([]byte(fmt.Sprintf("Failed to create command line: %s", err)))
-			logClient.Finilize()
+			logClient.Finalize()
 			success = false
 		}
 	case *api.Command_CacheInstruction:
@@ -259,7 +259,7 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return nil, errors.New(message)
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 	cmd, err := ShellCommandsAndWait(scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	}, &executor.timeout)
@@ -300,7 +300,7 @@ func (executor *Executor) CreateFile(
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return false
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 
 	switch source := instruction.GetSource().(type) {
 	case *api.FileInstruction_FromEnvironmentVariable:
@@ -339,7 +339,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return false
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 
 	logUploader.Write([]byte("Using built-in Git...\n"))
 

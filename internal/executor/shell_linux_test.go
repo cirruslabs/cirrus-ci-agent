@@ -7,12 +7,12 @@ import (
 )
 
 func Test_DirectShell_Unix(t *testing.T) {
-	test_env := map[string]string{
+	testEnv := map[string]string{
 		"CIRRUS_SHELL": "direct",
 	}
 	_, output := ShellCommandsAndGetOutput([]string{
 		"bash -c 'echo $CIRRUS_SHELL'",
-	}, &test_env, nil)
+	}, &testEnv, nil)
 
 	if output == "direct\n" {
 		t.Log("Passed")

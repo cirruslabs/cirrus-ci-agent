@@ -143,7 +143,7 @@ func (uploader *LogUploader) WriteChunk(bytesToWrite []byte) (int, error) {
 	return len(bytesToWrite), nil
 }
 
-func (uploader *LogUploader) Finilize() {
+func (uploader *LogUploader) Finalize() {
 	log.Printf("Finilizing log uploading for %s!\n", uploader.commandName)
 	close(uploader.logsChannel)
 	<-uploader.doneLogUpload

@@ -35,7 +35,7 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 	if err != nil {
 		return false
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 	cacheKeyHash := sha256.New()
 
 	if len(instruction.FingerprintScripts) > 0 {
@@ -190,7 +190,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	if err != nil {
 		return false
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 
 	cache := FindCache(instruction.CacheName)
 
