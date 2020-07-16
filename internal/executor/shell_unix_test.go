@@ -43,12 +43,12 @@ func Test_ShellCommands_Fail_Fast_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_Environment_Unix(t *testing.T) {
-	test_env := map[string]string{
+	testEnv := map[string]string{
 		"FOO": "BAR",
 	}
 	_, output := ShellCommandsAndGetOutput([]string{
 		"echo $FOO",
-	}, &test_env, nil)
+	}, &testEnv, nil)
 
 	if output == "echo $FOO\nBAR\n" {
 		t.Log("Passed")
@@ -58,20 +58,20 @@ func Test_ShellCommands_Environment_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_CustomWorkingDir_Unix(t *testing.T) {
-	test_env := map[string]string{
+	testEnv := map[string]string{
 		"CIRRUS_WORKING_DIR": "/tmp/cirrus-go-agent",
 	}
 	_, output := ShellCommandsAndGetOutput([]string{
 		"pwd",
-	}, &test_env, nil)
+	}, &testEnv, nil)
 
-	expected_output := "pwd\n/tmp/cirrus-go-agent\n"
+	expectedOutput := "pwd\n/tmp/cirrus-go-agent\n"
 
 	if runtime.GOOS == "darwin" {
-		expected_output = "pwd\n/private/tmp/cirrus-go-agent\n"
+		expectedOutput = "pwd\n/private/tmp/cirrus-go-agent\n"
 	}
 
-	if output == expected_output {
+	if output == expectedOutput {
 		t.Log("Passed")
 	} else {
 		t.Errorf("Wrong output: '%s'", output)

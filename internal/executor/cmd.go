@@ -11,26 +11,25 @@ import (
 	"syscall"
 )
 
-func createCmd(scripts []string, custom_env *map[string]string) (*exec.Cmd, *os.File, error) {
+func createCmd(scripts []string, customEnv *map[string]string) (*exec.Cmd, *os.File, error) {
 	cmdShell := "/bin/sh"
 	if bashPath, err := exec.LookPath("bash"); err == nil {
 		cmdShell = bashPath
 	}
-	if custom_env != nil {
-		if customShell, ok := (*custom_env)["CIRRUS_SHELL"]; ok {
+	if customEnv != nil {
+		if customShell, ok := (*customEnv)["CIRRUS_SHELL"]; ok {
 			cmdShell = customShell
 		}
 	}
 
 	if cmdShell == "direct" {
-		cmdArgs := shellwords.ToArgv(ExpandText(scripts[0], *custom_env))
+		cmdArgs := shellwords.ToArgv(ExpandText(scripts[0], *customEnv))
 		if len(cmdArgs) > 1 {
 			cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 			return cmd, nil, nil
-		} else {
-			cmd := exec.Command(cmdArgs[0])
-			return cmd, nil, nil
 		}
+		cmd := exec.Command(cmdArgs[0])
+		return cmd, nil, nil
 	}
 
 	scriptFile, err := TempFileName("scripts", ".sh")

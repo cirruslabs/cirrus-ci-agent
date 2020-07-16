@@ -24,7 +24,7 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 		_, _ = client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return false
 	}
-	defer logUploader.Finilize()
+	defer logUploader.Finalize()
 
 	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(context.Background())
 	if err != nil {
