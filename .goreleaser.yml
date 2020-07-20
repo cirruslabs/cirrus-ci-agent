@@ -5,7 +5,7 @@ before:
     - go mod download
     
 archives:
-  format: binary
+  - format: binary
 
 builds:
   - main: cmd/agent/main.go
