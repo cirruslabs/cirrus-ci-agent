@@ -1,0 +1,6 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:$TAG_NAME', '-t', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:latest', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/cirrus-ci-community/cirrus-ci-agent']
+images: ['gcr.io/cirrus-ci-community/cirrus-ci-agent:$TAG_NAME', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:latest']
