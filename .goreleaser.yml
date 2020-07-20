@@ -3,6 +3,9 @@ project_name: agent
 before:
   hooks:
     - go mod download
+    
+archives:
+  format: binary
 
 builds:
   - main: cmd/agent/main.go
