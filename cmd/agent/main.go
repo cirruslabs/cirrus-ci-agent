@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
@@ -10,6 +11,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"io"
 	"io/ioutil"
@@ -23,7 +25,7 @@ import (
 )
 
 func main() {
-	apiEndpointPtr := flag.String("api-endpoint", "api.cirrus-ci.com:8239", "GRPC endpoint")
+	apiEndpointPtr := flag.String("api-endpoint", "grpc.cirrus-ci.com:443", "GRPC endpoint")
 	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")
 	serverTokenPtr := flag.String("server-token", "", "Secret token")
@@ -146,11 +148,16 @@ func main() {
 func dialWithTimeout(apiEndpointPtr *string) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
+
+	tlsCredentials := credentials.NewTLS(&tls.Config{
+		MinVersion: tls.VersionTLS13,
+	})
+
 	return grpc.DialContext(
 		ctx,
 		*apiEndpointPtr,
 		grpc.WithBlock(),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(tlsCredentials),
 		grpc.WithUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
