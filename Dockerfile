@@ -7,5 +7,5 @@ ADD . /tmp/cirrus-ci-agent/
 
 RUN goreleaser build --snapshot
 
-FROM gcr.io/distroless/base-debian10
+FROM alpine:latest
 COPY --from=builder /tmp/cirrus-ci-agent/dist/agent_linux_amd64/agent /bin/cirrus-ci-agent
