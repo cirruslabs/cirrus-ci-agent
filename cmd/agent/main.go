@@ -26,6 +26,7 @@ import (
 
 func main() {
 	apiEndpointPtr := flag.String("api-endpoint", "grpc.cirrus-ci.com:443", "GRPC endpoint")
+	insecure := flag.Bool("insecure-endpoint", false, "Do not use TLS when connecting over GRPC")
 	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")
 	serverTokenPtr := flag.String("server-token", "", "Secret token")
@@ -50,7 +51,7 @@ func main() {
 
 	var conn *grpc.ClientConn
 	for {
-		newConnection, err := dialWithTimeout(apiEndpointPtr)
+		newConnection, err := dialWithTimeout(apiEndpointPtr, *insecure)
 		if err == nil {
 			conn = newConnection
 			log.Printf("Connected!\n")
@@ -145,19 +146,26 @@ func main() {
 	}
 }
 
-func dialWithTimeout(apiEndpointPtr *string) (*grpc.ClientConn, error) {
+func dialWithTimeout(apiEndpointPtr *string, insecure bool) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
+	// Use TLS by default
 	tlsCredentials := credentials.NewTLS(&tls.Config{
 		MinVersion: tls.VersionTLS13,
 	})
+	transportSecurity := grpc.WithTransportCredentials(tlsCredentials)
+
+	// Fall back to plain mode without TLS when explicitly asked to
+	if insecure {
+		transportSecurity = grpc.WithInsecure()
+	}
 
 	return grpc.DialContext(
 		ctx,
 		*apiEndpointPtr,
 		grpc.WithBlock(),
-		grpc.WithTransportCredentials(tlsCredentials),
+		transportSecurity,
 		grpc.WithUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
