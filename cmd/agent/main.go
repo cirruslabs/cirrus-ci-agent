@@ -173,7 +173,7 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 }
 
 func transportSettings(apiEndpoint string) (string, bool) {
-	// insecure by default because we can run it on localhost or in a private network
+	// Insecure by default to preserve backwards compatibility
 	insecure := true
 
 	// Use TLS if explicitly asked or no schema is in the target
