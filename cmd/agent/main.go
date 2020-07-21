@@ -25,8 +25,7 @@ import (
 )
 
 func main() {
-	apiEndpointPtr := flag.String("api-endpoint", "grpc.cirrus-ci.com:443", "GRPC endpoint")
-	insecure := flag.Bool("insecure-endpoint", false, "Do not use TLS when connecting over GRPC")
+	apiEndpointPtr := flag.String("api-endpoint", "https://grpc.cirrus-ci.com:443", "GRPC endpoint URL")
 	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")
 	serverTokenPtr := flag.String("server-token", "", "Secret token")
@@ -51,7 +50,7 @@ func main() {
 
 	var conn *grpc.ClientConn
 	for {
-		newConnection, err := dialWithTimeout(apiEndpointPtr, *insecure)
+		newConnection, err := dialWithTimeout(*apiEndpointPtr)
 		if err == nil {
 			conn = newConnection
 			log.Printf("Connected!\n")
@@ -146,24 +145,23 @@ func main() {
 	}
 }
 
-func dialWithTimeout(apiEndpointPtr *string, insecure bool) (*grpc.ClientConn, error) {
+func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	// Use TLS by default
+	target, insecure := transportSettings(apiEndpoint)
+
 	tlsCredentials := credentials.NewTLS(&tls.Config{
 		MinVersion: tls.VersionTLS13,
 	})
 	transportSecurity := grpc.WithTransportCredentials(tlsCredentials)
 
-	// Fall back to plain mode without TLS when explicitly asked to
 	if insecure {
 		transportSecurity = grpc.WithInsecure()
 	}
-
 	return grpc.DialContext(
 		ctx,
-		*apiEndpointPtr,
+		target,
 		grpc.WithBlock(),
 		transportSecurity,
 		grpc.WithUnaryInterceptor(
@@ -172,6 +170,19 @@ func dialWithTimeout(apiEndpointPtr *string, insecure bool) (*grpc.ClientConn, e
 			),
 		),
 	)
+}
+
+func transportSettings(apiEndpoint string) (string, bool) {
+	// Insecure by default to preserve backwards compatibility
+	insecure := true
+
+	// Use TLS if explicitly asked or no schema is in the target
+	if strings.Contains(apiEndpoint, "https://") || !strings.Contains(apiEndpoint, "://") {
+		insecure = false
+	}
+	// sanitize but leave unix:// if presented
+	target := strings.TrimPrefix(strings.TrimPrefix(apiEndpoint, "http://"), "https://")
+	return target, insecure
 }
 
 func startHeartbeat(taskId int64, clientToken string) {
