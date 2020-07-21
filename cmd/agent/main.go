@@ -149,21 +149,19 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	// insecure by default because we can run it on localhost or in a private network
-	transportSecurity := grpc.WithInsecure()
+	target, insecure := transportSettings(apiEndpoint)
 
-	// Use TLS if explicitly asked or no schema is in the target
-	if strings.Contains(apiEndpoint, "https://") || !strings.Contains(apiEndpoint, "://") {
-		tlsCredentials := credentials.NewTLS(&tls.Config{
-			MinVersion: tls.VersionTLS13,
-		})
-		transportSecurity = grpc.WithTransportCredentials(tlsCredentials)
+	tlsCredentials := credentials.NewTLS(&tls.Config{
+		MinVersion: tls.VersionTLS13,
+	})
+	transportSecurity := grpc.WithTransportCredentials(tlsCredentials)
+
+	if insecure {
+		transportSecurity = grpc.WithInsecure()
 	}
-
 	return grpc.DialContext(
 		ctx,
-		// sanitize but leave unix:// if presented
-		strings.TrimPrefix(strings.TrimPrefix(apiEndpoint, "http://"), "https://"),
+		target,
 		grpc.WithBlock(),
 		transportSecurity,
 		grpc.WithUnaryInterceptor(
@@ -172,6 +170,19 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 			),
 		),
 	)
+}
+
+func transportSettings(apiEndpoint string) (string, bool) {
+	// insecure by default because we can run it on localhost or in a private network
+	insecure := true
+
+	// Use TLS if explicitly asked or no schema is in the target
+	if strings.Contains(apiEndpoint, "https://") || !strings.Contains(apiEndpoint, "://") {
+		insecure = false
+	}
+	// sanitize but leave unix:// if presented
+	target := strings.TrimPrefix(strings.TrimPrefix(apiEndpoint, "http://"), "https://")
+	return target, insecure
 }
 
 func startHeartbeat(taskId int64, clientToken string) {
