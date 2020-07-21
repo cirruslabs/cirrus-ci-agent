@@ -149,7 +149,7 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	// insecure by default because we can run it on localhost or in a private network
+	// Insecure by default to preserve backwards compatibility
 	transportSecurity := grpc.WithInsecure()
 
 	// Use TLS if explicitly asked or no schema is in the target
