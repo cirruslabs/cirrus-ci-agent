@@ -152,6 +152,8 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 
 	target, insecure := transportSettings(apiEndpoint)
 
+	// use embedded root certificates because the agent can be executed with a distroless container, for example
+	// also don't check for error since then the default certificates from the host will be used
 	certPool, _ := gocertifi.CACerts()
 	tlsCredentials := credentials.NewTLS(&tls.Config{
 		MinVersion: tls.VersionTLS13,
