@@ -56,12 +56,6 @@ func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error
 	return &logUploader, nil
 }
 
-func (uploader *LogUploader) Closed() bool {
-	uploader.mutex.RLock()
-	defer uploader.mutex.RUnlock()
-	return uploader.closed
-}
-
 func (uploader *LogUploader) reInitializeClient() error {
 	err := uploader.client.CloseSend()
 	if err != nil {
@@ -76,7 +70,12 @@ func (uploader *LogUploader) reInitializeClient() error {
 }
 
 func (uploader *LogUploader) Write(bytes []byte) (int, error) {
-	if len(bytes) > 0 && !uploader.Closed() {
+	if len(bytes) == 0 {
+		return 0, nil
+	}
+	uploader.mutex.RLock()
+	defer uploader.mutex.RUnlock()
+	if !uploader.closed {
 		bytesCopy := make([]byte, len(bytes))
 		copy(bytesCopy, bytes)
 		uploader.logsChannel <- bytesCopy
