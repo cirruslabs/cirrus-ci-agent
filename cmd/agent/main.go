@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
@@ -151,8 +152,12 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 
 	target, insecure := transportSettings(apiEndpoint)
 
+	// use embedded root certificates because the agent can be executed with a distroless container, for example
+	// also don't check for error since then the default certificates from the host will be used
+	certPool, _ := gocertifi.CACerts()
 	tlsCredentials := credentials.NewTLS(&tls.Config{
 		MinVersion: tls.VersionTLS13,
+		RootCAs:    certPool,
 	})
 	transportSecurity := grpc.WithTransportCredentials(tlsCredentials)
 
