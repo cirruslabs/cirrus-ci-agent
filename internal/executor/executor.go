@@ -408,7 +408,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 			fetchOptions.Depth = clone_depth
 		}
 		err = repo.Fetch(fetchOptions)
-		if err != nil && retriableCloneError(err) {
+		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFetch failed: %s!", err)))
 			logUploader.Write([]byte(fmt.Sprintf("\nRe-trying to fetch...")))
 			err = repo.Fetch(fetchOptions)
@@ -456,8 +456,8 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 
 		repo, err = git.PlainClone(working_dir, false, &cloneOptions)
 
-		if err != nil && retriableCloneError(err) {
-			logUploader.Write([]byte("\nTimeout while cloning! Trying again..."))
+		if err != nil && retryableCloneError(err) {
+			logUploader.Write([]byte(fmt.Sprintf("\nRetryable error '%s' while cloning! Trying again...", err)))
 			os.RemoveAll(working_dir)
 			EnsureFolderExists(working_dir)
 			repo, err = git.PlainClone(working_dir, false, &cloneOptions)
@@ -503,7 +503,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	return true
 }
 
-func retriableCloneError(err error) bool {
+func retryableCloneError(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -518,6 +518,9 @@ func retriableCloneError(err error) bool {
 		return true
 	}
 	if strings.Contains(errorMessage, "authentication") {
+		return true
+	}
+	if strings.Contains(errorMessage, "not found") {
 		return true
 	}
 	return false
