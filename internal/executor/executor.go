@@ -143,6 +143,10 @@ EXECUTION_LOOP:
 		if err != nil {
 			backgroundCommand.Logs.Write([]byte(fmt.Sprintf("\nFailed to stop background script %s: %s!", backgroundCommand.Name, err)))
 		}
+		err = backgroundCommand.Cmd.Wait()
+		if err != nil {
+			backgroundCommand.Logs.Write([]byte(fmt.Sprintf("\nFailed to wait for killed shell: %s", err)))
+		}
 		backgroundCommand.Logs.Finalize()
 	}
 }

@@ -68,6 +68,10 @@ func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handl
 		if err != nil {
 			handler([]byte(fmt.Sprintf("\nFailed to gracefully kill: %s", err)))
 		}
+		err = cmd.Wait()
+		if err != nil {
+			handler([]byte(fmt.Sprintf("\nFailed to wait for killed shell: %s", err)))
+		}
 		return cmd, TimeOutError
 	case <-done:
 		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
