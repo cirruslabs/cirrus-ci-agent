@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type LogUploader struct {
 	logsChannel        chan []byte
 	doneLogUpload      chan bool
 	valuesToMask       []string
+	closed             bool
+	mutex              sync.RWMutex
 }
 
 func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error) {
@@ -47,9 +50,16 @@ func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error
 		logsChannel:        make(chan []byte),
 		doneLogUpload:      make(chan bool),
 		valuesToMask:       executor.sensitiveValues,
+		closed:             false,
 	}
 	go logUploader.StreamLogs()
 	return &logUploader, nil
+}
+
+func (uploader *LogUploader) Closed() bool {
+	uploader.mutex.RLock()
+	defer uploader.mutex.RUnlock()
+	return uploader.closed
 }
 
 func (uploader *LogUploader) reInitializeClient() error {
@@ -66,7 +76,7 @@ func (uploader *LogUploader) reInitializeClient() error {
 }
 
 func (uploader *LogUploader) Write(bytes []byte) (int, error) {
-	if len(bytes) > 0 {
+	if len(bytes) > 0 && !uploader.Closed() {
 		bytesCopy := make([]byte, len(bytes))
 		copy(bytesCopy, bytes)
 		uploader.logsChannel <- bytesCopy
@@ -145,6 +155,9 @@ func (uploader *LogUploader) WriteChunk(bytesToWrite []byte) (int, error) {
 
 func (uploader *LogUploader) Finalize() {
 	log.Printf("Finilizing log uploading for %s!\n", uploader.commandName)
+	uploader.mutex.Lock()
+	uploader.closed = true
+	uploader.mutex.Unlock()
 	close(uploader.logsChannel)
 	<-uploader.doneLogUpload
 }
