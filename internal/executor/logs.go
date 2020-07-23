@@ -157,8 +157,8 @@ func (uploader *LogUploader) Finalize() {
 	log.Printf("Finilizing log uploading for %s!\n", uploader.commandName)
 	uploader.mutex.Lock()
 	uploader.closed = true
-	uploader.mutex.Unlock()
 	close(uploader.logsChannel)
+	uploader.mutex.Unlock()
 	<-uploader.doneLogUpload
 }
 
