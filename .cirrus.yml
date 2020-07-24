@@ -19,7 +19,7 @@ task:
   depends_on: Test
   container:
     image: goreleaser/goreleaser:latest
-  release_script: goreleaser --build --snapshot
+  release_script: goreleaser build --snapshot
   binaries_artifacts:
     path: "dist/agent_*/agent*"
 
