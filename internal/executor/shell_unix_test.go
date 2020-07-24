@@ -5,6 +5,7 @@ package executor
 import (
 	"runtime"
 	"testing"
+	"time"
 )
 
 func Test_ShellCommands_Unix(t *testing.T) {
@@ -72,6 +73,16 @@ func Test_ShellCommands_CustomWorkingDir_Unix(t *testing.T) {
 	}
 
 	if output == expectedOutput {
+		t.Log("Passed")
+	} else {
+		t.Errorf("Wrong output: '%s'", output)
+	}
+}
+
+func Test_ShellCommands_Timeout_Unix(t *testing.T) {
+	timeout := time.After(5 * time.Second)
+	_, output := ShellCommandsAndGetOutput([]string{"sleep 60"}, nil, &timeout)
+	if output == "sleep 60\n\nTimed out!" {
 		t.Log("Passed")
 	} else {
 		t.Errorf("Wrong output: '%s'", output)
