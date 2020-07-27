@@ -126,6 +126,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 				uploadCacheClient.CloseAndRecv()
 				break
 			}
+			bytesUploaded += n
 		}
 
 		if err == io.EOF || n == 0 {
