@@ -117,7 +117,15 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 
 		if n > 0 {
 			chunkMsg := api.CacheEntry_Chunk{Chunk: &api.DataChunk{Data: readBuffer[:n]}}
-			uploadCacheClient.Send(&api.CacheEntry{Value: &chunkMsg})
+			err := uploadCacheClient.Send(&api.CacheEntry{Value: &chunkMsg})
+			if err != nil {
+				errorMsg := fmt.Sprintf("Failed to send a chunk: %s!", err)
+				log.Printf(errorMsg)
+				w.Write([]byte(errorMsg))
+				w.WriteHeader(http.StatusInternalServerError)
+				uploadCacheClient.CloseAndRecv()
+				break
+			}
 			bytesUploaded += n
 		}
 
