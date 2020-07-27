@@ -8,6 +8,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -105,18 +106,37 @@ func tryToDownloadAndPopulateCache(
 	cacheHost string,
 	cacheKey string,
 	folderToCache string,
-) (bool, bool) {
-	cacheHit, err := downloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, folderToCache)
-	if !cacheHit {
+) (bool, bool) { // successfully populated, available remotely
+	cacheFile, err := FetchCache(logUploader, commandName, cacheHost, cacheKey)
+	if err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to fetch archive for %s cache: %s!", commandName, err)))
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return false, true
+		} else {
+			return false, false
+		}
+	}
+	if cacheFile == nil {
 		return false, false
 	}
+	_, _ = logUploader.Write([]byte(fmt.Sprintf("\nCache hit for %s!", cacheKey)))
+	err = unarchiveCache(cacheFile, folderToCache)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to unarchive %s cache because of %s! Retrying...\n", commandName, err)))
 		os.RemoveAll(folderToCache)
-		cacheHit, err = downloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, folderToCache)
-		if !cacheHit {
+		cacheFile, err := FetchCache(logUploader, commandName, cacheHost, cacheKey)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to fetch archive for %s cache: %s!", commandName, err)))
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				return false, true
+			} else {
+				return false, false
+			}
+		}
+		if cacheFile == nil {
 			return false, true
 		}
+		err = unarchiveCache(cacheFile, folderToCache)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed again to unarchive %s cache because of %s!\n", commandName, err)))
 			logUploader.Write([]byte(fmt.Sprintf("\nTreating this failure as a cache miss but won't try to re-upload! Cleaning up %s...\n", folderToCache)))
@@ -128,28 +148,20 @@ func tryToDownloadAndPopulateCache(
 	return true, true
 }
 
-func downloadAndPopulateCache(
-	logUploader *LogUploader,
-	commandName string,
-	cacheHost string,
-	cacheKey string,
+func unarchiveCache(
+	cacheFile *os.File,
 	folderToCache string,
-) (bool, error) {
-	cacheFile := FetchCache(logUploader, commandName, cacheHost, cacheKey)
-	if cacheFile == nil {
-		return false, nil
-	}
+) error {
 	defer os.Remove(cacheFile.Name())
-	_, _ = logUploader.Write([]byte(fmt.Sprintf("\nCache hit for %s!", cacheKey)))
 	EnsureFolderExists(folderToCache)
-	return true, targz.Unarchive(cacheFile.Name(), folderToCache)
+	return targz.Unarchive(cacheFile.Name(), folderToCache)
 }
 
-func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, cacheKey string) *os.File {
+func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, cacheKey string) (*os.File, error) {
 	cacheFile, err := ioutil.TempFile(os.TempDir(), commandName)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s!", commandName)))
-		return nil
+		return nil, err
 	}
 	defer cacheFile.Close()
 
@@ -158,22 +170,22 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	}
 	resp, err := httpClient.Get(fmt.Sprintf("http://%s/%s", cacheHost, cacheKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil
+		return nil, nil
 	}
 
 	bufferedFileWriter := bufio.NewWriter(cacheFile)
 	bytesDownloaded, err := bufferedFileWriter.ReadFrom(bufio.NewReader(resp.Body))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	err = bufferedFileWriter.Flush()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	if bytesDownloaded < 1024 {
 		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %d bytes.", bytesDownloaded)))
@@ -182,7 +194,7 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	} else {
 		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %dMb.", bytesDownloaded/1024/1024)))
 	}
-	return cacheFile
+	return cacheFile, nil
 }
 
 func UploadCache(executor *Executor, commandName string, cacheHost string, instruction *api.UploadCacheInstruction) bool {
