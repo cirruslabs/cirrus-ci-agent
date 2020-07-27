@@ -12,6 +12,16 @@ task:
   get_script: go get ./...
   build_script: go build ./...
   test_script: go test ./...
+  
+task:
+  name: Build Binaries
+  only_if: $CIRRUS_PR != ''
+  depends_on: Test
+  container:
+    image: goreleaser/goreleaser:latest
+  release_script: goreleaser build --snapshot
+  binaries_artifacts:
+    path: "dist/agent_*/agent*"
 
 task:
   name: Release
