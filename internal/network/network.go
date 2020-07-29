@@ -17,5 +17,6 @@ func WaitForLocalPort(port int, waitDuration time.Duration) {
 		if conn != nil {
 			_ = conn.Close()
 		}
+		break
 	}
 }
