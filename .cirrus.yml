@@ -15,6 +15,7 @@ task:
 
 docker_builder:
   name: Test Docker Build
+  only_if: "changesInclude('Dockerfile')"
   build_script: docker build .
 
 task:
