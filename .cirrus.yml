@@ -12,7 +12,12 @@ task:
   get_script: go get ./...
   build_script: go build ./...
   test_script: go test ./...
-  
+
+docker_builder:
+  name: Test Docker Build
+  only_if: "changesInclude('Dockerfile')"
+  build_script: docker build .
+
 task:
   name: Build Binaries
   only_if: $CIRRUS_PR != ''
@@ -26,7 +31,9 @@ task:
 task:
   name: Release
   only_if: $CIRRUS_TAG != ''
-  depends_on: Test
+  depends_on:
+    - Test
+    - Test Docker Build
   env:
     GITHUB_TOKEN: ENCRYPTED[!98ace8259c6024da912c14d5a3c5c6aac186890a8d4819fad78f3e0c41a4e0cd3a2537dd6e91493952fb056fa434be7c!]
   container:
