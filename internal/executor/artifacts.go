@@ -166,7 +166,7 @@ func uploadArtifactsAndParseAnnotations(
 			}
 			err, artifactAnnotations := annotations.ParseAnnotations(artifactsInstruction.Format, artifactPath)
 			if err != nil {
-				return allAnnotations, errors.Wrapf(err, "failed to create annotations", artifactPath)
+				return allAnnotations, errors.Wrapf(err, "failed to create annotations from %s", artifactPath)
 			}
 			allAnnotations = append(allAnnotations, artifactAnnotations...)
 		}
