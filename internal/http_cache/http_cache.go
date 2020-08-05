@@ -3,9 +3,11 @@ package http_cache
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"golang.org/x/time/rate"
 	"io"
 	"log"
 	"net"
@@ -13,6 +15,7 @@ import (
 )
 
 var cirrusTaskIdentification api.TaskIdentification
+var rateLimiter = rate.NewLimiter(rate.Limit(10), 10)
 
 func Start(taskIdentification api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
@@ -36,6 +39,20 @@ func Start(taskIdentification api.TaskIdentification) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	// Rate limiting
+	if err := rateLimiter.Wait(r.Context()); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		log.Printf("Rate limiter failed: %s\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	key := r.URL.Path
 	if key[0] == '/' {
 		key = key[1:]
