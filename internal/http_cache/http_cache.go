@@ -27,9 +27,8 @@ func Start(taskIdentification api.TaskIdentification) string {
 	}
 	if err == nil {
 		address = listener.Addr().String()
-		listener.Close()
 		log.Printf("Starting http cache server %s\n", address)
-		go http.ListenAndServe(address, nil)
+		go http.Serve(listener, nil)
 	} else {
 		log.Printf("Failed to start http cache server %s: %s\n", address, err)
 	}
