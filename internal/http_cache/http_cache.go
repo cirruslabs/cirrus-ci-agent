@@ -3,6 +3,7 @@ package http_cache
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -10,9 +11,15 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"runtime"
+	"golang.org/x/sync/semaphore"
 )
 
 var cirrusTaskIdentification api.TaskIdentification
+
+const activeRequestsPerLogicalCPU = 4
+
+var sem = semaphore.NewWeighted(int64(runtime.NumCPU()*activeRequestsPerLogicalCPU))
 
 func Start(taskIdentification api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
@@ -36,6 +43,23 @@ func Start(taskIdentification api.TaskIdentification) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	// Limit request concurrency
+	if err := sem.Acquire(r.Context(), 1); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		log.Printf("Failed to acquite the semaphore: %s\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		sem.Release(1)
+	}()
+
 	key := r.URL.Path
 	if key[0] == '/' {
 		key = key[1:]
