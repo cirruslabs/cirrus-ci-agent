@@ -12,13 +12,14 @@ import (
 	"net"
 	"net/http"
 	"runtime"
+	"golang.org/x/sync/semaphore"
 )
 
 var cirrusTaskIdentification api.TaskIdentification
 
 const activeRequestsPerLogicalCPU = 4
 
-var semaphore = make(chan struct{}, runtime.NumCPU()*activeRequestsPerLogicalCPU)
+var sem = semaphore.NewWeighted(int64(runtime.NumCPU()*activeRequestsPerLogicalCPU))
 
 func Start(taskIdentification api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
@@ -42,25 +43,21 @@ func Start(taskIdentification api.TaskIdentification) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	// Grab semaphore slot
-	select {
-	case semaphore <- struct{}{}:
-		break
-	case <-r.Context().Done():
-		if errors.Is(r.Context().Err(), context.Canceled) {
+	// Limit request concurrency
+	if err := sem.Acquire(r.Context(), 1); err != nil {
+		if errors.Is(err, context.Canceled) {
 			return
 		}
-		if errors.Is(r.Context().Err(), context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		log.Printf("Failed to wait for the semaphore slot: %s\n", r.Context().Err())
+		log.Printf("Failed to acquite the semaphore: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// Schedule the release of the semaphore slot
 	defer func() {
-		<-semaphore
+		sem.Release(1)
 	}()
 
 	key := r.URL.Path
