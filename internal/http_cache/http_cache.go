@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
-	"golang.org/x/time/rate"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"runtime"
 )
 
 var cirrusTaskIdentification api.TaskIdentification
-var rateLimiter = rate.NewLimiter(rate.Limit(10), 10)
+
+const activeRequestsPerLogicalCPU = 4
+
+var semaphore = make(chan struct{}, runtime.NumCPU()*activeRequestsPerLogicalCPU)
 
 func Start(taskIdentification api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
@@ -39,19 +42,26 @@ func Start(taskIdentification api.TaskIdentification) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	// Rate limiting
-	if err := rateLimiter.Wait(r.Context()); err != nil {
-		if errors.Is(err, context.Canceled) {
+	// Grab semaphore slot
+	select {
+	case semaphore <- struct{}{}:
+		break
+	case <-r.Context().Done():
+		if errors.Is(r.Context().Err(), context.Canceled) {
 			return
 		}
-		if errors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(r.Context().Err(), context.DeadlineExceeded) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		log.Printf("Rate limiter failed: %s\n", err)
+		log.Printf("Failed to wait for the semaphore slot: %s\n", r.Context().Err())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// Schedule the release of the semaphore slot
+	defer func() {
+		<-semaphore
+	}()
 
 	key := r.URL.Path
 	if key[0] == '/' {
