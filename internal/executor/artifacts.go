@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-annotations"
 	"github.com/cirruslabs/cirrus-ci-annotations/model"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,20 +22,70 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 			TaskIdentification: &executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
-		_, _ = client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return false
 	}
 	defer logUploader.Finalize()
 
-	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(context.Background())
+	allAnnotations, err := uploadArtifactsAndParseAnnotations(executor, name, artifactsInstruction, customEnv, logUploader)
 	if err != nil {
-		_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to initialize artifacts upload client: %s", err)))
-		return false
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts: %s", err)))
+		logUploader.Write([]byte("\nRe-trying to upload artifacts..."))
+
+		allAnnotations, err = uploadArtifactsAndParseAnnotations(executor, name, artifactsInstruction, customEnv, logUploader)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts again: %s", err)))
+			return false
+		}
 	}
 
-	defer uploadArtifactsClient.CloseAndRecv()
+	workingDir := customEnv["CIRRUS_WORKING_DIR"]
+	if len(allAnnotations) > 0 {
+		err := annotations.ValidateAnnotations(workingDir, allAnnotations)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to validate annotations: %s", err)))
+		}
+		protoAnnotations := ConvertAnnotations(allAnnotations)
+		reportAnnotationsCommandRequest := api.ReportAnnotationsCommandRequest{
+			TaskIdentification: &executor.taskIdentification,
+			Annotations:        protoAnnotations,
+		}
 
+		_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to report %d annotations: %s", len(allAnnotations), err)))
+			logUploader.Write([]byte(fmt.Sprintf("\nRetrying...")))
+			_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
+		}
+		if err != nil {
+			return false
+		}
+		logUploader.Write([]byte(fmt.Sprintf("\nReported %d annotations!", len(allAnnotations))))
+	}
+
+	return true
+}
+
+func uploadArtifactsAndParseAnnotations(
+	executor *Executor,
+	name string,
+	artifactsInstruction *api.ArtifactsInstruction,
+	customEnv map[string]string,
+	logUploader *LogUploader,
+) ([]model.Annotation, error) {
 	allAnnotations := make([]model.Annotation, 0)
+
+	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(context.Background())
+	if err != nil {
+		return allAnnotations, errors.Wrapf(err, "failed to initialize artifacts upload client")
+	}
+
+	defer func() {
+		_, err := uploadArtifactsClient.CloseAndRecv()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nError from upload stream: %s", err)))
+		}
+	}()
 
 	workingDir := customEnv["CIRRUS_WORKING_DIR"]
 
@@ -44,14 +95,13 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 		artifactPaths, err := doublestar.Glob(artifactsPattern)
 
 		if err != nil {
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to list artifacts: %s", err)))
-			return false
+			return allAnnotations, errors.Wrap(err, "Failed to list artifacts")
 		}
 
 		if index > 0 {
-			_, _ = logUploader.Write([]byte("\n"))
+			logUploader.Write([]byte("\n"))
 		}
-		_, _ = logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s", len(artifactPaths), artifactsPattern)))
+		logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s", len(artifactPaths), artifactsPattern)))
 
 		chunkMsg := api.ArtifactEntry_ArtifactsUpload_{
 			ArtifactsUpload: &api.ArtifactEntry_ArtifactsUpload{
@@ -63,8 +113,7 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 		}
 		err = uploadArtifactsClient.Send(&api.ArtifactEntry{Value: &chunkMsg})
 		if err != nil {
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to initialize artifacts upload: %s", err)))
-			return false
+			return allAnnotations, errors.Wrap(err, "failed to initialize artifacts upload")
 		}
 
 		readBufferSize := int(1024 * 1024)
@@ -77,16 +126,14 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 
 			artifactFile, err := os.Open(artifactPath)
 			if err != nil {
-				_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to read artifact file %s: %s", artifactPath, err)))
-				return false
+				return allAnnotations, errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
 			}
 			//noinspection GoDeferInLoop
 			defer artifactFile.Close()
 
 			relativeArtifactPath, err := filepath.Rel(workingDir, artifactPath)
 			if err != nil {
-				_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to get artifact relative path for %s: %s", artifactPath, err)))
-				return false
+				return allAnnotations, errors.Wrapf(err, "failed to get artifact relative path for %s", artifactPath)
 			}
 
 			bytesUploaded := 0
@@ -100,8 +147,7 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 					chunkMsg := api.ArtifactEntry_Chunk{Chunk: &chunk}
 					err := uploadArtifactsClient.Send(&api.ArtifactEntry{Value: &chunkMsg})
 					if err != nil {
-						_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifact file %s: %s", artifactPath, err)))
-						return false
+						return allAnnotations, errors.Wrapf(err, "failed to upload artifact file %s", artifactPath)
 					}
 					bytesUploaded += n
 				}
@@ -110,46 +156,20 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 					break
 				}
 				if err != nil {
-					_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to read artifact file %s: %s", artifactPath, err)))
-					return false
+					return allAnnotations, errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
 				}
 			}
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nUploaded %s", artifactPath)))
+			logUploader.Write([]byte(fmt.Sprintf("\nUploaded %s", artifactPath)))
 
 			if artifactsInstruction.Format != "" {
-				_, _ = logUploader.Write([]byte(fmt.Sprintf("\nTrying to parse annotations for %s format", artifactsInstruction.Format)))
+				logUploader.Write([]byte(fmt.Sprintf("\nTrying to parse annotations for %s format", artifactsInstruction.Format)))
 			}
 			err, artifactAnnotations := annotations.ParseAnnotations(artifactsInstruction.Format, artifactPath)
 			if err != nil {
-				_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to create annotations: %s", err)))
-				return false
+				return allAnnotations, errors.Wrapf(err, "failed to create annotations", artifactPath)
 			}
 			allAnnotations = append(allAnnotations, artifactAnnotations...)
 		}
 	}
-
-	if len(allAnnotations) > 0 {
-		err := annotations.ValidateAnnotations(workingDir, allAnnotations)
-		if err != nil {
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to validate annotations: %s", err)))
-		}
-		protoAnnotations := ConvertAnnotations(allAnnotations)
-		reportAnnotationsCommandRequest := api.ReportAnnotationsCommandRequest{
-			TaskIdentification: &executor.taskIdentification,
-			Annotations:        protoAnnotations,
-		}
-
-		_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
-		if err != nil {
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nFailed to report %d annotations: %s", len(allAnnotations), err)))
-			_, _ = logUploader.Write([]byte(fmt.Sprintf("\nRetrying...")))
-			_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
-		}
-		if err != nil {
-			return false
-		}
-		_, _ = logUploader.Write([]byte(fmt.Sprintf("\nReported %d annotations!", len(allAnnotations))))
-	}
-
-	return true
+	return allAnnotations, nil
 }
