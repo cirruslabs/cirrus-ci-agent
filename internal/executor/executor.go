@@ -114,26 +114,25 @@ func (executor *Executor) RunBuild() {
 			}
 		}
 	}
-EXECUTION_LOOP:
+
+	// Even through we haven't run any commands yet, we bootstrap with the clean state
+	previousCommandSucceeded := true
+
 	for {
 		if currentStep.Name == executor.commandTo {
 			break
 		}
-		log.Printf("Executing %s...", currentStep.Name)
-		nextCommandName := executor.performStep(environment, currentStep)
-		if nextCommandName == "" {
-			log.Printf("%s command finished and instructed to exit!", currentStep.Name)
+
+		shouldRun := (currentStep.ExecutionBehaviour == api.Command_ON_SUCCESS && previousCommandSucceeded) ||
+			(currentStep.ExecutionBehaviour == api.Command_ON_FAILURE && !previousCommandSucceeded) ||
+			currentStep.ExecutionBehaviour == api.Command_ALWAYS
+		if !shouldRun {
 			break
 		}
+
+		log.Printf("Executing %s...", currentStep.Name)
+		previousCommandSucceeded = executor.performStep(environment, currentStep)
 		log.Printf("%s finished!", currentStep.Name)
-		for i := 0; i < len(commands); i++ {
-			if commands[i].Name == nextCommandName {
-				currentStep = commands[i]
-				continue EXECUTION_LOOP
-			}
-		}
-		log.Printf("Wasn't able to find next command %s!\n", nextCommandName)
-		break
 	}
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
@@ -177,7 +176,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) string {
+func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) bool {
 	success := false
 	signaledToExit := false
 	start := time.Now()
@@ -236,13 +235,13 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		SignaledToExit:     signaledToExit,
 		LocalTimestamp:     time.Now().Unix(),
 	}
-	response, err := client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
+	_, err := client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
 	for err != nil {
 		log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
 		time.Sleep(10 * time.Second)
-		response, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
+		_, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
 	}
-	return response.NextCommandName
+	return success
 }
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
