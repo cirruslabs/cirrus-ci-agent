@@ -137,7 +137,7 @@ func (uploader *LogUploader) WriteChunk(bytesToWrite []byte) (int, error) {
 		return 0, nil
 	}
 	for _, valueToMask := range uploader.valuesToMask {
-		bytesToWrite = bytes.Replace(bytesToWrite, []byte(valueToMask), []byte("SECRET"), -1)
+		bytesToWrite = bytes.Replace(bytesToWrite, []byte(valueToMask), []byte("!!CIRRUS-CI:HIDDEN!!"), -1)
 	}
 
 	uploader.storedOutput.Write(bytesToWrite)
