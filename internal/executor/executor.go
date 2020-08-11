@@ -115,23 +115,24 @@ func (executor *Executor) RunBuild() {
 		}
 	}
 
-	// Even through we haven't run any commands yet, we bootstrap with the clean state
-	previousCommandSucceeded := true
+	var failedAtLeastOnce bool
 
 	for {
 		if currentStep.Name == executor.commandTo {
 			break
 		}
 
-		shouldRun := (currentStep.ExecutionBehaviour == api.Command_ON_SUCCESS && previousCommandSucceeded) ||
-			(currentStep.ExecutionBehaviour == api.Command_ON_FAILURE && !previousCommandSucceeded) ||
+		shouldRun := (currentStep.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
+			(currentStep.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
 			currentStep.ExecutionBehaviour == api.Command_ALWAYS
 		if !shouldRun {
 			break
 		}
 
 		log.Printf("Executing %s...", currentStep.Name)
-		previousCommandSucceeded = executor.performStep(environment, currentStep)
+		if !executor.performStep(environment, currentStep) {
+			failedAtLeastOnce = true
+		}
 		log.Printf("%s finished!", currentStep.Name)
 	}
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
