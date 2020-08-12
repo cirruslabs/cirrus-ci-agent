@@ -112,7 +112,7 @@ func (executor *Executor) RunBuild() {
 			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
 			command.ExecutionBehaviour == api.Command_ALWAYS
 		if !shouldRun {
-			break
+			continue
 		}
 
 		log.Printf("Executing %s...", command.Name)
