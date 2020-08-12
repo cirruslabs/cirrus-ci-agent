@@ -105,7 +105,7 @@ func (executor *Executor) RunBuild() {
 		return
 	}
 
-	var failedAtLeastOnce bool
+	failedAtLeastOnce := response.FailedAtLeastOnce
 
 	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
 		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
