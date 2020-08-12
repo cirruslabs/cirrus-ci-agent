@@ -105,35 +105,21 @@ func (executor *Executor) RunBuild() {
 		return
 	}
 
-	var currentStep = commands[0]
-	if executor.commandFrom != "" {
-		for i := 0; i < len(commands); i++ {
-			if commands[i].Name == executor.commandFrom {
-				currentStep = commands[i]
-				break
-			}
+	failedAtLeastOnce := response.FailedAtLeastOnce
+
+	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
+		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
+			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
+			command.ExecutionBehaviour == api.Command_ALWAYS
+		if !shouldRun {
+			continue
 		}
-	}
-EXECUTION_LOOP:
-	for {
-		if currentStep.Name == executor.commandTo {
-			break
+
+		log.Printf("Executing %s...", command.Name)
+		if !executor.performStep(environment, command) {
+			failedAtLeastOnce = true
 		}
-		log.Printf("Executing %s...", currentStep.Name)
-		nextCommandName := executor.performStep(environment, currentStep)
-		if nextCommandName == "" {
-			log.Printf("%s command finished and instructed to exit!", currentStep.Name)
-			break
-		}
-		log.Printf("%s finished!", currentStep.Name)
-		for i := 0; i < len(commands); i++ {
-			if commands[i].Name == nextCommandName {
-				currentStep = commands[i]
-				continue EXECUTION_LOOP
-			}
-		}
-		log.Printf("Wasn't able to find next command %s!\n", nextCommandName)
-		break
+		log.Printf("%s finished!", command.Name)
 	}
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
@@ -145,6 +131,23 @@ EXECUTION_LOOP:
 		}
 		backgroundCommand.Logs.Finalize()
 	}
+}
+
+// BoundedCommands bounds a slice of commands with unique names to a half-open range [fromName, toName).
+func BoundedCommands(commands []*api.Command, fromName, toName string) []*api.Command {
+	left, right := 0, len(commands)
+
+	for i, command := range commands {
+		if fromName != "" && command.Name == fromName {
+			left = i
+		}
+
+		if toName != "" && command.Name == toName {
+			right = i
+		}
+	}
+
+	return commands[left:right]
 }
 
 func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[string]string) map[string]string {
@@ -177,7 +180,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) string {
+func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) bool {
 	success := false
 	signaledToExit := false
 	start := time.Now()
@@ -236,13 +239,13 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		SignaledToExit:     signaledToExit,
 		LocalTimestamp:     time.Now().Unix(),
 	}
-	response, err := client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
+	_, err := client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
 	for err != nil {
 		log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
 		time.Sleep(10 * time.Second)
-		response, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
+		_, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
 	}
-	return response.NextCommandName
+	return success
 }
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
