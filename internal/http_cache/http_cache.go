@@ -101,7 +101,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		for {
 			in, err := cacheStream.Recv()
 			if in != nil && in.RedirectUrl != "" {
-				log.Printf("Redirecting cache downlod of %s\n", cacheKey)
+				log.Printf("Redirecting cache download of %s\n", cacheKey)
 				http.Redirect(w, r, in.RedirectUrl, http.StatusTemporaryRedirect)
 				break
 			}
