@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"golang.org/x/sync/semaphore"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"runtime"
-	"golang.org/x/sync/semaphore"
 )
 
 var cirrusTaskIdentification api.TaskIdentification
 
 const activeRequestsPerLogicalCPU = 4
 
-var sem = semaphore.NewWeighted(int64(runtime.NumCPU()*activeRequestsPerLogicalCPU))
+var sem = semaphore.NewWeighted(int64(runtime.NumCPU() * activeRequestsPerLogicalCPU))
 
 func Start(taskIdentification api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
@@ -65,7 +65,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		key = key[1:]
 	}
 	if r.Method == "GET" {
-		downloadCache(w, key)
+		downloadCache(w, r, key)
 	} else if r.Method == "HEAD" {
 		checkCacheExists(w, key)
 	} else if r.Method == "POST" {
@@ -88,18 +88,23 @@ func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 	}
 }
 
-func downloadCache(w http.ResponseWriter, cacheKey string) {
+func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	downloadCacheRequest := api.DownloadCacheRequest{
 		TaskIdentification: &cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
 	cacheStream, err := client.CirrusClient.DownloadCache(context.Background(), &downloadCacheRequest)
 	if err != nil {
-		log.Print("Not found!")
+		log.Println("Not found!")
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		for {
 			in, err := cacheStream.Recv()
+			if in != nil && in.RedirectUrl != "" {
+				log.Printf("Redirecting cache downlod of %s\n", cacheKey)
+				http.Redirect(w, r, in.RedirectUrl, http.StatusTemporaryRedirect)
+				break
+			}
 			if in != nil && in.Data != nil && len(in.Data) > 0 {
 				_, _ = w.Write(in.Data)
 			}
