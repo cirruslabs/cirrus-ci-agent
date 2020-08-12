@@ -1,6 +1,6 @@
 module github.com/cirruslabs/cirrus-ci-agent
 
-go 1.14
+go 1.15
 
 require (
 	github.com/bmatcuk/doublestar v1.3.1
@@ -9,7 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/golang/protobuf v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
-	github.com/imdario/mergo v0.3.10 // indirect
+	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/joshdk/go-junit v0.0.0-20200702055522-6efcf4050909 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
