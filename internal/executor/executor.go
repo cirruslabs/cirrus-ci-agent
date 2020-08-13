@@ -413,7 +413,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		err = repo.Fetch(fetchOptions)
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFetch failed: %s!", err)))
-			logUploader.Write([]byte(fmt.Sprintf("\nRe-trying to fetch...")))
+			logUploader.Write([]byte("\nRe-trying to fetch..."))
 			err = repo.Fetch(fetchOptions)
 		}
 		if err != nil {
@@ -478,7 +478,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 
 	ref, err := repo.Head()
 	if err != nil {
-		logUploader.Write([]byte(fmt.Sprintf("\nFailed to get HEAD information!")))
+		logUploader.Write([]byte("\nFailed to get HEAD information!"))
 		return false
 	}
 
