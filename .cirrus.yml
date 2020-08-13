@@ -5,6 +5,17 @@ env:
   GOPROXY: https://proxy.golang.org
 
 task:
+  container:
+    image: golangci/golangci-lint:latest
+  name: Lint
+  script: golangci-lint run -v --out-format json > golangci.json
+  always:
+    artifacts:
+      path: golangci.json
+      type: text/json
+      format: golangci
+
+task:
   name: Test
   modules_cache:
     fingerprint_script: cat go.sum
