@@ -114,8 +114,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 				break
 			}
 			if err != nil {
-				errorMsg := fmt.Sprintf("Failed to download %s cache! %s", cacheKey, err)
-				log.Printf(errorMsg)
+				log.Printf("Failed to download %s cache! %s", cacheKey, err)
 				w.WriteHeader(http.StatusNotFound)
 				break
 			}
@@ -127,7 +126,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	uploadCacheClient, err := client.CirrusClient.UploadCache(context.Background())
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
-		log.Printf(errorMsg)
+		log.Print(errorMsg)
 		w.Write([]byte(errorMsg))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -148,7 +147,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 			err := uploadCacheClient.Send(&api.CacheEntry{Value: &chunkMsg})
 			if err != nil {
 				errorMsg := fmt.Sprintf("Failed to send a chunk: %s!", err)
-				log.Printf(errorMsg)
+				log.Print(errorMsg)
 				w.Write([]byte(errorMsg))
 				w.WriteHeader(http.StatusInternalServerError)
 				uploadCacheClient.CloseAndRecv()
@@ -164,7 +163,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		}
 		if err != nil {
 			errorMsg := fmt.Sprintf("Failed read cache body! %s", err)
-			log.Printf(errorMsg)
+			log.Print(errorMsg)
 			w.Write([]byte(errorMsg))
 			w.WriteHeader(http.StatusBadRequest)
 			uploadCacheClient.CloseAndRecv()
