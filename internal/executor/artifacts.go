@@ -19,7 +19,7 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 	logUploader, err := NewLogUploader(executor, name)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
@@ -47,7 +47,7 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 		}
 		protoAnnotations := ConvertAnnotations(allAnnotations)
 		reportAnnotationsCommandRequest := api.ReportAnnotationsCommandRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Annotations:        protoAnnotations,
 		}
 
@@ -105,7 +105,7 @@ func uploadArtifactsAndParseAnnotations(
 
 		chunkMsg := api.ArtifactEntry_ArtifactsUpload_{
 			ArtifactsUpload: &api.ArtifactEntry_ArtifactsUpload{
-				TaskIdentification: &executor.taskIdentification,
+				TaskIdentification: executor.taskIdentification,
 				Name:               name,
 				Type:               artifactsInstruction.Type,
 				Format:             artifactsInstruction.Format,

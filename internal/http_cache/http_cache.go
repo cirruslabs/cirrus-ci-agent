@@ -15,13 +15,13 @@ import (
 	"runtime"
 )
 
-var cirrusTaskIdentification api.TaskIdentification
+var cirrusTaskIdentification *api.TaskIdentification
 
 const activeRequestsPerLogicalCPU = 4
 
 var sem = semaphore.NewWeighted(int64(runtime.NumCPU() * activeRequestsPerLogicalCPU))
 
-func Start(taskIdentification api.TaskIdentification) string {
+func Start(taskIdentification *api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
 	http.HandleFunc("/", handler)
 
@@ -77,7 +77,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 	cacheInfoRequest := api.CacheInfoRequest{
-		TaskIdentification: &cirrusTaskIdentification,
+		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
 	_, err := client.CirrusClient.CacheInfo(context.Background(), &cacheInfoRequest)
@@ -90,7 +90,7 @@ func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 
 func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	downloadCacheRequest := api.DownloadCacheRequest{
-		TaskIdentification: &cirrusTaskIdentification,
+		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
 	cacheStream, err := client.CirrusClient.DownloadCache(context.Background(), &downloadCacheRequest)
@@ -131,7 +131,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	cacheKeyMsg := api.CacheEntry_CacheKey{TaskIdentification: &cirrusTaskIdentification, CacheKey: cacheKey}
+	cacheKeyMsg := api.CacheEntry_CacheKey{TaskIdentification: cirrusTaskIdentification, CacheKey: cacheKey}
 	keyMsg := api.CacheEntry_Key{Key: &cacheKeyMsg}
 	uploadCacheClient.Send(&api.CacheEntry{Value: &keyMsg})
 

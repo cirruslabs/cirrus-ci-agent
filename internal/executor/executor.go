@@ -34,7 +34,7 @@ type CommandAndLogs struct {
 }
 
 type Executor struct {
-	taskIdentification api.TaskIdentification
+	taskIdentification *api.TaskIdentification
 	serverToken        string
 	backgroundCommands []CommandAndLogs
 	httpCacheHost      string
@@ -45,7 +45,7 @@ type Executor struct {
 }
 
 func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom string, commandTo string) *Executor {
-	taskIdentification := api.TaskIdentification{
+	taskIdentification := &api.TaskIdentification{
 		TaskId: taskId,
 		Secret: clientToken,
 	}
@@ -62,7 +62,7 @@ func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom stri
 
 func (executor *Executor) RunBuild() {
 	initialStepsRequest := api.InitialCommandsRequest{
-		TaskIdentification:  &executor.taskIdentification,
+		TaskIdentification:  executor.taskIdentification,
 		LocalTimestamp:      time.Now().Unix(),
 		ContinueFromCommand: executor.commandFrom,
 	}
@@ -70,7 +70,7 @@ func (executor *Executor) RunBuild() {
 	response, err := client.CirrusClient.InitialCommands(context.Background(), &initialStepsRequest)
 	for response == nil || err != nil {
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to get initial commands: %v", err),
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
@@ -232,7 +232,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 
 	duration := time.Since(start)
 	reportRequest := api.ReportSingleCommandRequest{
-		TaskIdentification: &executor.taskIdentification,
+		TaskIdentification: executor.taskIdentification,
 		CommandName:        (*currentStep).Name,
 		Succeded:           success,
 		DurationInSeconds:  int64(duration.Seconds()),
@@ -256,7 +256,7 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            message,
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
@@ -277,7 +277,7 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            message,
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
@@ -297,7 +297,7 @@ func (executor *Executor) CreateFile(
 	logUploader, err := NewLogUploader(executor, commandName)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
@@ -336,7 +336,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	logUploader, err := NewLogUploader(executor, "clone")
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
-			TaskIdentification: &executor.taskIdentification,
+			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)

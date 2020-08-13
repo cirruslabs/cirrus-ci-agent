@@ -1,7 +1,6 @@
 linters:
   disable:
     # These generate too much errors and are disabled for now.
-    - govet
     - errcheck
 
 issues:
