@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
-	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
+	"github.com/cirruslabs/cirrus-ci-agent/targz"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -154,7 +154,7 @@ func unarchiveCache(
 ) error {
 	defer os.Remove(cacheFile.Name())
 	EnsureFolderExists(folderToCache)
-	return targz.Unarchive(cacheFile.Name(), folderToCache)
+	return targz.UnarchiveCompressed(cacheFile.Name(), folderToCache)
 }
 
 func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, cacheKey string) (*os.File, error) {
@@ -256,7 +256,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	cacheFile, _ := ioutil.TempFile(os.TempDir(), cache.Key)
 	defer os.Remove(cacheFile.Name())
 
-	err = targz.Archive(cache.Folder, cacheFile.Name())
+	err = targz.ArchiveCompressed(cache.Folder, cacheFile.Name())
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to tar caches for %s with %s!", commandName, err)))
 		return false

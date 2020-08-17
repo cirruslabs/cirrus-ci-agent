@@ -15,7 +15,7 @@ import (
 
 const DEFAULT_BUFFER_SIZE = 1024 * 1024
 
-func Archive(folderPath string, dest string) error {
+func ArchiveCompressed(folderPath string, dest string) error {
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("error creating %s: %v", dest, err)
@@ -25,7 +25,11 @@ func Archive(folderPath string, dest string) error {
 	gzipWriter := gzip.NewWriter(out)
 	defer gzipWriter.Close()
 
-	tarWriter := tar.NewWriter(gzipWriter)
+	return ArchiveUncompressed(folderPath, gzipWriter)
+}
+
+func ArchiveUncompressed(folderPath string, writer io.Writer) error {
+	tarWriter := tar.NewWriter(writer)
 	defer tarWriter.Close()
 
 	buffer := make([]byte, DEFAULT_BUFFER_SIZE)
@@ -78,7 +82,7 @@ func Archive(folderPath string, dest string) error {
 	})
 }
 
-func Unarchive(tarPath string, destFolder string) error {
+func UnarchiveCompressed(tarPath string, destFolder string) error {
 	tarFile, err := os.Open(tarPath)
 	if err != nil {
 		return fmt.Errorf("failed to open tar %s: %v", tarPath, err)
@@ -91,19 +95,23 @@ func Unarchive(tarPath string, destFolder string) error {
 	}
 	defer gzipReader.Close()
 
-	gzipTar := tar.NewReader(gzipReader)
+	return UnarchiveUncompressed(gzipReader, destFolder)
+}
+
+func UnarchiveUncompressed(reader io.Reader, destFolder string) error {
+	tarReader := tar.NewReader(reader)
 
 	buffer := make([]byte, DEFAULT_BUFFER_SIZE)
 
 	for {
-		header, err := gzipTar.Next()
+		header, err := tarReader.Next()
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return err
 		}
 
-		if err := untarFile(gzipTar, header, destFolder, buffer); err != nil {
+		if err := untarFile(tarReader, header, destFolder, buffer); err != nil {
 			return err
 		}
 	}
