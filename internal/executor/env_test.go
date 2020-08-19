@@ -57,3 +57,12 @@ func Test_Environment(t *testing.T) {
 		t.Errorf("Wrong output: '%s'", result)
 	}
 }
+
+func Test_Recursive(t *testing.T) {
+	result := expandEnvironmentRecursively(map[string]string{"FOO": "Contains $FOO"})
+	if result["FOO"] == "Contains $FOO" {
+		t.Log("Passed")
+	} else {
+		t.Errorf("Wrong output: '%s'", result)
+	}
+}
