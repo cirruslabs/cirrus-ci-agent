@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-func ExpandText(text string, custom_env map[string]string) string {
+func ExpandText(text string, customEnv map[string]string) string {
 	return expandTextExtended(text, func(name string) (string, bool) {
-		if userValue, ok := custom_env[name]; ok {
+		if userValue, ok := customEnv[name]; ok {
 			return userValue, true
 		}
 
@@ -16,12 +16,12 @@ func ExpandText(text string, custom_env map[string]string) string {
 	})
 }
 
-func ExpandTextOSFirst(text string, custom_env map[string]string) string {
+func ExpandTextOSFirst(text string, customEnv map[string]string) string {
 	return expandTextExtended(text, func(name string) (string, bool) {
 		if osValue, ok := os.LookupEnv(name); ok {
 			return osValue, true
 		}
-		userValue, ok := custom_env[name]
+		userValue, ok := customEnv[name]
 		return userValue, ok
 	})
 }
@@ -48,13 +48,22 @@ func expandTextExtended(text string, lookup func(string) (string, bool)) string 
 func expandEnvironmentRecursively(environment map[string]string) map[string]string {
 	result := make(map[string]string)
 	for key, value := range environment {
-		result[key] = ExpandTextOSFirst(value, environment)
+		result[key] = value
 	}
 	for step := 0; step < 10; step++ {
 		var changed = false
 		for key, value := range result {
 			originalValue := result[key]
 			expandedValue := ExpandTextOSFirst(value, result)
+
+			selfRecursion := strings.Contains(expandedValue, "$"+key) ||
+				strings.Contains(expandedValue, "${"+key) ||
+				strings.Contains(expandedValue, "%"+key)
+			if selfRecursion {
+				// detected self-recursion
+				continue
+			}
+
 			result[key] = expandedValue
 
 			if originalValue != expandedValue {
