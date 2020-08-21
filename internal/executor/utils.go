@@ -44,7 +44,7 @@ func isDirEmpty(path string) bool {
 	if err != nil {
 		return false
 	}
-	return files == nil
+	return files == nil || len(files) == 0
 }
 
 func ConvertAnnotations(annotations []model.Annotation) []*api.Annotation {
