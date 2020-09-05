@@ -102,7 +102,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 			in, err := cacheStream.Recv()
 			if in != nil && in.RedirectUrl != "" {
 				log.Printf("Redirecting cache download of %s\n", cacheKey)
-				http.Redirect(w, r, in.RedirectUrl, http.StatusTemporaryRedirect)
+				proxyDownloadFromURL(w, in.RedirectUrl)
 				break
 			}
 			if in != nil && in.Data != nil && len(in.Data) > 0 {
@@ -120,6 +120,26 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 			}
 		}
 	}
+}
+
+func proxyDownloadFromURL(w http.ResponseWriter, url string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Printf("Proxying cache %s failed: %v\n", url, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
+	if !successfulStatus {
+		log.Printf("Proxying cache %s failed with %d status\n", url, resp.StatusCode)
+		w.WriteHeader(resp.StatusCode)
+		return
+	}
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
