@@ -12,7 +12,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+const _ = grpc.SupportPackageIsVersion7
 
 // CirrusCIServiceClient is the client API for CirrusCIService service.
 //
@@ -45,6 +45,10 @@ func NewCirrusCIServiceClient(cc grpc.ClientConnInterface) CirrusCIServiceClient
 	return &cirrusCIServiceClient{cc}
 }
 
+var cirrusCIServiceInitialCommandsStreamDesc = &grpc.StreamDesc{
+	StreamName: "InitialCommands",
+}
+
 func (c *cirrusCIServiceClient) InitialCommands(ctx context.Context, in *InitialCommandsRequest, opts ...grpc.CallOption) (*CommandsResponse, error) {
 	out := new(CommandsResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/InitialCommands", in, out, opts...)
@@ -52,6 +56,10 @@ func (c *cirrusCIServiceClient) InitialCommands(ctx context.Context, in *Initial
 		return nil, err
 	}
 	return out, nil
+}
+
+var cirrusCIServiceReportSingleCommandStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportSingleCommand",
 }
 
 func (c *cirrusCIServiceClient) ReportSingleCommand(ctx context.Context, in *ReportSingleCommandRequest, opts ...grpc.CallOption) (*ReportSingleCommandResponse, error) {
@@ -63,6 +71,10 @@ func (c *cirrusCIServiceClient) ReportSingleCommand(ctx context.Context, in *Rep
 	return out, nil
 }
 
+var cirrusCIServiceReportAnnotationsStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportAnnotations",
+}
+
 func (c *cirrusCIServiceClient) ReportAnnotations(ctx context.Context, in *ReportAnnotationsCommandRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAnnotations", in, out, opts...)
@@ -72,8 +84,13 @@ func (c *cirrusCIServiceClient) ReportAnnotations(ctx context.Context, in *Repor
 	return out, nil
 }
 
+var cirrusCIServiceStreamLogsStreamDesc = &grpc.StreamDesc{
+	StreamName:    "StreamLogs",
+	ClientStreams: true,
+}
+
 func (c *cirrusCIServiceClient) StreamLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_StreamLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[0], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/StreamLogs", opts...)
+	stream, err := c.cc.NewStream(ctx, cirrusCIServiceStreamLogsStreamDesc, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/StreamLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +123,13 @@ func (x *cirrusCIServiceStreamLogsClient) CloseAndRecv() (*UploadLogsResponse, e
 	return m, nil
 }
 
+var cirrusCIServiceSaveLogsStreamDesc = &grpc.StreamDesc{
+	StreamName:    "SaveLogs",
+	ClientStreams: true,
+}
+
 func (c *cirrusCIServiceClient) SaveLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_SaveLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[1], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/SaveLogs", opts...)
+	stream, err := c.cc.NewStream(ctx, cirrusCIServiceSaveLogsStreamDesc, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/SaveLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +162,13 @@ func (x *cirrusCIServiceSaveLogsClient) CloseAndRecv() (*UploadLogsResponse, err
 	return m, nil
 }
 
+var cirrusCIServiceUploadCacheStreamDesc = &grpc.StreamDesc{
+	StreamName:    "UploadCache",
+	ClientStreams: true,
+}
+
 func (c *cirrusCIServiceClient) UploadCache(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadCacheClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[2], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadCache", opts...)
+	stream, err := c.cc.NewStream(ctx, cirrusCIServiceUploadCacheStreamDesc, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadCache", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -174,8 +201,13 @@ func (x *cirrusCIServiceUploadCacheClient) CloseAndRecv() (*UploadCacheResponse,
 	return m, nil
 }
 
+var cirrusCIServiceUploadArtifactsStreamDesc = &grpc.StreamDesc{
+	StreamName:    "UploadArtifacts",
+	ClientStreams: true,
+}
+
 func (c *cirrusCIServiceClient) UploadArtifacts(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadArtifactsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[3], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadArtifacts", opts...)
+	stream, err := c.cc.NewStream(ctx, cirrusCIServiceUploadArtifactsStreamDesc, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadArtifacts", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +240,13 @@ func (x *cirrusCIServiceUploadArtifactsClient) CloseAndRecv() (*UploadArtifactsR
 	return m, nil
 }
 
+var cirrusCIServiceDownloadCacheStreamDesc = &grpc.StreamDesc{
+	StreamName:    "DownloadCache",
+	ServerStreams: true,
+}
+
 func (c *cirrusCIServiceClient) DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[4], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DownloadCache", opts...)
+	stream, err := c.cc.NewStream(ctx, cirrusCIServiceDownloadCacheStreamDesc, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DownloadCache", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +277,10 @@ func (x *cirrusCIServiceDownloadCacheClient) Recv() (*DataChunk, error) {
 	return m, nil
 }
 
+var cirrusCIServiceCacheInfoStreamDesc = &grpc.StreamDesc{
+	StreamName: "CacheInfo",
+}
+
 func (c *cirrusCIServiceClient) CacheInfo(ctx context.Context, in *CacheInfoRequest, opts ...grpc.CallOption) (*CacheInfoResponse, error) {
 	out := new(CacheInfoResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/CacheInfo", in, out, opts...)
@@ -247,6 +288,10 @@ func (c *cirrusCIServiceClient) CacheInfo(ctx context.Context, in *CacheInfoRequ
 		return nil, err
 	}
 	return out, nil
+}
+
+var cirrusCIServicePingStreamDesc = &grpc.StreamDesc{
+	StreamName: "Ping",
 }
 
 func (c *cirrusCIServiceClient) Ping(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
@@ -258,6 +303,10 @@ func (c *cirrusCIServiceClient) Ping(ctx context.Context, in *empty.Empty, opts 
 	return out, nil
 }
 
+var cirrusCIServiceHeartbeatStreamDesc = &grpc.StreamDesc{
+	StreamName: "Heartbeat",
+}
+
 func (c *cirrusCIServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
 	out := new(HeartbeatResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Heartbeat", in, out, opts...)
@@ -265,6 +314,10 @@ func (c *cirrusCIServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequ
 		return nil, err
 	}
 	return out, nil
+}
+
+var cirrusCIServiceReportStopHookStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportStopHook",
 }
 
 func (c *cirrusCIServiceClient) ReportStopHook(ctx context.Context, in *ReportStopHookRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
@@ -276,6 +329,10 @@ func (c *cirrusCIServiceClient) ReportStopHook(ctx context.Context, in *ReportSt
 	return out, nil
 }
 
+var cirrusCIServiceReportAgentErrorStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportAgentError",
+}
+
 func (c *cirrusCIServiceClient) ReportAgentError(ctx context.Context, in *ReportAgentProblemRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentError", in, out, opts...)
@@ -283,6 +340,10 @@ func (c *cirrusCIServiceClient) ReportAgentError(ctx context.Context, in *Report
 		return nil, err
 	}
 	return out, nil
+}
+
+var cirrusCIServiceReportAgentWarningStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportAgentWarning",
 }
 
 func (c *cirrusCIServiceClient) ReportAgentWarning(ctx context.Context, in *ReportAgentProblemRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
@@ -294,6 +355,10 @@ func (c *cirrusCIServiceClient) ReportAgentWarning(ctx context.Context, in *Repo
 	return out, nil
 }
 
+var cirrusCIServiceReportAgentSignalStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportAgentSignal",
+}
+
 func (c *cirrusCIServiceClient) ReportAgentSignal(ctx context.Context, in *ReportAgentSignalRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentSignal", in, out, opts...)
@@ -301,6 +366,10 @@ func (c *cirrusCIServiceClient) ReportAgentSignal(ctx context.Context, in *Repor
 		return nil, err
 	}
 	return out, nil
+}
+
+var cirrusCIServiceReportAgentLogsStreamDesc = &grpc.StreamDesc{
+	StreamName: "ReportAgentLogs",
 }
 
 func (c *cirrusCIServiceClient) ReportAgentLogs(ctx context.Context, in *ReportAgentLogsRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
@@ -312,6 +381,10 @@ func (c *cirrusCIServiceClient) ReportAgentLogs(ctx context.Context, in *ReportA
 	return out, nil
 }
 
+var cirrusCIServiceParseConfigStreamDesc = &grpc.StreamDesc{
+	StreamName: "ParseConfig",
+}
+
 func (c *cirrusCIServiceClient) ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error) {
 	out := new(ParseConfigResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ParseConfig", in, out, opts...)
@@ -321,147 +394,252 @@ func (c *cirrusCIServiceClient) ParseConfig(ctx context.Context, in *ParseConfig
 	return out, nil
 }
 
-// CirrusCIServiceServer is the server API for CirrusCIService service.
-// All implementations must embed UnimplementedCirrusCIServiceServer
-// for forward compatibility
-type CirrusCIServiceServer interface {
-	InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
-	ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
-	ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
-	StreamLogs(CirrusCIService_StreamLogsServer) error
-	SaveLogs(CirrusCIService_SaveLogsServer) error
-	UploadCache(CirrusCIService_UploadCacheServer) error
-	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
-	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
-	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
-	Ping(context.Context, *empty.Empty) (*empty.Empty, error)
-	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
-	ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
-	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
-	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
-	mustEmbedUnimplementedCirrusCIServiceServer()
+// CirrusCIServiceService is the service API for CirrusCIService service.
+// Fields should be assigned to their respective handler implementations only before
+// RegisterCirrusCIServiceService is called.  Any unassigned fields will result in the
+// handler for that method returning an Unimplemented error.
+type CirrusCIServiceService struct {
+	InitialCommands     func(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
+	ReportSingleCommand func(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
+	ReportAnnotations   func(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
+	StreamLogs          func(CirrusCIService_StreamLogsServer) error
+	SaveLogs            func(CirrusCIService_SaveLogsServer) error
+	UploadCache         func(CirrusCIService_UploadCacheServer) error
+	UploadArtifacts     func(CirrusCIService_UploadArtifactsServer) error
+	DownloadCache       func(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
+	CacheInfo           func(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
+	Ping                func(context.Context, *empty.Empty) (*empty.Empty, error)
+	Heartbeat           func(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	ReportStopHook      func(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
+	ReportAgentError    func(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	ReportAgentWarning  func(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	ReportAgentSignal   func(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
+	ReportAgentLogs     func(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
+	ParseConfig         func(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 }
 
-// UnimplementedCirrusCIServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedCirrusCIServiceServer struct {
-}
-
-func (*UnimplementedCirrusCIServiceServer) InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InitialCommands not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportSingleCommand not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportAnnotations not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) StreamLogs(CirrusCIService_StreamLogsServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamLogs not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) SaveLogs(CirrusCIService_SaveLogsServer) error {
-	return status.Errorf(codes.Unimplemented, "method SaveLogs not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) UploadCache(CirrusCIService_UploadCacheServer) error {
-	return status.Errorf(codes.Unimplemented, "method UploadCache not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) UploadArtifacts(CirrusCIService_UploadArtifactsServer) error {
-	return status.Errorf(codes.Unimplemented, "method UploadArtifacts not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error {
-	return status.Errorf(codes.Unimplemented, "method DownloadCache not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CacheInfo not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) Ping(context.Context, *empty.Empty) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportStopHook not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentError not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentWarning not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentSignal not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentLogs not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ParseConfig not implemented")
-}
-func (*UnimplementedCirrusCIServiceServer) mustEmbedUnimplementedCirrusCIServiceServer() {}
-
-func RegisterCirrusCIServiceServer(s *grpc.Server, srv CirrusCIServiceServer) {
-	s.RegisterService(&_CirrusCIService_serviceDesc, srv)
-}
-
-func _CirrusCIService_InitialCommands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func (s *CirrusCIServiceService) initialCommands(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InitialCommandsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).InitialCommands(ctx, in)
+		return s.InitialCommands(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
-		Server:     srv,
+		Server:     s,
 		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/InitialCommands",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).InitialCommands(ctx, req.(*InitialCommandsRequest))
+		return s.InitialCommands(ctx, req.(*InitialCommandsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
-
-func _CirrusCIService_ReportSingleCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func (s *CirrusCIServiceService) reportSingleCommand(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportSingleCommandRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportSingleCommand(ctx, in)
+		return s.ReportSingleCommand(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
-		Server:     srv,
+		Server:     s,
 		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportSingleCommand",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportSingleCommand(ctx, req.(*ReportSingleCommandRequest))
+		return s.ReportSingleCommand(ctx, req.(*ReportSingleCommandRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
-
-func _CirrusCIService_ReportAnnotations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func (s *CirrusCIServiceService) reportAnnotations(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportAnnotationsCommandRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportAnnotations(ctx, in)
+		return s.ReportAnnotations(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
-		Server:     srv,
+		Server:     s,
 		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAnnotations",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportAnnotations(ctx, req.(*ReportAnnotationsCommandRequest))
+		return s.ReportAnnotations(ctx, req.(*ReportAnnotationsCommandRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
-
-func _CirrusCIService_StreamLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(CirrusCIServiceServer).StreamLogs(&cirrusCIServiceStreamLogsServer{stream})
+func (s *CirrusCIServiceService) streamLogs(_ interface{}, stream grpc.ServerStream) error {
+	return s.StreamLogs(&cirrusCIServiceStreamLogsServer{stream})
+}
+func (s *CirrusCIServiceService) saveLogs(_ interface{}, stream grpc.ServerStream) error {
+	return s.SaveLogs(&cirrusCIServiceSaveLogsServer{stream})
+}
+func (s *CirrusCIServiceService) uploadCache(_ interface{}, stream grpc.ServerStream) error {
+	return s.UploadCache(&cirrusCIServiceUploadCacheServer{stream})
+}
+func (s *CirrusCIServiceService) uploadArtifacts(_ interface{}, stream grpc.ServerStream) error {
+	return s.UploadArtifacts(&cirrusCIServiceUploadArtifactsServer{stream})
+}
+func (s *CirrusCIServiceService) downloadCache(_ interface{}, stream grpc.ServerStream) error {
+	m := new(DownloadCacheRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return s.DownloadCache(m, &cirrusCIServiceDownloadCacheServer{stream})
+}
+func (s *CirrusCIServiceService) cacheInfo(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.CacheInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/CacheInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.CacheInfo(ctx, req.(*CacheInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) ping(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.Ping(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) heartbeat(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.Heartbeat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Heartbeat",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.Heartbeat(ctx, req.(*HeartbeatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) reportStopHook(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportStopHookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ReportStopHook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportStopHook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ReportStopHook(ctx, req.(*ReportStopHookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) reportAgentError(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportAgentProblemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ReportAgentError(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentError",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ReportAgentError(ctx, req.(*ReportAgentProblemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) reportAgentWarning(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportAgentProblemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ReportAgentWarning(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentWarning",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ReportAgentWarning(ctx, req.(*ReportAgentProblemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) reportAgentSignal(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportAgentSignalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ReportAgentSignal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentSignal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ReportAgentSignal(ctx, req.(*ReportAgentSignalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) reportAgentLogs(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportAgentLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ReportAgentLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentLogs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ReportAgentLogs(ctx, req.(*ReportAgentLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+func (s *CirrusCIServiceService) parseConfig(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ParseConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.ParseConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ParseConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ParseConfig(ctx, req.(*ParseConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 type CirrusCIService_StreamLogsServer interface {
@@ -486,10 +664,6 @@ func (x *cirrusCIServiceStreamLogsServer) Recv() (*LogEntry, error) {
 	return m, nil
 }
 
-func _CirrusCIService_SaveLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(CirrusCIServiceServer).SaveLogs(&cirrusCIServiceSaveLogsServer{stream})
-}
-
 type CirrusCIService_SaveLogsServer interface {
 	SendAndClose(*UploadLogsResponse) error
 	Recv() (*LogEntry, error)
@@ -510,10 +684,6 @@ func (x *cirrusCIServiceSaveLogsServer) Recv() (*LogEntry, error) {
 		return nil, err
 	}
 	return m, nil
-}
-
-func _CirrusCIService_UploadCache_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(CirrusCIServiceServer).UploadCache(&cirrusCIServiceUploadCacheServer{stream})
 }
 
 type CirrusCIService_UploadCacheServer interface {
@@ -538,10 +708,6 @@ func (x *cirrusCIServiceUploadCacheServer) Recv() (*CacheEntry, error) {
 	return m, nil
 }
 
-func _CirrusCIService_UploadArtifacts_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(CirrusCIServiceServer).UploadArtifacts(&cirrusCIServiceUploadArtifactsServer{stream})
-}
-
 type CirrusCIService_UploadArtifactsServer interface {
 	SendAndClose(*UploadArtifactsResponse) error
 	Recv() (*ArtifactEntry, error)
@@ -564,14 +730,6 @@ func (x *cirrusCIServiceUploadArtifactsServer) Recv() (*ArtifactEntry, error) {
 	return m, nil
 }
 
-func _CirrusCIService_DownloadCache_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(DownloadCacheRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(CirrusCIServiceServer).DownloadCache(m, &cirrusCIServiceDownloadCacheServer{stream})
-}
-
 type CirrusCIService_DownloadCacheServer interface {
 	Send(*DataChunk) error
 	grpc.ServerStream
@@ -585,247 +743,295 @@ func (x *cirrusCIServiceDownloadCacheServer) Send(m *DataChunk) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _CirrusCIService_CacheInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CacheInfoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+// RegisterCirrusCIServiceService registers a service implementation with a gRPC server.
+func RegisterCirrusCIServiceService(s grpc.ServiceRegistrar, srv *CirrusCIServiceService) {
+	srvCopy := *srv
+	if srvCopy.InitialCommands == nil {
+		srvCopy.InitialCommands = func(context.Context, *InitialCommandsRequest) (*CommandsResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method InitialCommands not implemented")
+		}
 	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).CacheInfo(ctx, in)
+	if srvCopy.ReportSingleCommand == nil {
+		srvCopy.ReportSingleCommand = func(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportSingleCommand not implemented")
+		}
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/CacheInfo",
+	if srvCopy.ReportAnnotations == nil {
+		srvCopy.ReportAnnotations = func(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportAnnotations not implemented")
+		}
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).CacheInfo(ctx, req.(*CacheInfoRequest))
+	if srvCopy.StreamLogs == nil {
+		srvCopy.StreamLogs = func(CirrusCIService_StreamLogsServer) error {
+			return status.Errorf(codes.Unimplemented, "method StreamLogs not implemented")
+		}
 	}
-	return interceptor(ctx, in, info, handler)
+	if srvCopy.SaveLogs == nil {
+		srvCopy.SaveLogs = func(CirrusCIService_SaveLogsServer) error {
+			return status.Errorf(codes.Unimplemented, "method SaveLogs not implemented")
+		}
+	}
+	if srvCopy.UploadCache == nil {
+		srvCopy.UploadCache = func(CirrusCIService_UploadCacheServer) error {
+			return status.Errorf(codes.Unimplemented, "method UploadCache not implemented")
+		}
+	}
+	if srvCopy.UploadArtifacts == nil {
+		srvCopy.UploadArtifacts = func(CirrusCIService_UploadArtifactsServer) error {
+			return status.Errorf(codes.Unimplemented, "method UploadArtifacts not implemented")
+		}
+	}
+	if srvCopy.DownloadCache == nil {
+		srvCopy.DownloadCache = func(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error {
+			return status.Errorf(codes.Unimplemented, "method DownloadCache not implemented")
+		}
+	}
+	if srvCopy.CacheInfo == nil {
+		srvCopy.CacheInfo = func(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method CacheInfo not implemented")
+		}
+	}
+	if srvCopy.Ping == nil {
+		srvCopy.Ping = func(context.Context, *empty.Empty) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+		}
+	}
+	if srvCopy.Heartbeat == nil {
+		srvCopy.Heartbeat = func(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+		}
+	}
+	if srvCopy.ReportStopHook == nil {
+		srvCopy.ReportStopHook = func(context.Context, *ReportStopHookRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportStopHook not implemented")
+		}
+	}
+	if srvCopy.ReportAgentError == nil {
+		srvCopy.ReportAgentError = func(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportAgentError not implemented")
+		}
+	}
+	if srvCopy.ReportAgentWarning == nil {
+		srvCopy.ReportAgentWarning = func(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportAgentWarning not implemented")
+		}
+	}
+	if srvCopy.ReportAgentSignal == nil {
+		srvCopy.ReportAgentSignal = func(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportAgentSignal not implemented")
+		}
+	}
+	if srvCopy.ReportAgentLogs == nil {
+		srvCopy.ReportAgentLogs = func(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ReportAgentLogs not implemented")
+		}
+	}
+	if srvCopy.ParseConfig == nil {
+		srvCopy.ParseConfig = func(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method ParseConfig not implemented")
+		}
+	}
+	sd := grpc.ServiceDesc{
+		ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService",
+		Methods: []grpc.MethodDesc{
+			{
+				MethodName: "InitialCommands",
+				Handler:    srvCopy.initialCommands,
+			},
+			{
+				MethodName: "ReportSingleCommand",
+				Handler:    srvCopy.reportSingleCommand,
+			},
+			{
+				MethodName: "ReportAnnotations",
+				Handler:    srvCopy.reportAnnotations,
+			},
+			{
+				MethodName: "CacheInfo",
+				Handler:    srvCopy.cacheInfo,
+			},
+			{
+				MethodName: "Ping",
+				Handler:    srvCopy.ping,
+			},
+			{
+				MethodName: "Heartbeat",
+				Handler:    srvCopy.heartbeat,
+			},
+			{
+				MethodName: "ReportStopHook",
+				Handler:    srvCopy.reportStopHook,
+			},
+			{
+				MethodName: "ReportAgentError",
+				Handler:    srvCopy.reportAgentError,
+			},
+			{
+				MethodName: "ReportAgentWarning",
+				Handler:    srvCopy.reportAgentWarning,
+			},
+			{
+				MethodName: "ReportAgentSignal",
+				Handler:    srvCopy.reportAgentSignal,
+			},
+			{
+				MethodName: "ReportAgentLogs",
+				Handler:    srvCopy.reportAgentLogs,
+			},
+			{
+				MethodName: "ParseConfig",
+				Handler:    srvCopy.parseConfig,
+			},
+		},
+		Streams: []grpc.StreamDesc{
+			{
+				StreamName:    "StreamLogs",
+				Handler:       srvCopy.streamLogs,
+				ClientStreams: true,
+			},
+			{
+				StreamName:    "SaveLogs",
+				Handler:       srvCopy.saveLogs,
+				ClientStreams: true,
+			},
+			{
+				StreamName:    "UploadCache",
+				Handler:       srvCopy.uploadCache,
+				ClientStreams: true,
+			},
+			{
+				StreamName:    "UploadArtifacts",
+				Handler:       srvCopy.uploadArtifacts,
+				ClientStreams: true,
+			},
+			{
+				StreamName:    "DownloadCache",
+				Handler:       srvCopy.downloadCache,
+				ServerStreams: true,
+			},
+		},
+		Metadata: "cirrus_ci_service.proto",
+	}
+
+	s.RegisterService(&sd, nil)
 }
 
-func _CirrusCIService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
+// NewCirrusCIServiceService creates a new CirrusCIServiceService containing the
+// implemented methods of the CirrusCIService service in s.  Any unimplemented
+// methods will result in the gRPC server returning an UNIMPLEMENTED status to the client.
+// This includes situations where the method handler is misspelled or has the wrong
+// signature.  For this reason, this function should be used with great care and
+// is not recommended to be used by most users.
+func NewCirrusCIServiceService(s interface{}) *CirrusCIServiceService {
+	ns := &CirrusCIServiceService{}
+	if h, ok := s.(interface {
+		InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
+	}); ok {
+		ns.InitialCommands = h.InitialCommands
 	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).Ping(ctx, in)
+	if h, ok := s.(interface {
+		ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
+	}); ok {
+		ns.ReportSingleCommand = h.ReportSingleCommand
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Ping",
+	if h, ok := s.(interface {
+		ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportAnnotations = h.ReportAnnotations
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).Ping(ctx, req.(*empty.Empty))
+	if h, ok := s.(interface {
+		StreamLogs(CirrusCIService_StreamLogsServer) error
+	}); ok {
+		ns.StreamLogs = h.StreamLogs
 	}
-	return interceptor(ctx, in, info, handler)
+	if h, ok := s.(interface {
+		SaveLogs(CirrusCIService_SaveLogsServer) error
+	}); ok {
+		ns.SaveLogs = h.SaveLogs
+	}
+	if h, ok := s.(interface {
+		UploadCache(CirrusCIService_UploadCacheServer) error
+	}); ok {
+		ns.UploadCache = h.UploadCache
+	}
+	if h, ok := s.(interface {
+		UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
+	}); ok {
+		ns.UploadArtifacts = h.UploadArtifacts
+	}
+	if h, ok := s.(interface {
+		DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
+	}); ok {
+		ns.DownloadCache = h.DownloadCache
+	}
+	if h, ok := s.(interface {
+		CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
+	}); ok {
+		ns.CacheInfo = h.CacheInfo
+	}
+	if h, ok := s.(interface {
+		Ping(context.Context, *empty.Empty) (*empty.Empty, error)
+	}); ok {
+		ns.Ping = h.Ping
+	}
+	if h, ok := s.(interface {
+		Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	}); ok {
+		ns.Heartbeat = h.Heartbeat
+	}
+	if h, ok := s.(interface {
+		ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportStopHook = h.ReportStopHook
+	}
+	if h, ok := s.(interface {
+		ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportAgentError = h.ReportAgentError
+	}
+	if h, ok := s.(interface {
+		ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportAgentWarning = h.ReportAgentWarning
+	}
+	if h, ok := s.(interface {
+		ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportAgentSignal = h.ReportAgentSignal
+	}
+	if h, ok := s.(interface {
+		ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
+	}); ok {
+		ns.ReportAgentLogs = h.ReportAgentLogs
+	}
+	if h, ok := s.(interface {
+		ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
+	}); ok {
+		ns.ParseConfig = h.ParseConfig
+	}
+	return ns
 }
 
-func _CirrusCIService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HeartbeatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).Heartbeat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Heartbeat",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).Heartbeat(ctx, req.(*HeartbeatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportStopHook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportStopHookRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportStopHook(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportStopHook",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportStopHook(ctx, req.(*ReportStopHookRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportAgentError_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportAgentProblemRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportAgentError(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentError",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportAgentError(ctx, req.(*ReportAgentProblemRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportAgentWarning_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportAgentProblemRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportAgentWarning(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentWarning",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportAgentWarning(ctx, req.(*ReportAgentProblemRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportAgentSignal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportAgentSignalRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportAgentSignal(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentSignal",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportAgentSignal(ctx, req.(*ReportAgentSignalRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportAgentLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportAgentLogsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportAgentLogs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentLogs",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportAgentLogs(ctx, req.(*ReportAgentLogsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ParseConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ParseConfigRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ParseConfig(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ParseConfig",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ParseConfig(ctx, req.(*ParseConfigRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _CirrusCIService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService",
-	HandlerType: (*CirrusCIServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "InitialCommands",
-			Handler:    _CirrusCIService_InitialCommands_Handler,
-		},
-		{
-			MethodName: "ReportSingleCommand",
-			Handler:    _CirrusCIService_ReportSingleCommand_Handler,
-		},
-		{
-			MethodName: "ReportAnnotations",
-			Handler:    _CirrusCIService_ReportAnnotations_Handler,
-		},
-		{
-			MethodName: "CacheInfo",
-			Handler:    _CirrusCIService_CacheInfo_Handler,
-		},
-		{
-			MethodName: "Ping",
-			Handler:    _CirrusCIService_Ping_Handler,
-		},
-		{
-			MethodName: "Heartbeat",
-			Handler:    _CirrusCIService_Heartbeat_Handler,
-		},
-		{
-			MethodName: "ReportStopHook",
-			Handler:    _CirrusCIService_ReportStopHook_Handler,
-		},
-		{
-			MethodName: "ReportAgentError",
-			Handler:    _CirrusCIService_ReportAgentError_Handler,
-		},
-		{
-			MethodName: "ReportAgentWarning",
-			Handler:    _CirrusCIService_ReportAgentWarning_Handler,
-		},
-		{
-			MethodName: "ReportAgentSignal",
-			Handler:    _CirrusCIService_ReportAgentSignal_Handler,
-		},
-		{
-			MethodName: "ReportAgentLogs",
-			Handler:    _CirrusCIService_ReportAgentLogs_Handler,
-		},
-		{
-			MethodName: "ParseConfig",
-			Handler:    _CirrusCIService_ParseConfig_Handler,
-		},
-	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamLogs",
-			Handler:       _CirrusCIService_StreamLogs_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "SaveLogs",
-			Handler:       _CirrusCIService_SaveLogs_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "UploadCache",
-			Handler:       _CirrusCIService_UploadCache_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "UploadArtifacts",
-			Handler:       _CirrusCIService_UploadArtifacts_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "DownloadCache",
-			Handler:       _CirrusCIService_DownloadCache_Handler,
-			ServerStreams: true,
-		},
-	},
-	Metadata: "cirrus_ci_service.proto",
+// UnstableCirrusCIServiceService is the service API for CirrusCIService service.
+// New methods may be added to this interface if they are added to the service
+// definition, which is not a backward-compatible change.  For this reason,
+// use of this type is not recommended.
+type UnstableCirrusCIServiceService interface {
+	InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
+	ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
+	ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
+	StreamLogs(CirrusCIService_StreamLogsServer) error
+	SaveLogs(CirrusCIService_SaveLogsServer) error
+	UploadCache(CirrusCIService_UploadCacheServer) error
+	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
+	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
+	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
+	Ping(context.Context, *empty.Empty) (*empty.Empty, error)
+	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
+	ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
+	ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
+	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
+	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 }
