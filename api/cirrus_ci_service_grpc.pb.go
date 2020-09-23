@@ -14,6 +14,83 @@ import (
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion7
 
+// CirrusConfigurationEvaluatorServiceClient is the client API for CirrusConfigurationEvaluatorService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CirrusConfigurationEvaluatorServiceClient interface {
+	EvaluateConfig(ctx context.Context, in *EvaluateConfigRequest, opts ...grpc.CallOption) (*EvaluateConfigResponse, error)
+}
+
+type cirrusConfigurationEvaluatorServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCirrusConfigurationEvaluatorServiceClient(cc grpc.ClientConnInterface) CirrusConfigurationEvaluatorServiceClient {
+	return &cirrusConfigurationEvaluatorServiceClient{cc}
+}
+
+var cirrusConfigurationEvaluatorServiceEvaluateConfigStreamDesc = &grpc.StreamDesc{
+	StreamName: "EvaluateConfig",
+}
+
+func (c *cirrusConfigurationEvaluatorServiceClient) EvaluateConfig(ctx context.Context, in *EvaluateConfigRequest, opts ...grpc.CallOption) (*EvaluateConfigResponse, error) {
+	out := new(EvaluateConfigResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/EvaluateConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CirrusConfigurationEvaluatorServiceService is the service API for CirrusConfigurationEvaluatorService service.
+// Fields should be assigned to their respective handler implementations only before
+// RegisterCirrusConfigurationEvaluatorServiceService is called.  Any unassigned fields will result in the
+// handler for that method returning an Unimplemented error.
+type CirrusConfigurationEvaluatorServiceService struct {
+	EvaluateConfig func(context.Context, *EvaluateConfigRequest) (*EvaluateConfigResponse, error)
+}
+
+func (s *CirrusConfigurationEvaluatorServiceService) evaluateConfig(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EvaluateConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return s.EvaluateConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     s,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/EvaluateConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.EvaluateConfig(ctx, req.(*EvaluateConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// RegisterCirrusConfigurationEvaluatorServiceService registers a service implementation with a gRPC server.
+func RegisterCirrusConfigurationEvaluatorServiceService(s grpc.ServiceRegistrar, srv *CirrusConfigurationEvaluatorServiceService) {
+	srvCopy := *srv
+	if srvCopy.EvaluateConfig == nil {
+		srvCopy.EvaluateConfig = func(context.Context, *EvaluateConfigRequest) (*EvaluateConfigResponse, error) {
+			return nil, status.Errorf(codes.Unimplemented, "method EvaluateConfig not implemented")
+		}
+	}
+	sd := grpc.ServiceDesc{
+		ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService",
+		Methods: []grpc.MethodDesc{
+			{
+				MethodName: "EvaluateConfig",
+				Handler:    srvCopy.evaluateConfig,
+			},
+		},
+		Streams:  []grpc.StreamDesc{},
+		Metadata: "cirrus_ci_service.proto",
+	}
+
+	s.RegisterService(&sd, nil)
+}
+
 // CirrusCIServiceClient is the client API for CirrusCIService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
@@ -914,124 +991,4 @@ func RegisterCirrusCIServiceService(s grpc.ServiceRegistrar, srv *CirrusCIServic
 	}
 
 	s.RegisterService(&sd, nil)
-}
-
-// NewCirrusCIServiceService creates a new CirrusCIServiceService containing the
-// implemented methods of the CirrusCIService service in s.  Any unimplemented
-// methods will result in the gRPC server returning an UNIMPLEMENTED status to the client.
-// This includes situations where the method handler is misspelled or has the wrong
-// signature.  For this reason, this function should be used with great care and
-// is not recommended to be used by most users.
-func NewCirrusCIServiceService(s interface{}) *CirrusCIServiceService {
-	ns := &CirrusCIServiceService{}
-	if h, ok := s.(interface {
-		InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
-	}); ok {
-		ns.InitialCommands = h.InitialCommands
-	}
-	if h, ok := s.(interface {
-		ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
-	}); ok {
-		ns.ReportSingleCommand = h.ReportSingleCommand
-	}
-	if h, ok := s.(interface {
-		ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportAnnotations = h.ReportAnnotations
-	}
-	if h, ok := s.(interface {
-		StreamLogs(CirrusCIService_StreamLogsServer) error
-	}); ok {
-		ns.StreamLogs = h.StreamLogs
-	}
-	if h, ok := s.(interface {
-		SaveLogs(CirrusCIService_SaveLogsServer) error
-	}); ok {
-		ns.SaveLogs = h.SaveLogs
-	}
-	if h, ok := s.(interface {
-		UploadCache(CirrusCIService_UploadCacheServer) error
-	}); ok {
-		ns.UploadCache = h.UploadCache
-	}
-	if h, ok := s.(interface {
-		UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
-	}); ok {
-		ns.UploadArtifacts = h.UploadArtifacts
-	}
-	if h, ok := s.(interface {
-		DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
-	}); ok {
-		ns.DownloadCache = h.DownloadCache
-	}
-	if h, ok := s.(interface {
-		CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
-	}); ok {
-		ns.CacheInfo = h.CacheInfo
-	}
-	if h, ok := s.(interface {
-		Ping(context.Context, *empty.Empty) (*empty.Empty, error)
-	}); ok {
-		ns.Ping = h.Ping
-	}
-	if h, ok := s.(interface {
-		Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	}); ok {
-		ns.Heartbeat = h.Heartbeat
-	}
-	if h, ok := s.(interface {
-		ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportStopHook = h.ReportStopHook
-	}
-	if h, ok := s.(interface {
-		ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportAgentError = h.ReportAgentError
-	}
-	if h, ok := s.(interface {
-		ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportAgentWarning = h.ReportAgentWarning
-	}
-	if h, ok := s.(interface {
-		ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportAgentSignal = h.ReportAgentSignal
-	}
-	if h, ok := s.(interface {
-		ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
-	}); ok {
-		ns.ReportAgentLogs = h.ReportAgentLogs
-	}
-	if h, ok := s.(interface {
-		ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
-	}); ok {
-		ns.ParseConfig = h.ParseConfig
-	}
-	return ns
-}
-
-// UnstableCirrusCIServiceService is the service API for CirrusCIService service.
-// New methods may be added to this interface if they are added to the service
-// definition, which is not a backward-compatible change.  For this reason,
-// use of this type is not recommended.
-type UnstableCirrusCIServiceService interface {
-	InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
-	ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
-	ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
-	StreamLogs(CirrusCIService_StreamLogsServer) error
-	SaveLogs(CirrusCIService_SaveLogsServer) error
-	UploadCache(CirrusCIService_UploadCacheServer) error
-	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
-	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
-	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
-	Ping(context.Context, *empty.Empty) (*empty.Empty, error)
-	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
-	ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
-	ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
-	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
-	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 }
