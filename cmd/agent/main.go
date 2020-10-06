@@ -10,6 +10,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
+	"github.com/cirruslabs/cirrus-ci-agent/pkg/connector"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -26,6 +27,7 @@ import (
 )
 
 func main() {
+	apiListenPtr := flag.String("api-listen", "", "enable connector mode and wait for the incoming connection instead")
 	apiEndpointPtr := flag.String("api-endpoint", "https://grpc.cirrus-ci.com:443", "GRPC endpoint URL")
 	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")
@@ -48,6 +50,28 @@ func main() {
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
+
+	if *apiListenPtr != "" {
+		// Ensure that connector will be terminated at the end of main()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Launch the connector
+		_, fakeRPCServer, _, connectorErrChan := connector.FemaleToFemale(ctx, *apiListenPtr, "localhost:0")
+
+		// Re-route the RPC endpoint to use the connector instead
+		*apiEndpointPtr = "http://" + fakeRPCServer
+
+		// Log connector errors
+		go func() {
+			select {
+			case connectorErr := <-connectorErrChan:
+				log.Printf("Connector failed: %v\n", connectorErr)
+			case <-ctx.Done():
+				// we're terminating; do nothing and just return
+			}
+		}()
+	}
 
 	var conn *grpc.ClientConn
 	for {
