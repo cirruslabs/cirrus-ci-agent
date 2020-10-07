@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -54,11 +55,13 @@ func MaleToMale(ctx context.Context, leftAddr string, rightAddr string) (doneCha
 		go func() {
 			defer wg.Done()
 
-			_, err := io.Copy(leftConn, rightConn)
+			n, err := io.Copy(leftConn, rightConn)
 			if err != nil {
 				leftErrChan <- err
 				return
 			}
+
+			fmt.Printf("[+] copied %d bytes to leftConn\n", n)
 		}()
 
 		// Right handler
@@ -66,11 +69,13 @@ func MaleToMale(ctx context.Context, leftAddr string, rightAddr string) (doneCha
 		go func() {
 			defer wg.Done()
 
-			_, err := io.Copy(rightConn, leftConn)
+			n, err := io.Copy(rightConn, leftConn)
 			if err != nil {
 				rightErrChan <- err
 				return
 			}
+
+			fmt.Printf("[+] copied %d bytes to rightConn\n", n)
 
 			// This is a way to interrupt io.Copy() in the goroutine above
 			err = rightConn.(*net.TCPConn).CloseWrite()
@@ -81,6 +86,8 @@ func MaleToMale(ctx context.Context, leftAddr string, rightAddr string) (doneCha
 		}()
 
 		wg.Wait()
+
+		fmt.Println("[+] handlers finished")
 
 		// Propagate handler errors (if any)
 		select {
