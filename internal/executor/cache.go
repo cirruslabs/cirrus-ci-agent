@@ -120,6 +120,7 @@ func tryToDownloadAndPopulateCache(
 		return false, false
 	}
 	_, _ = logUploader.Write([]byte(fmt.Sprintf("\nCache hit for %s!", cacheKey)))
+	unarchiveStartTime := time.Now()
 	err = unarchiveCache(cacheFile, folderToCache)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to unarchive %s cache because of %s! Retrying...\n", commandName, err)))
@@ -143,6 +144,11 @@ func tryToDownloadAndPopulateCache(
 			os.RemoveAll(folderToCache)
 			EnsureFolderExists(folderToCache)
 			return false, true
+		}
+	} else {
+		unarchiveDuration := time.Now().Sub(unarchiveStartTime)
+		if unarchiveDuration > 10*time.Second {
+			logUploader.Write([]byte(fmt.Sprintf("\nUnarchived %s cache entry in %f seconds!\n", commandName, unarchiveDuration.Seconds())))
 		}
 	}
 	return true, true
@@ -168,6 +174,7 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	httpClient := http.Client{
 		Timeout: 5 * time.Minute,
 	}
+	downloadStartTime := time.Now()
 	resp, err := httpClient.Get(fmt.Sprintf("http://%s/%s", cacheHost, cacheKey))
 	if err != nil {
 		return nil, err
@@ -187,12 +194,13 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	if err != nil {
 		return nil, err
 	}
+	downloadDuration := time.Now().Sub(downloadStartTime)
 	if bytesDownloaded < 1024 {
 		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %d bytes.", bytesDownloaded)))
 	} else if bytesDownloaded < 1024*1024 {
 		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %dKb.", bytesDownloaded/1024)))
 	} else {
-		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %dMb.", bytesDownloaded/1024/1024)))
+		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %dMb in %fs.", bytesDownloaded/1024/1024, downloadDuration.Seconds())))
 	}
 	return cacheFile, nil
 }
