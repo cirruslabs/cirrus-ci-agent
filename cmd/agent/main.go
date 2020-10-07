@@ -10,7 +10,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
-	"github.com/cirruslabs/cirrus-ci-agent/pkg/connector"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -18,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -51,39 +51,52 @@ func main() {
 	log.SetOutput(multiWriter)
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
 
-	if *apiListenPtr != "" {
-		// Ensure that connector will be terminated at the end of main()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		// Launch the connector
-		_, fakeRPCServer, _, connectorErrChan := connector.FemaleToFemale(ctx, *apiListenPtr, "localhost:0")
-
-		// Re-route the RPC endpoint to use the connector instead
-		*apiEndpointPtr = "http://" + fakeRPCServer
-
-		// Log connector errors
-		go func() {
-			select {
-			case connectorErr := <-connectorErrChan:
-				log.Printf("Connector failed: %v\n", connectorErr)
-			case <-ctx.Done():
-				// we're terminating; do nothing and just return
-			}
-		}()
-	}
-
 	var conn *grpc.ClientConn
-	for {
-		newConnection, err := dialWithTimeout(*apiEndpointPtr)
-		if err == nil {
-			conn = newConnection
-			log.Printf("Connected!\n")
-			break
+
+	if *apiListenPtr != "" {
+		lis, err := net.Listen("tcp", *apiListenPtr)
+		if err != nil {
+			log.Printf("Connector mode failed to listen for the incoming connections: %v\n", err)
+			os.Exit(1)
 		}
-		log.Printf("Failed to open a connection: %v\n", err)
-		time.Sleep(1 * time.Second)
+		defer lis.Close()
+
+		for {
+			cliConn, err := lis.Accept()
+			if err != nil {
+				log.Printf("Connector mode failed to accept incoming connection: %v\n", err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			conn, err = grpc.Dial(
+				// The port here doesn't really matter
+				":1234",
+				grpc.WithInsecure(),
+				grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+					return cliConn, nil
+				}),
+			)
+			if err == nil {
+				log.Printf("Connector mode successfully connected!\n")
+				break
+			}
+			log.Printf("Connector mode failed to dial on the accepted connection: %v\n", err)
+			time.Sleep(1 * time.Second)
+		}
+	} else {
+		for {
+			newConnection, err := dialWithTimeout(*apiEndpointPtr)
+			if err == nil {
+				conn = newConnection
+				log.Printf("Connected!\n")
+				break
+			}
+			log.Printf("Failed to open a connection: %v\n", err)
+			time.Sleep(1 * time.Second)
+		}
 	}
+
 	defer conn.Close()
 
 	client.InitClient(conn)
