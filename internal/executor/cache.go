@@ -146,7 +146,7 @@ func tryToDownloadAndPopulateCache(
 			return false, true
 		}
 	} else {
-		unarchiveDuration := time.Now().Sub(unarchiveStartTime)
+		unarchiveDuration := time.Since(unarchiveStartTime)
 		if unarchiveDuration > 10*time.Second {
 			logUploader.Write([]byte(fmt.Sprintf("\nUnarchived %s cache entry in %f seconds!\n", commandName, unarchiveDuration.Seconds())))
 		}
@@ -194,7 +194,7 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	if err != nil {
 		return nil, err
 	}
-	downloadDuration := time.Now().Sub(downloadStartTime)
+	downloadDuration := time.Since(downloadStartTime)
 	if bytesDownloaded < 1024 {
 		logUploader.Write([]byte(fmt.Sprintf("\nDownloaded %d bytes.", bytesDownloaded)))
 	} else if bytesDownloaded < 1024*1024 {
