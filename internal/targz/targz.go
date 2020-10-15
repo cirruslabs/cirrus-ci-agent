@@ -3,7 +3,7 @@ package targz
 import (
 	"archive/tar"
 	"bufio"
-	"compress/gzip"
+	gzip "github.com/klauspost/pgzip"
 	"fmt"
 	"io"
 	"os"

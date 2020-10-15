@@ -11,6 +11,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/joshdk/go-junit v0.0.0-20200702055522-6efcf4050909 // indirect
+	github.com/klauspost/compress v1.11.1 // indirect
+	github.com/klauspost/pgzip v1.2.5
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee // indirect
