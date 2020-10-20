@@ -142,7 +142,6 @@ func tryToDownloadAndPopulateCache(
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed again to unarchive %s cache because of %s!\n", commandName, err)))
 			logUploader.Write([]byte(fmt.Sprintf("\nTreating this failure as a cache miss but won't try to re-upload! Cleaning up %s...\n", folderToCache)))
 			os.RemoveAll(folderToCache)
-			EnsureFolderExists(folderToCache)
 			return false, true
 		}
 	} else {
