@@ -60,8 +60,11 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	folderToCache := ExpandText(instruction.Folder, custom_env)
 
-	if !filepath.IsAbs(folderToCache) {
-		folderToCache = filepath.Join(custom_env["CIRRUS_WORKING_DIR"], folderToCache)
+	folderToCache, err = filepath.Abs(folderToCache)
+	if err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to compute absolute path for cache folder '%s': %s\n",
+			folderToCache, err)))
+		return false
 	}
 
 	var glob string
