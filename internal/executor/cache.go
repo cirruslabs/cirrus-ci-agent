@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"fmt"
+	"github.com/bmatcuk/doublestar"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
@@ -21,6 +22,7 @@ type Cache struct {
 	Key            string
 	BaseFolder     string
 	FoldersToCache []string
+	Glob           string
 	FileHasher     *hasher.Hasher
 	SkipUpload     bool
 	CacheAvailable bool
@@ -62,8 +64,43 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 		folderToCache = filepath.Join(custom_env["CIRRUS_WORKING_DIR"], folderToCache)
 	}
 
+	var glob string
 	baseFolder := folderToCache
 	foldersToCache := []string{folderToCache}
+
+	if pathLooksLikeGlob(folderToCache) {
+		glob = folderToCache
+
+		// Sanity check
+		//
+		// When glob is used, the semantics are clearly defined only when
+		// it's matches are scoped to the current working directory,
+		// because otherwise it's impossible to make paths inside of the
+		// archive portable (i.e. independent on the location of the working
+		// directory).
+		//
+		// Note: this is not a security stop-gap but merely a hint to the users
+		// that they are doing something potentially wrong.
+		terminatedWorkingDir := custom_env["CIRRUS_WORKING_DIR"]
+
+		if !strings.HasSuffix(terminatedWorkingDir, string(os.PathSeparator)) {
+			terminatedWorkingDir += string(os.PathSeparator)
+		}
+
+		if !strings.HasPrefix(glob, terminatedWorkingDir) {
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s' that points above the current working directory %s\n",
+				glob, terminatedWorkingDir)))
+			return false
+		}
+
+		// Expand the glob so we can calculate the hashes for directories that already exist
+		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
+		foldersToCache, err = doublestar.Glob(glob)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", glob, err)))
+			return false
+		}
+	}
 
 	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
 
@@ -96,12 +133,17 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 			Key:            cacheKey,
 			BaseFolder:     baseFolder,
 			FoldersToCache: foldersToCache,
+			Glob:           glob,
 			FileHasher:     fileHasher,
 			SkipUpload:     cacheAvailable && !instruction.ReuploadOnChanges,
 			CacheAvailable: cacheAvailable,
 		},
 	)
 	return true
+}
+
+func pathLooksLikeGlob(path string) bool {
+	return strings.Contains(path, "**")
 }
 
 func tryToDownloadAndPopulateCache(
@@ -225,6 +267,15 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	if cache.SkipUpload {
 		logUploader.Write([]byte(fmt.Sprintf("Skipping change detection for %s cache!", instruction.CacheName)))
 		return true
+	}
+
+	if cache.Glob != "" {
+		// Expand the glob again to capture the folders that were created after the first expansion in DownloadCache()
+		cache.FoldersToCache, err = doublestar.Glob(cache.Glob)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", cache.Glob, err)))
+			return false
+		}
 	}
 
 	commaSeparatedFolders := strings.Join(cache.FoldersToCache, ", ")
