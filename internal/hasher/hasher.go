@@ -3,17 +3,85 @@ package hasher
 import (
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func FolderHash(folderPath string) (string, map[string]string, error) {
-	folderHash := sha256.New()
-	fileHashes := make(map[string]string)
+type DiffEntry struct {
+	Type DiffEntryType
+	Path string
+}
+
+type DiffEntryType int
+
+const (
+	Created DiffEntryType = iota
+	Modified
+	Deleted
+)
+
+func (det DiffEntryType) String() string {
+	switch det {
+	case Created:
+		return "created"
+	case Modified:
+		return "modified"
+	case Deleted:
+		return "deleted"
+	default:
+		return "unknown"
+	}
+}
+
+type Hasher struct {
+	globalHash hash.Hash
+	fileHashes map[string]string
+}
+
+func New() *Hasher {
+	return &Hasher{
+		globalHash: sha256.New(),
+		fileHashes: make(map[string]string),
+	}
+}
+
+func (hasher *Hasher) SHA() string {
+	digest := hasher.globalHash.Sum(nil)
+	return fmt.Sprintf("%x", digest)
+}
+
+func (hasher *Hasher) Len() int {
+	return len(hasher.fileHashes)
+}
+
+func (hasher *Hasher) DiffWithNewer(newer *Hasher) []DiffEntry {
+	var result []DiffEntry
+
+	for newPath, newHash := range newer.fileHashes {
+		oldHash, ok := hasher.fileHashes[newPath]
+		if !ok {
+			result = append(result, DiffEntry{Type: Created, Path: newPath})
+		} else if newHash != oldHash {
+			result = append(result, DiffEntry{Type: Modified, Path: newPath})
+		}
+	}
+
+	for oldPath := range hasher.fileHashes {
+		_, ok := newer.fileHashes[oldPath]
+		if !ok {
+			result = append(result, DiffEntry{Type: Deleted, Path: oldPath})
+		}
+	}
+
+	return result
+}
+
+func (hasher *Hasher) AddFolder(folderPath string) error {
 	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
-		return "", fileHashes, nil
+		return nil
 	}
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -42,14 +110,15 @@ func FolderHash(folderPath string) (string, map[string]string, error) {
 		if err != nil {
 			return err
 		}
-		fileHashes[relativePath] = fmt.Sprintf("%x", fileHash)
-		_, err = folderHash.Write(fileHash)
+		hasher.fileHashes[relativePath] = fmt.Sprintf("%x", fileHash)
+		_, err = hasher.globalHash.Write(fileHash)
 		return err
 	})
 	if err != nil {
-		return "", fileHashes, err
+		return err
 	}
-	return fmt.Sprintf("%x", folderHash.Sum(nil)), fileHashes, nil
+
+	return nil
 }
 
 func FileHash(path string) ([]byte, error) {

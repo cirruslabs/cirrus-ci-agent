@@ -19,8 +19,7 @@ type Cache struct {
 	Name           string
 	Key            string
 	Folder         string
-	FolderHash     string
-	FilesHashes    map[string]string
+	FileHasher     *hasher.Hasher
 	SkipUpload     bool
 	CacheAvailable bool
 }
@@ -63,11 +62,9 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, folderToCache)
 
-	var folderToCacheHash = ""
-	var folderToCacheFileHashes = make(map[string]string)
+	fileHasher := hasher.New()
 	if cachePopulated {
-		folderToCacheHash, folderToCacheFileHashes, err = hasher.FolderHash(folderToCache)
-		if err != nil {
+		if err := fileHasher.AddFolder(folderToCache); err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
 		}
 	}
@@ -91,8 +88,7 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 			Name:           commandName,
 			Key:            cacheKey,
 			Folder:         folderToCache,
-			FolderHash:     folderToCacheHash,
-			FilesHashes:    folderToCacheFileHashes,
+			FileHasher:     fileHasher,
 			SkipUpload:     cacheAvailable && !instruction.ReuploadOnChanges,
 			CacheAvailable: cacheAvailable,
 		},
@@ -228,35 +224,25 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 		return true
 	}
 
-	folderToCacheHash, folderToCacheFileHashes, err := hasher.FolderHash(cache.Folder)
-	if err != nil {
+	fileHasher := hasher.New()
+	if err := fileHasher.AddFolder(cache.Folder); err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", cache.Folder, err)))
 		logUploader.Write([]byte(fmt.Sprintf("Skipping uploading of %s!", cache.Folder)))
 		return true
 	}
 
-	logUploader.Write([]byte(fmt.Sprintf("SHA for %s is '%s'\n", cache.Folder, folderToCacheHash)))
+	logUploader.Write([]byte(fmt.Sprintf("SHA for %s is '%s'\n", cache.Folder, fileHasher.SHA())))
 
-	if folderToCacheHash == cache.FolderHash {
+	if fileHasher.SHA() == cache.FileHasher.SHA() {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s hasn't changed! Skipping uploading...", cache.Name)))
 		return true
 	}
-	if cache.FolderHash != "" {
+	if cache.FileHasher.Len() != 0 {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s has changed!", cache.Name)))
 		logUploader.Write([]byte(fmt.Sprintf("\nList of changes for %s:", cache.Folder)))
-		for endFilePath, endFileHash := range folderToCacheFileHashes {
-			startFileHash, ok := cache.FilesHashes[endFilePath]
-			if !ok {
-				logUploader.Write([]byte(fmt.Sprintf("\ncreated: %s", endFilePath)))
-			} else if endFileHash != startFileHash {
-				logUploader.Write([]byte(fmt.Sprintf("\nmodified: %s", endFilePath)))
-			}
-		}
-		for startFilePath := range cache.FilesHashes {
-			_, ok := folderToCacheFileHashes[startFilePath]
-			if !ok {
-				logUploader.Write([]byte(fmt.Sprintf("\ndeleted: %s", startFilePath)))
-			}
+
+		for _, diffEntry := range cache.FileHasher.DiffWithNewer(fileHasher) {
+			logUploader.Write([]byte(fmt.Sprintf("\n%s: %s", diffEntry.Type.String(), diffEntry.Path)))
 		}
 	}
 
