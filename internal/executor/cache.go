@@ -143,7 +143,7 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 }
 
 func pathLooksLikeGlob(path string) bool {
-	return strings.Contains(path, "**")
+	return strings.Contains(path, "*")
 }
 
 func tryToDownloadAndPopulateCache(
