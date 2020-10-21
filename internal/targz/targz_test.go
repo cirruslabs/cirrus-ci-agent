@@ -115,11 +115,38 @@ func TestArchive(t *testing.T) {
 			dest := filepath.Join(testutil.TempDir(t), "archive.tar.gz")
 
 			// Create archive
-			if err := targz.Archive(folderPath, dest); err != nil {
+			if err := targz.Archive(folderPath, []string{folderPath}, dest); err != nil {
 				t.Fatal(err)
 			}
 
 			assert.Equal(t, testCase.Expected, TarGzContentsHelper(t, dest))
 		})
 	}
+}
+
+func TestArchiveMultiple(t *testing.T) {
+	// Create a base folder
+	baseFolder := testutil.TempDir(t)
+
+	// Create sub-folders
+	subFolder1 := filepath.Join(baseFolder, "left", "hot")
+	os.MkdirAll(subFolder1, 0700)
+	subFolder2 := filepath.Join(baseFolder, "right", "cold")
+	os.MkdirAll(subFolder2, 0700)
+
+	ioutil.WriteFile(filepath.Join(baseFolder, "should-not-be-included.txt"), []byte("doesn't matter"), 0600)
+
+	// Make up a place where the archive will be stored
+	dest := filepath.Join(testutil.TempDir(t), "archive.tar.gz")
+
+	// Create archive
+	if err := targz.Archive(baseFolder, []string{subFolder1, subFolder2}, dest); err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []PartialTarHeader{
+		{tar.TypeDir, "/left/hot", "", []byte{}},
+		{tar.TypeDir, "/right/cold", "", []byte{}},
+	}
+	assert.Equal(t, expected, TarGzContentsHelper(t, dest))
 }

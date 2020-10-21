@@ -249,7 +249,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	cacheFile, _ := ioutil.TempFile(os.TempDir(), cache.Key)
 	defer os.Remove(cacheFile.Name())
 
-	err = targz.Archive(cache.Folder, cacheFile.Name())
+	err = targz.Archive(cache.Folder, []string{cache.Folder}, cacheFile.Name())
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to tar caches for %s with %s!", commandName, err)))
 		return false

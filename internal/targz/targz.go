@@ -15,7 +15,7 @@ import (
 
 const DEFAULT_BUFFER_SIZE = 1024 * 1024
 
-func Archive(folderPath string, dest string) error {
+func Archive(baseFolder string, folderPaths []string, dest string) error {
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("error creating %s: %v", dest, err)
@@ -30,6 +30,16 @@ func Archive(folderPath string, dest string) error {
 
 	buffer := make([]byte, DEFAULT_BUFFER_SIZE)
 
+	for _, folderPath := range folderPaths {
+		if err := archiveSingleFolder(baseFolder, folderPath, tarWriter, buffer); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func archiveSingleFolder(baseFolder string, folderPath string, tarWriter *tar.Writer, buffer []byte) error {
 	return filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("error walking folder %s: %v", path, err)
@@ -39,7 +49,7 @@ func Archive(folderPath string, dest string) error {
 		if err != nil {
 			return fmt.Errorf("error  making header %s: %v", path, err)
 		}
-		header.Name = strings.TrimPrefix(path, folderPath)
+		header.Name = strings.TrimPrefix(path, baseFolder)
 		unixEpoch := time.Unix(0, 0)
 		header.ModTime = unixEpoch
 		header.AccessTime = unixEpoch
@@ -48,7 +58,7 @@ func Archive(folderPath string, dest string) error {
 		if header.Typeflag == tar.TypeSymlink {
 			linkDest, _ := os.Readlink(path)
 			if filepath.IsAbs(linkDest) {
-				linkDest, _ = filepath.Rel(folderPath, linkDest)
+				linkDest, _ = filepath.Rel(baseFolder, linkDest)
 			}
 			header.Linkname = linkDest
 		}
