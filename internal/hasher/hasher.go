@@ -90,7 +90,7 @@ func (hasher *Hasher) AddFolder(folderPath string) error {
 		if info.IsDir() {
 			return nil
 		}
-		fileHash, err := FileHash(path)
+		fileHash, err := fileHash(path)
 		// symlink can still be a directory
 		if err != nil && strings.Contains(err.Error(), "is a directory") {
 			return nil
@@ -121,7 +121,7 @@ func (hasher *Hasher) AddFolder(folderPath string) error {
 	return nil
 }
 
-func FileHash(path string) ([]byte, error) {
+func fileHash(path string) ([]byte, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
