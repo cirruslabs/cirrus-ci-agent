@@ -12,13 +12,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type Cache struct {
 	Name           string
 	Key            string
-	Folder         string
+	BaseFolder     string
+	FoldersToCache []string
 	FileHasher     *hasher.Hasher
 	SkipUpload     bool
 	CacheAvailable bool
@@ -60,12 +62,17 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 		folderToCache = filepath.Join(custom_env["CIRRUS_WORKING_DIR"], folderToCache)
 	}
 
-	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, folderToCache)
+	baseFolder := folderToCache
+	foldersToCache := []string{folderToCache}
+
+	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
 
 	fileHasher := hasher.New()
 	if cachePopulated {
-		if err := fileHasher.AddFolder(folderToCache); err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
+		for _, folderToCache := range foldersToCache {
+			if err := fileHasher.AddFolder(folderToCache); err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
+			}
 		}
 	}
 
@@ -87,7 +94,8 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 		Cache{
 			Name:           commandName,
 			Key:            cacheKey,
-			Folder:         folderToCache,
+			BaseFolder:     baseFolder,
+			FoldersToCache: foldersToCache,
 			FileHasher:     fileHasher,
 			SkipUpload:     cacheAvailable && !instruction.ReuploadOnChanges,
 			CacheAvailable: cacheAvailable,
@@ -219,19 +227,23 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 		return true
 	}
 
-	if isDirEmpty(cache.Folder) {
-		logUploader.Write([]byte(fmt.Sprintf("Folder %s is empty! Skipping uploading ...", cache.Folder)))
+	commaSeparatedFolders := strings.Join(cache.FoldersToCache, ", ")
+
+	if allDirsEmpty(cache.FoldersToCache) {
+		logUploader.Write([]byte(fmt.Sprintf("All cache folders (%s) are empty! Skipping uploading ...", commaSeparatedFolders)))
 		return true
 	}
 
 	fileHasher := hasher.New()
-	if err := fileHasher.AddFolder(cache.Folder); err != nil {
-		logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", cache.Folder, err)))
-		logUploader.Write([]byte(fmt.Sprintf("Skipping uploading of %s!", cache.Folder)))
-		return true
+	for _, folder := range cache.FoldersToCache {
+		if err := fileHasher.AddFolder(folder); err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", folder, err)))
+			logUploader.Write([]byte("Skipping uploading of cache!"))
+			return true
+		}
 	}
 
-	logUploader.Write([]byte(fmt.Sprintf("SHA for %s is '%s'\n", cache.Folder, fileHasher.SHA())))
+	logUploader.Write([]byte(fmt.Sprintf("SHA for cache folders (%s) is '%s'\n", commaSeparatedFolders, fileHasher.SHA())))
 
 	if fileHasher.SHA() == cache.FileHasher.SHA() {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s hasn't changed! Skipping uploading...", cache.Name)))
@@ -239,7 +251,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	}
 	if cache.FileHasher.Len() != 0 {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s has changed!", cache.Name)))
-		logUploader.Write([]byte(fmt.Sprintf("\nList of changes for %s:", cache.Folder)))
+		logUploader.Write([]byte(fmt.Sprintf("\nList of changes for cache folders (%s):", commaSeparatedFolders)))
 
 		for _, diffEntry := range cache.FileHasher.DiffWithNewer(fileHasher) {
 			logUploader.Write([]byte(fmt.Sprintf("\n%s: %s", diffEntry.Type.String(), diffEntry.Path)))
@@ -249,7 +261,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	cacheFile, _ := ioutil.TempFile(os.TempDir(), cache.Key)
 	defer os.Remove(cacheFile.Name())
 
-	err = targz.Archive(cache.Folder, []string{cache.Folder}, cacheFile.Name())
+	err = targz.Archive(cache.BaseFolder, cache.FoldersToCache, cacheFile.Name())
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to tar caches for %s with %s!", commandName, err)))
 		return false
