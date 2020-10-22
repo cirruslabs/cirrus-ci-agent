@@ -85,6 +85,7 @@ func (executor *Executor) RunBuild() {
 
 	environment := getExpandedScriptEnvironment(executor, response.Environment)
 
+	EnsureFolderExists(environment["CIRRUS_WORKING_DIR"])
 	os.Chdir(environment["CIRRUS_WORKING_DIR"])
 
 	commands := response.Commands
