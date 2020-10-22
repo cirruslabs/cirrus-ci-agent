@@ -36,6 +36,16 @@ func EnsureFolderExists(path string) {
 	}
 }
 
+func allDirsEmpty(paths []string) bool {
+	for _, path := range paths {
+		if !isDirEmpty(path) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func isDirEmpty(path string) bool {
 	files, err := ioutil.ReadDir(path)
 	if os.IsNotExist(err) {

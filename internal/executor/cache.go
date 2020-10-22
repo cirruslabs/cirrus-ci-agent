@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"fmt"
+	"github.com/bmatcuk/doublestar"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
@@ -12,15 +13,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type Cache struct {
 	Name           string
 	Key            string
-	Folder         string
-	FolderHash     string
-	FilesHashes    map[string]string
+	BaseFolder     string
+	FoldersToCache []string
+	Glob           string
+	FileHasher     *hasher.Hasher
 	SkipUpload     bool
 	CacheAvailable bool
 }
@@ -57,18 +60,59 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	folderToCache := ExpandText(instruction.Folder, custom_env)
 
-	if !filepath.IsAbs(folderToCache) {
-		folderToCache = filepath.Join(custom_env["CIRRUS_WORKING_DIR"], folderToCache)
+	folderToCache, err = filepath.Abs(folderToCache)
+	if err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to compute absolute path for cache folder '%s': %s\n",
+			folderToCache, err)))
+		return false
 	}
 
-	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, folderToCache)
+	var glob string
+	baseFolder := folderToCache
+	foldersToCache := []string{folderToCache}
 
-	var folderToCacheHash = ""
-	var folderToCacheFileHashes = make(map[string]string)
-	if cachePopulated {
-		folderToCacheHash, folderToCacheFileHashes, err = hasher.FolderHash(folderToCache)
+	if pathLooksLikeGlob(folderToCache) {
+		glob = folderToCache
+
+		// Sanity check
+		//
+		// When glob is used, the semantics are clearly defined only when
+		// it's matches are scoped to the current working directory,
+		// because otherwise it's impossible to make paths inside of the
+		// archive portable (i.e. independent on the location of the working
+		// directory).
+		//
+		// Note: this is not a security stop-gap but merely a hint to the users
+		// that they are doing something potentially wrong.
+		terminatedWorkingDir := custom_env["CIRRUS_WORKING_DIR"]
+
+		if !strings.HasSuffix(terminatedWorkingDir, string(os.PathSeparator)) {
+			terminatedWorkingDir += string(os.PathSeparator)
+		}
+
+		if !strings.HasPrefix(glob, terminatedWorkingDir) {
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s' that points above the current working directory %s\n",
+				glob, terminatedWorkingDir)))
+			return false
+		}
+
+		// Expand the glob so we can calculate the hashes for directories that already exist
+		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
+		foldersToCache, err = doublestar.Glob(glob)
 		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", glob, err)))
+			return false
+		}
+	}
+
+	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
+
+	fileHasher := hasher.New()
+	if cachePopulated {
+		for _, folderToCache := range foldersToCache {
+			if err := fileHasher.AddFolder(folderToCache); err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
+			}
 		}
 	}
 
@@ -90,14 +134,19 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 		Cache{
 			Name:           commandName,
 			Key:            cacheKey,
-			Folder:         folderToCache,
-			FolderHash:     folderToCacheHash,
-			FilesHashes:    folderToCacheFileHashes,
+			BaseFolder:     baseFolder,
+			FoldersToCache: foldersToCache,
+			Glob:           glob,
+			FileHasher:     fileHasher,
 			SkipUpload:     cacheAvailable && !instruction.ReuploadOnChanges,
 			CacheAvailable: cacheAvailable,
 		},
 	)
 	return true
+}
+
+func pathLooksLikeGlob(path string) bool {
+	return strings.Contains(path, "*")
 }
 
 func tryToDownloadAndPopulateCache(
@@ -142,7 +191,6 @@ func tryToDownloadAndPopulateCache(
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed again to unarchive %s cache because of %s!\n", commandName, err)))
 			logUploader.Write([]byte(fmt.Sprintf("\nTreating this failure as a cache miss but won't try to re-upload! Cleaning up %s...\n", folderToCache)))
 			os.RemoveAll(folderToCache)
-			EnsureFolderExists(folderToCache)
 			return false, true
 		}
 	} else {
@@ -224,47 +272,50 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 		return true
 	}
 
-	if isDirEmpty(cache.Folder) {
-		logUploader.Write([]byte(fmt.Sprintf("Folder %s is empty! Skipping uploading ...", cache.Folder)))
+	if cache.Glob != "" {
+		// Expand the glob again to capture the folders that were created after the first expansion in DownloadCache()
+		cache.FoldersToCache, err = doublestar.Glob(cache.Glob)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", cache.Glob, err)))
+			return false
+		}
+	}
+
+	commaSeparatedFolders := strings.Join(cache.FoldersToCache, ", ")
+
+	if allDirsEmpty(cache.FoldersToCache) {
+		logUploader.Write([]byte(fmt.Sprintf("All cache folders (%s) are empty! Skipping uploading ...", commaSeparatedFolders)))
 		return true
 	}
 
-	folderToCacheHash, folderToCacheFileHashes, err := hasher.FolderHash(cache.Folder)
-	if err != nil {
-		logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", cache.Folder, err)))
-		logUploader.Write([]byte(fmt.Sprintf("Skipping uploading of %s!", cache.Folder)))
-		return true
+	fileHasher := hasher.New()
+	for _, folder := range cache.FoldersToCache {
+		if err := fileHasher.AddFolder(folder); err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", folder, err)))
+			logUploader.Write([]byte("Skipping uploading of cache!"))
+			return true
+		}
 	}
 
-	logUploader.Write([]byte(fmt.Sprintf("SHA for %s is '%s'\n", cache.Folder, folderToCacheHash)))
+	logUploader.Write([]byte(fmt.Sprintf("SHA for cache folders (%s) is '%s'\n", commaSeparatedFolders, fileHasher.SHA())))
 
-	if folderToCacheHash == cache.FolderHash {
+	if fileHasher.SHA() == cache.FileHasher.SHA() {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s hasn't changed! Skipping uploading...", cache.Name)))
 		return true
 	}
-	if cache.FolderHash != "" {
+	if cache.FileHasher.Len() != 0 {
 		logUploader.Write([]byte(fmt.Sprintf("Cache %s has changed!", cache.Name)))
-		logUploader.Write([]byte(fmt.Sprintf("\nList of changes for %s:", cache.Folder)))
-		for endFilePath, endFileHash := range folderToCacheFileHashes {
-			startFileHash, ok := cache.FilesHashes[endFilePath]
-			if !ok {
-				logUploader.Write([]byte(fmt.Sprintf("\ncreated: %s", endFilePath)))
-			} else if endFileHash != startFileHash {
-				logUploader.Write([]byte(fmt.Sprintf("\nmodified: %s", endFilePath)))
-			}
-		}
-		for startFilePath := range cache.FilesHashes {
-			_, ok := folderToCacheFileHashes[startFilePath]
-			if !ok {
-				logUploader.Write([]byte(fmt.Sprintf("\ndeleted: %s", startFilePath)))
-			}
+		logUploader.Write([]byte(fmt.Sprintf("\nList of changes for cache folders (%s):", commaSeparatedFolders)))
+
+		for _, diffEntry := range cache.FileHasher.DiffWithNewer(fileHasher) {
+			logUploader.Write([]byte(fmt.Sprintf("\n%s: %s", diffEntry.Type.String(), diffEntry.Path)))
 		}
 	}
 
 	cacheFile, _ := ioutil.TempFile(os.TempDir(), cache.Key)
 	defer os.Remove(cacheFile.Name())
 
-	err = targz.Archive(cache.Folder, cacheFile.Name())
+	err = targz.Archive(cache.BaseFolder, cache.FoldersToCache, cacheFile.Name())
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to tar caches for %s with %s!", commandName, err)))
 		return false
