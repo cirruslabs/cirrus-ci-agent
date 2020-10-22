@@ -69,8 +69,8 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	var glob string
 	baseFolder := folderToCache
+	foldersToCache := []string{folderToCache}
 	if pathLooksLikeGlob(folderToCache) {
-		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
 		glob = folderToCache
 
 		// Sanity check
@@ -98,8 +98,8 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
 
-	foldersToCache := []string{folderToCache}
 	if glob != "" {
+		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
 		// Expand the glob so we can calculate the hashes for directories that already exist
 		foldersToCache, err = doublestar.Glob(glob)
 		if err != nil {
