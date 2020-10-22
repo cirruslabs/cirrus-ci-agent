@@ -85,8 +85,15 @@ func (executor *Executor) RunBuild() {
 
 	environment := getExpandedScriptEnvironment(executor, response.Environment)
 
-	EnsureFolderExists(environment["CIRRUS_WORKING_DIR"])
-	os.Chdir(environment["CIRRUS_WORKING_DIR"])
+	workingDir, ok := environment["CIRRUS_WORKING_DIR"]
+	if ok {
+		EnsureFolderExists(workingDir)
+		if err := os.Chdir(workingDir); err != nil {
+			log.Printf("Failed to change current working directory to '%s': %v", workingDir, err)
+		}
+	} else {
+		log.Printf("Not changing current working directory because CIRRUS_WORKING_DIR is not set")
+	}
 
 	commands := response.Commands
 
