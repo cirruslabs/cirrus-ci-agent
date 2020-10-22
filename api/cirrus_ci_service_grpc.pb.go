@@ -63,7 +63,7 @@ type UnsafeCirrusConfigurationEvaluatorServiceServer interface {
 	mustEmbedUnimplementedCirrusConfigurationEvaluatorServiceServer()
 }
 
-func RegisterCirrusConfigurationEvaluatorServiceServer(s *grpc.Server, srv CirrusConfigurationEvaluatorServiceServer) {
+func RegisterCirrusConfigurationEvaluatorServiceServer(s grpc.ServiceRegistrar, srv CirrusConfigurationEvaluatorServiceServer) {
 	s.RegisterService(&_CirrusConfigurationEvaluatorService_serviceDesc, srv)
 }
 
@@ -92,6 +92,207 @@ var _CirrusConfigurationEvaluatorService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EvaluateConfig",
 			Handler:    _CirrusConfigurationEvaluatorService_EvaluateConfig_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cirrus_ci_service.proto",
+}
+
+// CirrusWorkersServiceClient is the client API for CirrusWorkersService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CirrusWorkersServiceClient interface {
+	// Issued by the persistent worker after it starts
+	//
+	// Can be called without an authentication token.
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	// Periodically issued by the registered persistent worker to get new jobs and indicate that it's alive
+	Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollResponse, error)
+	// Issued by the registered persistent worker to indicate task status
+	TaskStarted(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
+	TaskStopped(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
+}
+
+type cirrusWorkersServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCirrusWorkersServiceClient(cc grpc.ClientConnInterface) CirrusWorkersServiceClient {
+	return &cirrusWorkersServiceClient{cc}
+}
+
+func (c *cirrusWorkersServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/Register", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusWorkersServiceClient) Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollResponse, error) {
+	out := new(PollResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/Poll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusWorkersServiceClient) TaskStarted(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskStarted", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusWorkersServiceClient) TaskStopped(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskStopped", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CirrusWorkersServiceServer is the server API for CirrusWorkersService service.
+// All implementations must embed UnimplementedCirrusWorkersServiceServer
+// for forward compatibility
+type CirrusWorkersServiceServer interface {
+	// Issued by the persistent worker after it starts
+	//
+	// Can be called without an authentication token.
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	// Periodically issued by the registered persistent worker to get new jobs and indicate that it's alive
+	Poll(context.Context, *PollRequest) (*PollResponse, error)
+	// Issued by the registered persistent worker to indicate task status
+	TaskStarted(context.Context, *TaskIdentification) (*empty.Empty, error)
+	TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error)
+	mustEmbedUnimplementedCirrusWorkersServiceServer()
+}
+
+// UnimplementedCirrusWorkersServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedCirrusWorkersServiceServer struct {
+}
+
+func (UnimplementedCirrusWorkersServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedCirrusWorkersServiceServer) Poll(context.Context, *PollRequest) (*PollResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Poll not implemented")
+}
+func (UnimplementedCirrusWorkersServiceServer) TaskStarted(context.Context, *TaskIdentification) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TaskStarted not implemented")
+}
+func (UnimplementedCirrusWorkersServiceServer) TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TaskStopped not implemented")
+}
+func (UnimplementedCirrusWorkersServiceServer) mustEmbedUnimplementedCirrusWorkersServiceServer() {}
+
+// UnsafeCirrusWorkersServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CirrusWorkersServiceServer will
+// result in compilation errors.
+type UnsafeCirrusWorkersServiceServer interface {
+	mustEmbedUnimplementedCirrusWorkersServiceServer()
+}
+
+func RegisterCirrusWorkersServiceServer(s grpc.ServiceRegistrar, srv CirrusWorkersServiceServer) {
+	s.RegisterService(&_CirrusWorkersService_serviceDesc, srv)
+}
+
+func _CirrusWorkersService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/Register",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusWorkersService_Poll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PollRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).Poll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/Poll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).Poll(ctx, req.(*PollRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusWorkersService_TaskStarted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskIdentification)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).TaskStarted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskStarted",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).TaskStarted(ctx, req.(*TaskIdentification))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusWorkersService_TaskStopped_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskIdentification)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).TaskStopped(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskStopped",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).TaskStopped(ctx, req.(*TaskIdentification))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _CirrusWorkersService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService",
+	HandlerType: (*CirrusWorkersServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Register",
+			Handler:    _CirrusWorkersService_Register_Handler,
+		},
+		{
+			MethodName: "Poll",
+			Handler:    _CirrusWorkersService_Poll_Handler,
+		},
+		{
+			MethodName: "TaskStarted",
+			Handler:    _CirrusWorkersService_TaskStarted_Handler,
+		},
+		{
+			MethodName: "TaskStopped",
+			Handler:    _CirrusWorkersService_TaskStopped_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -493,7 +694,7 @@ type UnsafeCirrusCIServiceServer interface {
 	mustEmbedUnimplementedCirrusCIServiceServer()
 }
 
-func RegisterCirrusCIServiceServer(s *grpc.Server, srv CirrusCIServiceServer) {
+func RegisterCirrusCIServiceServer(s grpc.ServiceRegistrar, srv CirrusCIServiceServer) {
 	s.RegisterService(&_CirrusCIService_serviceDesc, srv)
 }
 
