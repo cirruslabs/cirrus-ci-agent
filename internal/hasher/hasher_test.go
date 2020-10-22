@@ -97,7 +97,7 @@ func TestDiffWithNewer(t *testing.T) {
 			}
 
 			newHasher := hasher.New()
-			if err := newHasher.AddFolder(oldDir, newDir); err != nil {
+			if err := newHasher.AddFolder(newDir, newDir); err != nil {
 				t.Fatal(err)
 			}
 
