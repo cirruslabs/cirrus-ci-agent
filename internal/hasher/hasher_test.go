@@ -92,12 +92,12 @@ func TestDiffWithNewer(t *testing.T) {
 
 			// Hash directories
 			oldHasher := hasher.New()
-			if err := oldHasher.AddFolder(oldDir); err != nil {
+			if err := oldHasher.AddFolder(oldDir, oldDir); err != nil {
 				t.Fatal(err)
 			}
 
 			newHasher := hasher.New()
-			if err := newHasher.AddFolder(newDir); err != nil {
+			if err := newHasher.AddFolder(oldDir, newDir); err != nil {
 				t.Fatal(err)
 			}
 

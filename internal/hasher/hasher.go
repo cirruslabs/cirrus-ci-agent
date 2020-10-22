@@ -79,11 +79,7 @@ func (hasher *Hasher) DiffWithNewer(newer *Hasher) []DiffEntry {
 	return result
 }
 
-func (hasher *Hasher) AddFolder(folderPath string) error {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+func (hasher *Hasher) AddFolder(baseFolder string, folderPath string) error {
 	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
 		return nil
 	}
@@ -110,7 +106,7 @@ func (hasher *Hasher) AddFolder(folderPath string) error {
 		if err != nil {
 			return err
 		}
-		relativePath, err := filepath.Rel(workingDir, path)
+		relativePath, err := filepath.Rel(baseFolder, path)
 		if err != nil {
 			return err
 		}
