@@ -70,7 +70,6 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 	var glob string
 	baseFolder := folderToCache
 	foldersToCache := []string{folderToCache}
-
 	if pathLooksLikeGlob(folderToCache) {
 		glob = folderToCache
 
@@ -95,9 +94,13 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 				glob, terminatedWorkingDir)))
 			return false
 		}
+	}
 
-		// Expand the glob so we can calculate the hashes for directories that already exist
+	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
+
+	if glob != "" {
 		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
+		// Expand the glob so we can calculate the hashes for directories that already exist
 		foldersToCache, err = doublestar.Glob(glob)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", glob, err)))
@@ -105,12 +108,10 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 		}
 	}
 
-	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
-
 	fileHasher := hasher.New()
 	if cachePopulated {
 		for _, folderToCache := range foldersToCache {
-			if err := fileHasher.AddFolder(folderToCache); err != nil {
+			if err := fileHasher.AddFolder(baseFolder, folderToCache); err != nil {
 				logUploader.Write([]byte(fmt.Sprintf("\nFailed to calculate hash of %s! %s", folderToCache, err)))
 			}
 		}
@@ -290,7 +291,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 
 	fileHasher := hasher.New()
 	for _, folder := range cache.FoldersToCache {
-		if err := fileHasher.AddFolder(folder); err != nil {
+		if err := fileHasher.AddFolder(cache.BaseFolder, folder); err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", folder, err)))
 			logUploader.Write([]byte("Skipping uploading of cache!"))
 			return true
