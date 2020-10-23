@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -41,9 +42,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	logFile, err := os.OpenFile("cirrus-agent.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+	logFilePath, err := filepath.Abs("cirrus-agent.log")
 	if err != nil {
-		log.Printf("Failed to open log file: %v", err)
+		log.Printf("Failed to get absolute log file path: %v", err)
+		logFilePath = "cirrus-agent.log"
+	}
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+	if err != nil {
+		log.Printf("Failed to create log file: %v", err)
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
@@ -82,6 +88,7 @@ func main() {
 
 	defer func() {
 		if err := recover(); err != nil {
+			log.Printf("Recovered an error: %v", err)
 			taskIdentification := api.TaskIdentification{
 				TaskId: *taskIdPtr,
 				Secret: *clientTokenPtr,
@@ -128,11 +135,11 @@ func main() {
 
 	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr)
 	buildExecutor.RunBuild()
+	log.Printf("Uploading agent logs located at %s...", logFile.Name())
 	err = logFile.Close()
 	if err == nil {
-		logFile, err = os.Open("cirrus-agent.log")
-		logContents, readErr := ioutil.ReadAll(logFile)
-		if err == nil && readErr == nil {
+		logContents, readErr := ioutil.ReadFile(logFile.Name())
+		if readErr == nil {
 			taskIdentification := api.TaskIdentification{
 				TaskId: *taskIdPtr,
 				Secret: *clientTokenPtr,
@@ -141,7 +148,10 @@ func main() {
 				TaskIdentification: &taskIdentification,
 				Logs:               string(logContents),
 			}
-			_, _ = client.CirrusClient.ReportAgentLogs(context.Background(), &request)
+			_, err = client.CirrusClient.ReportAgentLogs(context.Background(), &request)
+			log.Printf("Upload agent logs: %v!\n", err)
+		} else {
+			log.Printf("Failed to read agent logs: %v %v!\n", err, readErr)
 		}
 	}
 }
