@@ -58,7 +58,8 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 			_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
 		}
 		if err != nil {
-			return false
+			logUploader.Write([]byte(fmt.Sprintf("\nStill failed to report %d annotations: %s. Ignoring...", len(allAnnotations), err)))
+			return true
 		}
 		logUploader.Write([]byte(fmt.Sprintf("\nReported %d annotations!", len(allAnnotations))))
 	}
