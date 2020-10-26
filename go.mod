@@ -6,6 +6,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.2
 	github.com/certifi/gocertifi v0.0.0-20200922220541-2c3bb06c6054
 	github.com/cirruslabs/cirrus-ci-annotations v0.0.0-20200908203753-b813f63941d7
+	github.com/dustin/go-humanize v1.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/protobuf v1.4.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
