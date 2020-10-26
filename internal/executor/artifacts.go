@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-annotations"
 	"github.com/cirruslabs/cirrus-ci-annotations/model"
+	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 	"io"
 	"os"
@@ -121,8 +122,16 @@ func uploadArtifactsAndParseAnnotations(
 		readBuffer := make([]byte, readBufferSize)
 
 		for _, artifactPath := range artifactPaths {
-			if info, err := os.Stat(artifactPath); err == nil && info.IsDir() {
+			info, err := os.Stat(artifactPath)
+
+			if err == nil && info.IsDir() {
 				continue
+			}
+
+			if err == nil && info.Size() > 1 * humanize.MByte {
+				humanFriendlySize := humanize.Bytes(uint64(info.Size()))
+				logUploader.Write([]byte(fmt.Sprintf("Uploading a quite hefty artifact '%s' of size %s",
+					artifactPath, humanFriendlySize)))
 			}
 
 			artifactFile, err := os.Open(artifactPath)
