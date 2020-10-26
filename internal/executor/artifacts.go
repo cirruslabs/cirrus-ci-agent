@@ -128,7 +128,7 @@ func uploadArtifactsAndParseAnnotations(
 				continue
 			}
 
-			if err == nil && info.Size() > 1 * humanize.MByte {
+			if err == nil && info.Size() > 100 * humanize.MByte {
 				humanFriendlySize := humanize.Bytes(uint64(info.Size()))
 				logUploader.Write([]byte(fmt.Sprintf("Uploading a quite hefty artifact '%s' of size %s",
 					artifactPath, humanFriendlySize)))
