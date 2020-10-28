@@ -42,7 +42,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	logFilePath := filepath.Join(os.TempDir(), "cirrus-agent.log")
+	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
 	defer uploadAgentLogs(logFilePath, *taskIdPtr, *clientTokenPtr)
 
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
@@ -150,7 +150,10 @@ func uploadAgentLogs(logFilePath string, taskId int64, clientToken string) {
 		TaskIdentification: &taskIdentification,
 		Logs:               string(logContents),
 	}
-	client.CirrusClient.ReportAgentLogs(context.Background(), &request)
+	_, err := client.CirrusClient.ReportAgentLogs(context.Background(), &request)
+	if err == nil {
+		os.Remove(logFilePath)
+	}
 }
 
 func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
