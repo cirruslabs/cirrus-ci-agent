@@ -42,14 +42,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	logFilePath, err := filepath.Abs("cirrus-agent.log")
-	if err != nil {
-		log.Printf("Failed to get absolute log file path: %v", err)
-		logFilePath = "cirrus-agent.log"
-	}
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+	logFilePath := filepath.Join(os.TempDir(), "cirrus-agent.log")
+	defer uploadAgentLogs(logFilePath, *taskIdPtr, *clientTokenPtr)
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
 	if err != nil {
 		log.Printf("Failed to create log file: %v", err)
+	} else {
+		defer logFile.Close()
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
@@ -135,25 +135,22 @@ func main() {
 
 	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr)
 	buildExecutor.RunBuild()
-	log.Printf("Uploading agent logs located at %s...", logFile.Name())
-	err = logFile.Close()
-	if err == nil {
-		logContents, readErr := ioutil.ReadFile(logFile.Name())
-		if readErr == nil {
-			taskIdentification := api.TaskIdentification{
-				TaskId: *taskIdPtr,
-				Secret: *clientTokenPtr,
-			}
-			request := api.ReportAgentLogsRequest{
-				TaskIdentification: &taskIdentification,
-				Logs:               string(logContents),
-			}
-			_, err = client.CirrusClient.ReportAgentLogs(context.Background(), &request)
-			log.Printf("Upload agent logs: %v!\n", err)
-		} else {
-			log.Printf("Failed to read agent logs: %v %v!\n", err, readErr)
-		}
+}
+
+func uploadAgentLogs(logFilePath string, taskId int64, clientToken string) {
+	logContents, readErr := ioutil.ReadFile(logFilePath)
+	if readErr != nil {
+		return
 	}
+	taskIdentification := api.TaskIdentification{
+		TaskId: taskId,
+		Secret: clientToken,
+	}
+	request := api.ReportAgentLogsRequest{
+		TaskIdentification: &taskIdentification,
+		Logs:               string(logContents),
+	}
+	client.CirrusClient.ReportAgentLogs(context.Background(), &request)
 }
 
 func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
