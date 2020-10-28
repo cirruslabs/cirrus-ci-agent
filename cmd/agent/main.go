@@ -43,13 +43,9 @@ func main() {
 	}
 
 	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
-	defer uploadAgentLogs(logFilePath, *taskIdPtr, *clientTokenPtr)
-
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
 	if err != nil {
 		log.Printf("Failed to create log file: %v", err)
-	} else {
-		defer logFile.Close()
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
@@ -135,6 +131,9 @@ func main() {
 
 	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr)
 	buildExecutor.RunBuild()
+
+	logFile.Close()
+	uploadAgentLogs(logFilePath, *taskIdPtr, *clientTokenPtr)
 }
 
 func uploadAgentLogs(logFilePath string, taskId int64, clientToken string) {
