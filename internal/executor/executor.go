@@ -203,7 +203,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 	case *api.Command_ScriptInstruction:
 		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(currentStep.Name, instruction.ScriptInstruction.Scripts, env)
 		success = err == nil && cmd.ProcessState.Success()
-		if cmd != nil {
+		if err == nil {
 			if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
 				signaledToExit = ws.Signaled()
 			}
