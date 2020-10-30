@@ -104,7 +104,7 @@ var _CirrusConfigurationEvaluatorService_serviceDesc = grpc.ServiceDesc{
 type CirrusWorkersServiceClient interface {
 	// Issued by the persistent worker after it starts
 	//
-	// Can be called without an authentication token.
+	// Can be called without a session token.
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	// Periodically issued by the registered persistent worker to get new jobs and indicate that it's alive
 	Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollResponse, error)
@@ -163,7 +163,7 @@ func (c *cirrusWorkersServiceClient) TaskStopped(ctx context.Context, in *TaskId
 type CirrusWorkersServiceServer interface {
 	// Issued by the persistent worker after it starts
 	//
-	// Can be called without an authentication token.
+	// Can be called without a session token.
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	// Periodically issued by the registered persistent worker to get new jobs and indicate that it's alive
 	Poll(context.Context, *PollRequest) (*PollResponse, error)
