@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -106,6 +107,8 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", glob, err)))
 			return false
 		}
+
+		foldersToCache = DeduplicatePaths(foldersToCache)
 	}
 
 	fileHasher := hasher.New()
@@ -280,6 +283,8 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", cache.Glob, err)))
 			return false
 		}
+
+		cache.FoldersToCache = DeduplicatePaths(cache.FoldersToCache)
 	}
 
 	commaSeparatedFolders := strings.Join(cache.FoldersToCache, ", ")
@@ -383,4 +388,19 @@ func FindCache(cacheName string) *Cache {
 		}
 	}
 	return nil
+}
+
+func DeduplicatePaths(paths []string) (result []string) {
+	sort.Strings(paths)
+
+	var previous string
+
+	for _, path := range paths {
+		if previous == "" || !strings.Contains(path, previous+string(os.PathSeparator)) {
+			result = append(result, path)
+			previous = path
+		}
+	}
+
+	return
 }
