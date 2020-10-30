@@ -3,8 +3,8 @@ package targz
 import (
 	"archive/tar"
 	"bufio"
-	gzip "github.com/klauspost/pgzip"
 	"fmt"
+	gzip "github.com/klauspost/pgzip"
 	"io"
 	"os"
 	"path/filepath"
