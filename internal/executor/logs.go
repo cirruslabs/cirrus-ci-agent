@@ -27,6 +27,12 @@ type LogUploader struct {
 	doneLogUpload      chan bool
 	valuesToMask       []string
 	closed             bool
+
+	// Fields related to the CIRRUS_LOG_TIMESTAMP behavioral environment variable
+	LogTimestamps bool
+	GetTimestamp  func() time.Time
+	OweTimestamp  bool
+
 	mutex              sync.RWMutex
 }
 
@@ -50,6 +56,10 @@ func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error
 		doneLogUpload:      make(chan bool),
 		valuesToMask:       executor.sensitiveValues,
 		closed:             false,
+
+		LogTimestamps: os.Getenv("CIRRUS_LOG_TIMESTAMP") == "true",
+		GetTimestamp:  time.Now,
+		OweTimestamp:  true,
 	}
 	go logUploader.StreamLogs()
 	return &logUploader, nil
@@ -68,10 +78,46 @@ func (uploader *LogUploader) reInitializeClient() error {
 	return nil
 }
 
+func (uploader *LogUploader) WithTimestamps(input []byte) []byte {
+	var result []byte
+
+	timestampPrefix := uploader.GetTimestamp().Format("[15:04:05.000]") + " "
+
+	// Insert a timestamp if we owe one, either because it's
+	// the first log chunk in the stream or because the previous
+	// chunk was ending with \n
+	if uploader.OweTimestamp {
+		result = append(result, []byte(timestampPrefix)...)
+		uploader.OweTimestamp = false
+	}
+
+	// How many \n's are going to get a timestamp prefix
+	numTimestamps := bytes.Count(input, []byte{'\n'})
+
+	// If the chunk ends with \n — don't insert the timestamp at the end
+	// right now, but remember to do this in the future to avoid empty
+	// lines with timestamps at the log's end
+	if bytes.HasSuffix(input, []byte{'\n'}) {
+		numTimestamps--
+		uploader.OweTimestamp = true
+	}
+
+	// Insert timestamps
+	input = bytes.Replace(input, []byte("\n"), []byte("\n" + timestampPrefix), numTimestamps)
+	result = append(result, input...)
+
+	return result
+}
+
 func (uploader *LogUploader) Write(bytes []byte) (int, error) {
 	if len(bytes) == 0 {
 		return 0, nil
 	}
+
+	if uploader.LogTimestamps {
+		bytes = uploader.WithTimestamps(bytes)
+	}
+
 	uploader.mutex.RLock()
 	defer uploader.mutex.RUnlock()
 	if !uploader.closed {
