@@ -27,11 +27,13 @@ func TarGzContentsHelper(t *testing.T, path string) []PartialTarHeader {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer archive.Close()
 
 	gzReader, err := gzip.NewReader(archive)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer gzReader.Close()
 
 	tarReader := tar.NewReader(gzReader)
 
@@ -119,6 +121,12 @@ func TestArchive(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// Make paths OS-aware before comparing
+			for i := range testCase.Expected {
+				testCase.Expected[i].Name = filepath.FromSlash(testCase.Expected[i].Name)
+				testCase.Expected[i].Linkname = filepath.FromSlash(testCase.Expected[i].Linkname)
+			}
+
 			assert.Equal(t, testCase.Expected, TarGzContentsHelper(t, dest))
 		})
 	}
@@ -145,8 +153,8 @@ func TestArchiveMultiple(t *testing.T) {
 	}
 
 	expected := []PartialTarHeader{
-		{tar.TypeDir, "/left/hot", "", []byte{}},
-		{tar.TypeDir, "/right/cold", "", []byte{}},
+		{tar.TypeDir, filepath.FromSlash("/left/hot"), "", []byte{}},
+		{tar.TypeDir, filepath.FromSlash("/right/cold"), "", []byte{}},
 	}
 	assert.Equal(t, expected, TarGzContentsHelper(t, dest))
 }

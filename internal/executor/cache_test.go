@@ -3,6 +3,7 @@ package executor_test
 import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/stretchr/testify/assert"
+	"path/filepath"
 	"testing"
 )
 
@@ -39,7 +40,17 @@ func TestDeduplicatePaths(t *testing.T) {
 		testCase := testCase
 
 		t.Run(testCase.Name, func(t *testing.T) {
-			assert.Equal(t, testCase.ExpectedOutput, executor.DeduplicatePaths(testCase.Input))
+			var osAwareInput []string
+			for _, input := range testCase.Input {
+				osAwareInput = append(osAwareInput, filepath.FromSlash(input))
+			}
+
+			var osAwareExpectedOutput []string
+			for _, expectedOutput := range testCase.ExpectedOutput {
+				osAwareExpectedOutput = append(osAwareExpectedOutput, filepath.FromSlash(expectedOutput))
+			}
+
+			assert.Equal(t, osAwareExpectedOutput, executor.DeduplicatePaths(osAwareInput))
 		})
 	}
 }
