@@ -153,8 +153,8 @@ func TestArchiveMultiple(t *testing.T) {
 	}
 
 	expected := []PartialTarHeader{
-		{tar.TypeDir, "/left/hot", "", []byte{}},
-		{tar.TypeDir, "/right/cold", "", []byte{}},
+		{tar.TypeDir, filepath.FromSlash("/left/hot"), "", []byte{}},
+		{tar.TypeDir, filepath.FromSlash("/right/cold"), "", []byte{}},
 	}
 	assert.Equal(t, expected, TarGzContentsHelper(t, dest))
 }
