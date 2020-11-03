@@ -16,13 +16,34 @@ task:
       format: golangci
 
 task:
-  name: Test
+  name: Test (Linux)
+  alias: test-linux
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
   get_script: go get ./...
   build_script: go build ./...
   test_script: go test ./...
+
+docker_builder:
+  name: Test (Windows)
+  alias: test-windows
+  platform: windows
+  os_version: 2019
+  test_script:
+    - choco install -y golang
+    - refreshenv
+    - md C:\Windows\system32\config\systemprofile\AppData\Local\Temp
+    - go test ./...
+
+task:
+  name: Test (macOS)
+  alias: test-macos
+  osx_instance:
+    image: catalina-base
+  test_script:
+    - brew install go
+    - go test ./...
 
 docker_builder:
   name: Test Docker Build
@@ -32,7 +53,10 @@ docker_builder:
 task:
   name: Build Binaries
   only_if: $CIRRUS_PR != ''
-  depends_on: Test
+  depends_on:
+    - test-linux
+    - test-windows
+    - test-macos
   container:
     image: goreleaser/goreleaser:latest
   release_script: goreleaser build --snapshot
@@ -43,7 +67,9 @@ task:
   name: Release
   only_if: $CIRRUS_TAG != ''
   depends_on:
-    - Test
+    - test-linux
+    - test-windows
+    - test-macos
     - Test Docker Build
   env:
     GITHUB_TOKEN: ENCRYPTED[!98ace8259c6024da912c14d5a3c5c6aac186890a8d4819fad78f3e0c41a4e0cd3a2537dd6e91493952fb056fa434be7c!]
