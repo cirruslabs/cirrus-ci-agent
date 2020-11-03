@@ -27,11 +27,13 @@ func TarGzContentsHelper(t *testing.T, path string) []PartialTarHeader {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer archive.Close()
 
 	gzReader, err := gzip.NewReader(archive)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer gzReader.Close()
 
 	tarReader := tar.NewReader(gzReader)
 
