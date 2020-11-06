@@ -17,7 +17,7 @@ import (
 )
 
 func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.ArtifactsInstruction, customEnv map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, name)
+	logUploader, err := NewLogUploader(executor, name, customEnv)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,

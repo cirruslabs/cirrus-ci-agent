@@ -230,7 +230,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 	case *api.Command_CacheInstruction:
 		success = DownloadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
 	case *api.Command_UploadCacheInstruction:
-		success = UploadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction)
+		success = UploadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
 	case *api.Command_ArtifactsInstruction:
 		success = UploadArtifacts(executor, currentStep.Name, instruction.ArtifactsInstruction, env)
 	default:
@@ -260,7 +260,7 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, error) {
-	logUploader, err := NewLogUploader(executor, commandName)
+	logUploader, err := NewLogUploader(executor, commandName, env)
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
@@ -281,7 +281,7 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, *LogUploader, error) {
-	logUploader, err := NewLogUploader(executor, commandName)
+	logUploader, err := NewLogUploader(executor, commandName, env)
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
@@ -302,7 +302,7 @@ func (executor *Executor) CreateFile(
 	instruction *api.FileInstruction,
 	env map[string]string,
 ) bool {
-	logUploader, err := NewLogUploader(executor, commandName)
+	logUploader, err := NewLogUploader(executor, commandName, env)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
@@ -341,7 +341,7 @@ func (executor *Executor) CreateFile(
 }
 
 func (executor *Executor) CloneRepository(env map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, "clone")
+	logUploader, err := NewLogUploader(executor, "clone", env)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
