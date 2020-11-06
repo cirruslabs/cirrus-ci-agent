@@ -36,7 +36,7 @@ var httpClient = &http.Client{
 }
 
 func DownloadCache(executor *Executor, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, commandName)
+	logUploader, err := NewLogUploader(executor, commandName, custom_env)
 	if err != nil {
 		return false
 	}
@@ -257,8 +257,8 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	return cacheFile, nil
 }
 
-func UploadCache(executor *Executor, commandName string, cacheHost string, instruction *api.UploadCacheInstruction) bool {
-	logUploader, err := NewLogUploader(executor, commandName)
+func UploadCache(executor *Executor, commandName string, cacheHost string, instruction *api.UploadCacheInstruction, env map[string]string) bool {
+	logUploader, err := NewLogUploader(executor, commandName, env)
 	if err != nil {
 		return false
 	}

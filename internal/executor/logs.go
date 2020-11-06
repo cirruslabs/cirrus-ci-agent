@@ -36,7 +36,7 @@ type LogUploader struct {
 	mutex              sync.RWMutex
 }
 
-func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error) {
+func NewLogUploader(executor *Executor, commandName string, env map[string]string) (*LogUploader, error) {
 	logClient, err := InitializeLogStreamClient(executor.taskIdentification, commandName, false)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func NewLogUploader(executor *Executor, commandName string) (*LogUploader, error
 		valuesToMask:       executor.sensitiveValues,
 		closed:             false,
 
-		LogTimestamps: os.Getenv("CIRRUS_LOG_TIMESTAMP") == "true",
+		LogTimestamps: env["CIRRUS_LOG_TIMESTAMP"] == "true",
 		GetTimestamp:  time.Now,
 		OweTimestamp:  true,
 	}
