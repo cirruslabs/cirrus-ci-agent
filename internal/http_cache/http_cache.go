@@ -138,8 +138,9 @@ func proxyDownloadFromURL(w http.ResponseWriter, url string) {
 	_, err = io.Copy(w, resp.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
