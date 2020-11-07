@@ -45,14 +45,15 @@ func Start(taskIdentification *api.TaskIdentification) string {
 func handler(w http.ResponseWriter, r *http.Request) {
 	// Limit request concurrency
 	if err := sem.Acquire(r.Context(), 1); err != nil {
+		log.Printf("Failed to acquite the semaphore: %s\n", err)
 		if errors.Is(err, context.Canceled) {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, context.DeadlineExceeded) {
-			w.WriteHeader(http.StatusServiceUnavailable)
+			w.WriteHeader(http.StatusRequestTimeout)
 			return
 		}
-		log.Printf("Failed to acquite the semaphore: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -64,6 +65,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if key[0] == '/' {
 		key = key[1:]
 	}
+	if len(key) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if r.Method == "GET" {
 		downloadCache(w, r, key)
 	} else if r.Method == "HEAD" {
@@ -72,6 +77,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		uploadCache(w, r, key)
 	} else if r.Method == "PUT" {
 		uploadCache(w, r, key)
+	} else {
+		log.Printf("Not supported request method: %s\n", r.Method)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
@@ -135,10 +143,12 @@ func proxyDownloadFromURL(w http.ResponseWriter, url string) {
 		w.WriteHeader(resp.StatusCode)
 		return
 	}
-	_, err = io.Copy(w, resp.Body)
+	bytesRead, err := io.Copy(w, resp.Body)
 	if err != nil {
+		log.Printf("Proxying cache download for %s failed with %v\n", url, err)
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
+		log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
 		w.WriteHeader(http.StatusOK)
 	}
 }
