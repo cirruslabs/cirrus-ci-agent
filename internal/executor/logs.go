@@ -33,7 +33,7 @@ type LogUploader struct {
 	GetTimestamp  func() time.Time
 	OweTimestamp  bool
 
-	mutex              sync.RWMutex
+	mutex sync.RWMutex
 }
 
 func NewLogUploader(executor *Executor, commandName string, env map[string]string) (*LogUploader, error) {
@@ -103,7 +103,7 @@ func (uploader *LogUploader) WithTimestamps(input []byte) []byte {
 	}
 
 	// Insert timestamps
-	input = bytes.Replace(input, []byte("\n"), []byte("\n" + timestampPrefix), numTimestamps)
+	input = bytes.Replace(input, []byte("\n"), []byte("\n"+timestampPrefix), numTimestamps)
 	result = append(result, input...)
 
 	return result
