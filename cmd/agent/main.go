@@ -12,6 +12,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"io"
@@ -173,6 +174,9 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 	if insecure {
 		transportSecurity = grpc.WithInsecure()
 	}
+	retryCodes := []codes.Code{
+		codes.Unavailable, codes.Internal, codes.Unknown, codes.ResourceExhausted, codes.DeadlineExceeded,
+	}
 	return grpc.DialContext(
 		ctx,
 		target,
@@ -181,6 +185,8 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 		grpc.WithUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
+				grpc_retry.WithCodes(retryCodes...),
+				grpc_retry.WithPerRetryTimeout(10*time.Second),
 			),
 		),
 	)
@@ -217,6 +223,7 @@ func sendHeartbeat(taskId int64, clientToken string) {
 		TaskId: taskId,
 		Secret: clientToken,
 	}
+	log.Println("Sending heartbeat...")
 	_, err := client.CirrusClient.Heartbeat(context.Background(), &api.HeartbeatRequest{TaskIdentification: &taskIdentification})
 	if err != nil {
 		log.Printf("Failed to send heartbeat: %v", err)
