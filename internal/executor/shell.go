@@ -72,7 +72,8 @@ func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handl
 	case <-done:
 		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
 			if ws.Signaled() {
-				handler([]byte("\nSignaled to exit!"))
+				message := fmt.Sprintf("\nSignaled to exit (%v)!", ws.Signal())
+				handler([]byte(message))
 			}
 			exitStatus := ws.ExitStatus()
 			if exitStatus > 1 {

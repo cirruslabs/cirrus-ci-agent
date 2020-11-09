@@ -114,6 +114,9 @@ func (uploader *LogUploader) Write(bytes []byte) (int, error) {
 		return 0, nil
 	}
 
+	// Make potential bytes expansion below transparent to the caller
+	originalLen := len(bytes)
+
 	if uploader.LogTimestamps {
 		bytes = uploader.WithTimestamps(bytes)
 	}
@@ -125,7 +128,7 @@ func (uploader *LogUploader) Write(bytes []byte) (int, error) {
 		copy(bytesCopy, bytes)
 		uploader.logsChannel <- bytesCopy
 	}
-	return len(bytes), nil
+	return originalLen, nil
 }
 
 func (uploader *LogUploader) StreamLogs() {
