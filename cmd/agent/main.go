@@ -13,6 +13,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"io"
@@ -128,7 +129,7 @@ func main() {
 		}
 	}
 
-	startHeartbeat(*taskIdPtr, *clientTokenPtr)
+	go runHeartbeat(*taskIdPtr, *clientTokenPtr, conn)
 
 	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr)
 	buildExecutor.RunBuild()
@@ -205,29 +206,25 @@ func transportSettings(apiEndpoint string) (string, bool) {
 	return target, insecure
 }
 
-func startHeartbeat(taskId int64, clientToken string) {
-	sendHeartbeat(taskId, clientToken)
-	go heartbeat(taskId, clientToken)
-}
-
-func heartbeat(taskId int64, clientToken string) {
-	ticker := time.NewTicker(60 * time.Second)
-	for {
-		sendHeartbeat(taskId, clientToken)
-		<-ticker.C
-	}
-}
-
-func sendHeartbeat(taskId int64, clientToken string) {
+func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {
 	taskIdentification := api.TaskIdentification{
 		TaskId: taskId,
 		Secret: clientToken,
 	}
-	log.Println("Sending heartbeat...")
-	_, err := client.CirrusClient.Heartbeat(context.Background(), &api.HeartbeatRequest{TaskIdentification: &taskIdentification})
-	if err != nil {
-		log.Printf("Failed to send heartbeat: %v", err)
-	} else {
-		log.Printf("Sent heartbeat!")
+	ticker := time.NewTicker(60 * time.Second)
+	for {
+		log.Println("Sending heartbeat...")
+		_, err := client.CirrusClient.Heartbeat(context.Background(), &api.HeartbeatRequest{TaskIdentification: &taskIdentification})
+		if err != nil {
+			log.Printf("Failed to send heartbeat: %v", err)
+			connectionState := conn.GetState()
+			log.Printf("Connection state: %v", connectionState.String())
+			if connectionState == connectivity.TransientFailure {
+				conn.ResetConnectBackoff()
+			}
+		} else {
+			log.Printf("Sent heartbeat!")
+		}
+		<-ticker.C
 	}
 }
