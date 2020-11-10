@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/keepalive"
 	"io"
 	"io/ioutil"
 	"log"
@@ -191,6 +192,13 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 		target,
 		grpc.WithBlock(),
 		transportSecurity,
+		grpc.WithKeepaliveParams(
+			keepalive.ClientParameters{
+				Time:                30 * time.Second, // make connection is alive every 30 seconds
+				Timeout:             30 * time.Second, // with a timeout of 30 seconds so it takes at most a minute (like heartbeats)
+				PermitWithoutStream: true,             // always send Pings even if there are no RPCs
+			},
+		),
 		grpc.WithUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
