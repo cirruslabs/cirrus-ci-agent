@@ -44,6 +44,9 @@ func main() {
 	}
 
 	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
+	if *stopHook {
+		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d-hook.log", *taskIdPtr))
+	}
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
 	if err != nil {
 		log.Printf("Failed to create log file: %v", err)
@@ -79,6 +82,9 @@ func main() {
 		_, err = client.CirrusClient.ReportStopHook(context.Background(), &request)
 		if err != nil {
 			log.Printf("Failed to report stop hook for task %d: %v\n", *taskIdPtr, err)
+		} else {
+			logFile.Close()
+			os.Remove(logFilePath)
 		}
 		os.Exit(0)
 	}
