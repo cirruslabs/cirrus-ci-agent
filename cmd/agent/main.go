@@ -45,6 +45,8 @@ func main() {
 
 	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
 	if *stopHook {
+		// In case of a failure the log file will be persisted on the machine for debugging purposes.
+		// But unfortunately stop hook invocation will override it so let's use a different name.
 		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d-hook.log", *taskIdPtr))
 	}
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
