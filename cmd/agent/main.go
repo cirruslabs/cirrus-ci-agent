@@ -211,7 +211,6 @@ func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {
 		TaskId: taskId,
 		Secret: clientToken,
 	}
-	ticker := time.NewTicker(60 * time.Second)
 	for {
 		log.Println("Sending heartbeat...")
 		_, err := client.CirrusClient.Heartbeat(context.Background(), &api.HeartbeatRequest{TaskIdentification: &taskIdentification})
@@ -225,6 +224,6 @@ func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {
 		} else {
 			log.Printf("Sent heartbeat!")
 		}
-		<-ticker.C
+		time.Sleep(60 * time.Second)
 	}
 }
