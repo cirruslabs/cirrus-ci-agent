@@ -352,7 +352,11 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 		response, _ := httpClient.Head(fmt.Sprintf("http://%s/%s", cacheHost, cache.Key))
 		if response != nil && response.StatusCode == http.StatusOK {
 			createdByTaskId := response.Header.Get(http_cache.CirrusHeaderCreatedBy)
-			logUploader.Write([]byte(fmt.Sprintf("\nTask '%s' has already uploaded cache entry %s! Skipping upload...", createdByTaskId, cache.Key)))
+			if createdByTaskId != "" {
+				logUploader.Write([]byte(fmt.Sprintf("\nTask '%s' has already uploaded cache entry %s! Skipping upload...", createdByTaskId, cache.Key)))
+			} else {
+				logUploader.Write([]byte(fmt.Sprintf("\nSome other task has already uploaded cache entry %s! Skipping upload...", cache.Key)))
+			}
 			return true
 		}
 	}
