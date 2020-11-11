@@ -21,9 +21,7 @@ var cirrusTaskIdentification *api.TaskIdentification
 const (
 	activeRequestsPerLogicalCPU = 4
 
-	CirrusHeaderCreatedBy         = "CIRRUS_CREATED_BY"
-	CirrusHeaderCreationTimestamp = "CIRRUS_CREATION_TIMESTAMP"
-	CirrusHeaderSize              = "CIRRUS_SIZE"
+	CirrusHeaderCreatedBy = "Cirrus-Created-By"
 )
 
 var sem = semaphore.NewWeighted(int64(runtime.NumCPU() * activeRequestsPerLogicalCPU))
@@ -99,9 +97,10 @@ func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 	} else {
-		w.Header().Set(CirrusHeaderCreatedBy, strconv.FormatInt(response.Info.CreatedByTaskId, 10))
-		w.Header().Set(CirrusHeaderCreationTimestamp, strconv.FormatInt(response.Info.CreationTimestamp, 10))
-		w.Header().Set(CirrusHeaderSize, strconv.FormatInt(response.Info.SizeInBytes, 10))
+		if response.Info.CreatedByTaskId > 0 {
+			w.Header().Set(CirrusHeaderCreatedBy, strconv.FormatInt(response.Info.CreatedByTaskId, 10))
+		}
+		w.Header().Set("Content-Length", strconv.FormatInt(response.Info.SizeInBytes, 10))
 		w.WriteHeader(http.StatusOK)
 	}
 }
