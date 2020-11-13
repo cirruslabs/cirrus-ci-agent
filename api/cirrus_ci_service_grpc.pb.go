@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CirrusConfigurationEvaluatorServiceClient interface {
 	EvaluateConfig(ctx context.Context, in *EvaluateConfigRequest, opts ...grpc.CallOption) (*EvaluateConfigResponse, error)
+	JSONSchema(ctx context.Context, in *JSONSchemaRequest, opts ...grpc.CallOption) (*JSONSchemaResponse, error)
 }
 
 type cirrusConfigurationEvaluatorServiceClient struct {
@@ -38,11 +39,21 @@ func (c *cirrusConfigurationEvaluatorServiceClient) EvaluateConfig(ctx context.C
 	return out, nil
 }
 
+func (c *cirrusConfigurationEvaluatorServiceClient) JSONSchema(ctx context.Context, in *JSONSchemaRequest, opts ...grpc.CallOption) (*JSONSchemaResponse, error) {
+	out := new(JSONSchemaResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/JSONSchema", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CirrusConfigurationEvaluatorServiceServer is the server API for CirrusConfigurationEvaluatorService service.
 // All implementations must embed UnimplementedCirrusConfigurationEvaluatorServiceServer
 // for forward compatibility
 type CirrusConfigurationEvaluatorServiceServer interface {
 	EvaluateConfig(context.Context, *EvaluateConfigRequest) (*EvaluateConfigResponse, error)
+	JSONSchema(context.Context, *JSONSchemaRequest) (*JSONSchemaResponse, error)
 	mustEmbedUnimplementedCirrusConfigurationEvaluatorServiceServer()
 }
 
@@ -52,6 +63,9 @@ type UnimplementedCirrusConfigurationEvaluatorServiceServer struct {
 
 func (UnimplementedCirrusConfigurationEvaluatorServiceServer) EvaluateConfig(context.Context, *EvaluateConfigRequest) (*EvaluateConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EvaluateConfig not implemented")
+}
+func (UnimplementedCirrusConfigurationEvaluatorServiceServer) JSONSchema(context.Context, *JSONSchemaRequest) (*JSONSchemaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JSONSchema not implemented")
 }
 func (UnimplementedCirrusConfigurationEvaluatorServiceServer) mustEmbedUnimplementedCirrusConfigurationEvaluatorServiceServer() {
 }
@@ -85,6 +99,24 @@ func _CirrusConfigurationEvaluatorService_EvaluateConfig_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusConfigurationEvaluatorService_JSONSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JSONSchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusConfigurationEvaluatorServiceServer).JSONSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/JSONSchema",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusConfigurationEvaluatorServiceServer).JSONSchema(ctx, req.(*JSONSchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _CirrusConfigurationEvaluatorService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService",
 	HandlerType: (*CirrusConfigurationEvaluatorServiceServer)(nil),
@@ -92,6 +124,10 @@ var _CirrusConfigurationEvaluatorService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EvaluateConfig",
 			Handler:    _CirrusConfigurationEvaluatorService_EvaluateConfig_Handler,
+		},
+		{
+			MethodName: "JSONSchema",
+			Handler:    _CirrusConfigurationEvaluatorService_JSONSchema_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
