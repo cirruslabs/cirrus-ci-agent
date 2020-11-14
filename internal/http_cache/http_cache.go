@@ -3,8 +3,10 @@ package http_cache
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"golang.org/x/sync/semaphore"
@@ -14,6 +16,7 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"time"
 )
 
 var cirrusTaskIdentification *api.TaskIdentification
@@ -26,8 +29,21 @@ const (
 
 var sem = semaphore.NewWeighted(int64(runtime.NumCPU() * activeRequestsPerLogicalCPU))
 
+var httpProxyClient = &http.Client{}
+
 func Start(taskIdentification *api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
+
+	certPool, err := gocertifi.CACerts()
+	if err == nil {
+		httpProxyClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{RootCAs: certPool},
+			},
+			Timeout: time.Minute,
+		}
+	}
+
 	http.HandleFunc("/", handler)
 
 	address := "127.0.0.1:12321"
@@ -140,7 +156,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 }
 
 func proxyDownloadFromURL(w http.ResponseWriter, url string) {
-	resp, err := http.Get(url)
+	resp, err := httpProxyClient.Get(url)
 	if err != nil {
 		log.Printf("Proxying cache %s failed: %v\n", url, err)
 		w.WriteHeader(http.StatusInternalServerError)

@@ -224,9 +224,6 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	}
 	defer cacheFile.Close()
 
-	httpClient := http.Client{
-		Timeout: 5 * time.Minute,
-	}
 	downloadStartTime := time.Now()
 	resp, err := httpClient.Get(fmt.Sprintf("http://%s/%s", cacheHost, cacheKey))
 	if err != nil {
