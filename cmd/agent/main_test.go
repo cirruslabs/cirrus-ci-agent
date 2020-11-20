@@ -8,24 +8,6 @@ import (
 	"testing"
 )
 
-func Test_SecurityDefault(t *testing.T) {
-	target, insecure := transportSettings("grpc.cirrus-ci.com:443")
-	assert.Equal(t, "grpc.cirrus-ci.com:443", target)
-	assert.False(t, insecure)
-}
-
-func Test_SecurityHTTP(t *testing.T) {
-	target, insecure := transportSettings("http://grpc.cirrus-ci.com:80")
-	assert.Equal(t, "grpc.cirrus-ci.com:80", target)
-	assert.True(t, insecure)
-}
-
-func Test_SecurityUNIX(t *testing.T) {
-	target, insecure := transportSettings("unix:///agent.sock")
-	assert.Equal(t, "unix:///agent.sock", target)
-	assert.True(t, insecure)
-}
-
 func Test_DialHTTPS(t *testing.T) {
 	assert.Nil(t, checkEndpoint("https://grpc.cirrus-ci.com:443"))
 }
