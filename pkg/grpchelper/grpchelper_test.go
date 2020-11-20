@@ -18,6 +18,12 @@ func Test_SecurityHTTP(t *testing.T) {
 	assert.True(t, insecure)
 }
 
+func Test_SecurityHTTPS(t *testing.T) {
+	target, insecure := grpchelper.TransportSettings("https://grpc.cirrus-ci.com:443")
+	assert.Equal(t, "grpc.cirrus-ci.com:443", target)
+	assert.False(t, insecure)
+}
+
 func Test_SecurityUNIX(t *testing.T) {
 	target, insecure := grpchelper.TransportSettings("unix:///agent.sock")
 	assert.Equal(t, "unix:///agent.sock", target)
