@@ -10,6 +10,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
+	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -170,7 +171,7 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	target, insecure := transportSettings(apiEndpoint)
+	target, insecure := grpchelper.TransportSettings(apiEndpoint)
 
 	// use embedded root certificates because the agent can be executed with a distroless container, for example
 	// also don't check for error since then the default certificates from the host will be used
@@ -207,19 +208,6 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 			),
 		),
 	)
-}
-
-func transportSettings(apiEndpoint string) (string, bool) {
-	// Insecure by default to preserve backwards compatibility
-	insecure := true
-
-	// Use TLS if explicitly asked or no schema is in the target
-	if strings.Contains(apiEndpoint, "https://") || !strings.Contains(apiEndpoint, "://") {
-		insecure = false
-	}
-	// sanitize but leave unix:// if presented
-	target := strings.TrimPrefix(strings.TrimPrefix(apiEndpoint, "http://"), "https://")
-	return target, insecure
 }
 
 func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {
