@@ -3,9 +3,13 @@ project_name: agent
 before:
   hooks:
     - go mod download
-    
+
 archives:
-  - format: binary
+  - id: binary
+    format: binary
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+  - id: regular
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
 
 builds:
   - main: cmd/agent/main.go
@@ -23,3 +27,6 @@ builds:
       - arm64
       - s390x
       - ppc64le
+
+release:
+  prerelease: auto
