@@ -3,14 +3,20 @@ package grpchelper
 import "strings"
 
 func TransportSettings(apiEndpoint string) (string, bool) {
-	// Insecure by default to preserve backwards compatibility
-	insecure := true
-
-	// Use TLS if explicitly asked or no schema is in the target
-	if strings.Contains(apiEndpoint, "https://") || !strings.Contains(apiEndpoint, "://") {
-		insecure = false
+	// HTTP is always insecure
+	if strings.HasPrefix(apiEndpoint, "http://") {
+		return strings.TrimPrefix(apiEndpoint, "http://"), true
 	}
-	// sanitize but leave unix:// if presented
-	target := strings.TrimPrefix(strings.TrimPrefix(apiEndpoint, "http://"), "https://")
-	return target, insecure
+
+	// Unix domain sockets are always insecure
+	if strings.HasPrefix(apiEndpoint, "unix:") {
+		return apiEndpoint, true
+	}
+
+	// HTTPS and other cases are always secure
+	if strings.HasPrefix(apiEndpoint, "https://") {
+		apiEndpoint = strings.TrimPrefix(apiEndpoint, "https://")
+	}
+
+	return apiEndpoint, false
 }

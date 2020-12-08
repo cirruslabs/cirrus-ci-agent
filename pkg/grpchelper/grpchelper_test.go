@@ -29,3 +29,9 @@ func Test_SecurityUNIX(t *testing.T) {
 	assert.Equal(t, "unix:///agent.sock", target)
 	assert.True(t, insecure)
 }
+
+func Test_SecurityUNIXWindows(t *testing.T) {
+	target, insecure := grpchelper.TransportSettings("unix:C:\\Temp\\cli.sock")
+	assert.Equal(t, "unix:C:\\Temp\\cli.sock", target)
+	assert.True(t, insecure)
+}

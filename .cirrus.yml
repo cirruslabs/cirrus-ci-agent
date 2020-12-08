@@ -92,8 +92,6 @@ apple_silicon: &APPLE_SILICON_BUILD
     - gotip version
   build_script:
     - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 gotip build -o agent-darwin-arm64 cmd/agent/main.go
-  sign_script:
-    - codesign --sign - agent-darwin-arm64
 
 task:
   name: Release Apple Silicon (Dry Run)
