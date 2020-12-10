@@ -322,7 +322,7 @@ func (executor *Executor) CreateFile(
 			return true
 		}
 		if strings.HasPrefix(content, "ENCRYPTED") {
-			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s wan't decrypted! Skipping file creation...", envName)))
+			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s wasn't decrypted! Skipping file creation...", envName)))
 			return true
 		}
 		filePath := ExpandText(instruction.DestinationPath, env)
