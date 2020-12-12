@@ -331,10 +331,6 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	}
 
 	bytesToUpload := fi.Size()
-	if bytesToUpload >= 2*1000*1000*1000 {
-		logUploader.Write([]byte(fmt.Sprintf("\nCache %s is too big! Skipping caching...", commandName)))
-		return true
-	}
 
 	if bytesToUpload < 1024 {
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %d bytes.", instruction.CacheName, bytesToUpload)))
@@ -342,6 +338,11 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %dKb.", instruction.CacheName, bytesToUpload/1024)))
 	} else {
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %dMb.", instruction.CacheName, bytesToUpload/1024/1024)))
+	}
+
+	if bytesToUpload >= 2*1000*1000*1000 {
+		logUploader.Write([]byte(fmt.Sprintf("\nCache %s is too big! Skipping caching...", commandName)))
+		return true
 	}
 
 	if !cache.CacheAvailable {
