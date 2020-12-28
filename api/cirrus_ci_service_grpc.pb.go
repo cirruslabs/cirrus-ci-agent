@@ -78,7 +78,7 @@ type UnsafeCirrusConfigurationEvaluatorServiceServer interface {
 }
 
 func RegisterCirrusConfigurationEvaluatorServiceServer(s grpc.ServiceRegistrar, srv CirrusConfigurationEvaluatorServiceServer) {
-	s.RegisterService(&_CirrusConfigurationEvaluatorService_serviceDesc, srv)
+	s.RegisterService(&CirrusConfigurationEvaluatorService_ServiceDesc, srv)
 }
 
 func _CirrusConfigurationEvaluatorService_EvaluateConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -117,7 +117,10 @@ func _CirrusConfigurationEvaluatorService_JSONSchema_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
-var _CirrusConfigurationEvaluatorService_serviceDesc = grpc.ServiceDesc{
+// CirrusConfigurationEvaluatorService_ServiceDesc is the grpc.ServiceDesc for CirrusConfigurationEvaluatorService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CirrusConfigurationEvaluatorService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService",
 	HandlerType: (*CirrusConfigurationEvaluatorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -146,6 +149,7 @@ type CirrusWorkersServiceClient interface {
 	Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollResponse, error)
 	// Issued by the registered persistent worker to indicate task status
 	TaskStarted(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
+	TaskFailed(ctx context.Context, in *TaskFailedRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	TaskStopped(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
@@ -184,6 +188,15 @@ func (c *cirrusWorkersServiceClient) TaskStarted(ctx context.Context, in *TaskId
 	return out, nil
 }
 
+func (c *cirrusWorkersServiceClient) TaskFailed(ctx context.Context, in *TaskFailedRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskFailed", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cirrusWorkersServiceClient) TaskStopped(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskStopped", in, out, opts...)
@@ -205,6 +218,7 @@ type CirrusWorkersServiceServer interface {
 	Poll(context.Context, *PollRequest) (*PollResponse, error)
 	// Issued by the registered persistent worker to indicate task status
 	TaskStarted(context.Context, *TaskIdentification) (*empty.Empty, error)
+	TaskFailed(context.Context, *TaskFailedRequest) (*empty.Empty, error)
 	TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error)
 	mustEmbedUnimplementedCirrusWorkersServiceServer()
 }
@@ -222,6 +236,9 @@ func (UnimplementedCirrusWorkersServiceServer) Poll(context.Context, *PollReques
 func (UnimplementedCirrusWorkersServiceServer) TaskStarted(context.Context, *TaskIdentification) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TaskStarted not implemented")
 }
+func (UnimplementedCirrusWorkersServiceServer) TaskFailed(context.Context, *TaskFailedRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TaskFailed not implemented")
+}
 func (UnimplementedCirrusWorkersServiceServer) TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TaskStopped not implemented")
 }
@@ -235,7 +252,7 @@ type UnsafeCirrusWorkersServiceServer interface {
 }
 
 func RegisterCirrusWorkersServiceServer(s grpc.ServiceRegistrar, srv CirrusWorkersServiceServer) {
-	s.RegisterService(&_CirrusWorkersService_serviceDesc, srv)
+	s.RegisterService(&CirrusWorkersService_ServiceDesc, srv)
 }
 
 func _CirrusWorkersService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -292,6 +309,24 @@ func _CirrusWorkersService_TaskStarted_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusWorkersService_TaskFailed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskFailedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).TaskFailed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/TaskFailed",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).TaskFailed(ctx, req.(*TaskFailedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CirrusWorkersService_TaskStopped_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(TaskIdentification)
 	if err := dec(in); err != nil {
@@ -310,7 +345,10 @@ func _CirrusWorkersService_TaskStopped_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-var _CirrusWorkersService_serviceDesc = grpc.ServiceDesc{
+// CirrusWorkersService_ServiceDesc is the grpc.ServiceDesc for CirrusWorkersService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CirrusWorkersService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService",
 	HandlerType: (*CirrusWorkersServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -325,6 +363,10 @@ var _CirrusWorkersService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TaskStarted",
 			Handler:    _CirrusWorkersService_TaskStarted_Handler,
+		},
+		{
+			MethodName: "TaskFailed",
+			Handler:    _CirrusWorkersService_TaskFailed_Handler,
 		},
 		{
 			MethodName: "TaskStopped",
@@ -394,7 +436,7 @@ func (c *cirrusCIServiceClient) ReportAnnotations(ctx context.Context, in *Repor
 }
 
 func (c *cirrusCIServiceClient) StreamLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_StreamLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[0], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/StreamLogs", opts...)
+	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[0], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/StreamLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +470,7 @@ func (x *cirrusCIServiceStreamLogsClient) CloseAndRecv() (*UploadLogsResponse, e
 }
 
 func (c *cirrusCIServiceClient) SaveLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_SaveLogsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[1], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/SaveLogs", opts...)
+	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[1], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/SaveLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +504,7 @@ func (x *cirrusCIServiceSaveLogsClient) CloseAndRecv() (*UploadLogsResponse, err
 }
 
 func (c *cirrusCIServiceClient) UploadCache(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadCacheClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[2], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadCache", opts...)
+	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[2], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadCache", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -496,7 +538,7 @@ func (x *cirrusCIServiceUploadCacheClient) CloseAndRecv() (*UploadCacheResponse,
 }
 
 func (c *cirrusCIServiceClient) UploadArtifacts(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadArtifactsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[3], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadArtifacts", opts...)
+	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[3], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/UploadArtifacts", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +572,7 @@ func (x *cirrusCIServiceUploadArtifactsClient) CloseAndRecv() (*UploadArtifactsR
 }
 
 func (c *cirrusCIServiceClient) DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_CirrusCIService_serviceDesc.Streams[4], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DownloadCache", opts...)
+	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[4], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DownloadCache", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -731,7 +773,7 @@ type UnsafeCirrusCIServiceServer interface {
 }
 
 func RegisterCirrusCIServiceServer(s grpc.ServiceRegistrar, srv CirrusCIServiceServer) {
-	s.RegisterService(&_CirrusCIService_serviceDesc, srv)
+	s.RegisterService(&CirrusCIService_ServiceDesc, srv)
 }
 
 func _CirrusCIService_InitialCommands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1075,7 +1117,10 @@ func _CirrusCIService_ParseConfig_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-var _CirrusCIService_serviceDesc = grpc.ServiceDesc{
+// CirrusCIService_ServiceDesc is the grpc.ServiceDesc for CirrusCIService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService",
 	HandlerType: (*CirrusCIServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
