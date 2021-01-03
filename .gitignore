@@ -1,3 +1,6 @@
+# goreleaser is installed here
+bin/
+
 # IntelliJ and GoLand
 .idea
 *.iml
