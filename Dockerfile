@@ -1,11 +1,10 @@
-FROM goreleaser/goreleaser:latest as builder
-
-ENV GORELEASER_CURRENT_TAG=latest
+FROM golang:latest as builder
 
 WORKDIR /tmp/cirrus-ci-agent
 ADD . /tmp/cirrus-ci-agent/
 
-RUN goreleaser build --snapshot
+RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
+RUN ./bin/goreleaser build --snapshot
 
 FROM alpine:latest
 
