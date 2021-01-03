@@ -52,7 +52,7 @@ func NewLogUploader(executor *Executor, commandName string, env map[string]strin
 		client:             logClient,
 		storedOutput:       file,
 		erroredChunks:      0,
-		logsChannel:        make(chan []byte),
+		logsChannel:        make(chan []byte, 128),
 		doneLogUpload:      make(chan bool),
 		valuesToMask:       executor.sensitiveValues,
 		closed:             false,
