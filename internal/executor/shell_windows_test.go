@@ -116,3 +116,27 @@ func Test_Powershell(t *testing.T) {
 		t.Errorf("Wrong output: '%+q' expected '%+q'", output, expected_output)
 	}
 }
+
+func Test_Powershell_EXE(t *testing.T) {
+	test_env := map[string]string{
+		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
+		"CIRRUS_SHELL":       "powershell",
+	}
+	success, output := ShellCommandsAndGetOutput([]string{
+		"echo 'Foo!'",
+		"echo 'Bar!'",
+		"powershell --not-existing-flag-to-fail",
+		"echo 'Unreachable!'",
+	}, &test_env, nil)
+
+	if success {
+		t.Errorf("Should've fail! '%+q'", output)
+	}
+
+	expected_output := "Foo!\r\nBar!\r\n"
+	if output == expected_output {
+		t.Log("Passed")
+	} else {
+		t.Errorf("Wrong output: '%+q' expected '%+q'", output, expected_output)
+	}
+}
