@@ -51,10 +51,9 @@ func createCmd(scripts []string, customEnv *map[string]string) (*exec.Cmd, *os.F
 	scriptFile.Chmod(os.FileMode(0777))
 	cmd := exec.Command(cmdShell, scriptFile.Name())
 
-	// run CMD in it's own group
-	// https://stackoverflow.com/questions/33165530/prevent-ctrlc-from-interrupting-exec-command-in-golang
+	// Run CMD in it's own session
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+		Setsid: true,
 	}
 
 	return cmd, scriptFile, nil

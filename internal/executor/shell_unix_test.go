@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func TestZshDoesNotHang(t *testing.T) {
+	_, _ = ShellCommandsAndGetOutput([]string{"zsh -c 'echo \"a:b\" | read -d \":\" piece'"}, nil, nil)
+}
+
 func Test_ShellCommands_Unix(t *testing.T) {
 	_, output := ShellCommandsAndGetOutput([]string{"echo 'Foo'"}, nil, nil)
 	if output == "echo 'Foo'\nFoo\n" {
