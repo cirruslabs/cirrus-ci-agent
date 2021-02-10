@@ -40,8 +40,8 @@ docker_builder:
 task:
   name: Test (macOS)
   alias: test-macos
-  osx_instance:
-    image: catalina-base
+  macos_instance:
+    image: big-sur-base
   test_script:
     - brew install go
     - go test ./...
@@ -91,8 +91,8 @@ task:
   release_script: ./bin/goreleaser
 
 apple_silicon: &APPLE_SILICON_BUILD
-  osx_instance:
-    image: catalina-xcode
+  macos_instance:
+    image: big-sur-xcode
   env:
     GOPATH: $HOME/go
     PATH: $GOPATH/bin:$PATH
