@@ -3,10 +3,17 @@
 package executor
 
 import (
+	"github.com/stretchr/testify/assert"
 	"runtime"
 	"testing"
 	"time"
 )
+
+func TestZshDoesNotHang(t *testing.T) {
+	timeout := time.After(5 * time.Second)
+	success, _ := ShellCommandsAndGetOutput([]string{"zsh -c 'echo \"a:b\" | read -d \":\" piece'"}, nil, &timeout)
+	assert.True(t, success)
+}
 
 func Test_ShellCommands_Unix(t *testing.T) {
 	_, output := ShellCommandsAndGetOutput([]string{"echo 'Foo'"}, nil, nil)

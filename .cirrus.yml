@@ -21,9 +21,10 @@ task:
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
-  get_script: go get ./...
-  build_script: go build ./...
-  test_script: go test ./...
+  test_script:
+    - apt-get update
+    - apt-get install -y zsh
+    - go test ./...
 
 docker_builder:
   name: Test (Windows)
@@ -45,6 +46,15 @@ task:
     - brew install go
     - go test ./...
 
+task:
+  name: Test (FreeBSD)
+  alias: test-freebsd
+  freebsd_instance:
+    image_family: freebsd-12-2
+  test_script:
+    - pkg install -y zsh go
+    - go test ./...
+
 docker_builder:
   name: Test Docker Build
   only_if: "changesInclude('Dockerfile')"
@@ -57,6 +67,7 @@ task:
     - test-linux
     - test-windows
     - test-macos
+    - test-freebsd
   container:
     image: golang:latest
   install_script: curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
@@ -102,6 +113,7 @@ task:
     - test-linux
     - test-windows
     - test-macos
+    - test-freebsd
   <<: *APPLE_SILICON_BUILD
   binary_artifacts:
     path: agent-darwin-arm64
