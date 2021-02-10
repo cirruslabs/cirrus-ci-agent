@@ -17,7 +17,21 @@ task:
 
 task:
   name: Test (Linux)
-  alias: test-linux
+  alias: tests
+  modules_cache:
+    fingerprint_script: cat go.sum
+    folder: $GOPATH/pkg/mod
+  get_script: go get ./...
+  build_script: go build ./...
+  test_script: go test ./...
+
+task:
+  name: Test (FreeBSD)
+  alias: tests
+  freebsd_instance:
+    image_family: freebsd-13-0
+  install_script:
+    - pkg install -y zsh go
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
@@ -27,7 +41,7 @@ task:
 
 docker_builder:
   name: Test (Windows)
-  alias: test-windows
+  alias: tests
   platform: windows
   os_version: 2019
   test_script:
@@ -38,7 +52,7 @@ docker_builder:
 
 task:
   name: Test (macOS)
-  alias: test-macos
+  alias: tests
   osx_instance:
     image: catalina-base
   test_script:
@@ -53,10 +67,7 @@ docker_builder:
 task:
   name: Release (Dry Run)
   only_if: $CIRRUS_TAG == ''
-  depends_on:
-    - test-linux
-    - test-windows
-    - test-macos
+  depends_on: tests
   container:
     image: golang:latest
   install_script: curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
