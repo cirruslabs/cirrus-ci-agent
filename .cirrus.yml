@@ -21,9 +21,10 @@ task:
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
-  get_script: go get ./...
-  build_script: go build ./...
-  test_script: go test ./...
+  test_script:
+    - apt-get update
+    - apt-get install -y zsh
+    - go test ./...
 
 docker_builder:
   name: Test (Windows)
