@@ -12,14 +12,18 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // CirrusConfigurationEvaluatorServiceClient is the client API for CirrusConfigurationEvaluatorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CirrusConfigurationEvaluatorServiceClient interface {
+	// Parser
 	EvaluateConfig(ctx context.Context, in *EvaluateConfigRequest, opts ...grpc.CallOption) (*EvaluateConfigResponse, error)
 	JSONSchema(ctx context.Context, in *JSONSchemaRequest, opts ...grpc.CallOption) (*JSONSchemaResponse, error)
+	// Hooks
+	EvaluateFunction(ctx context.Context, in *EvaluateFunctionRequest, opts ...grpc.CallOption) (*EvaluateFunctionResponse, error)
 }
 
 type cirrusConfigurationEvaluatorServiceClient struct {
@@ -48,12 +52,24 @@ func (c *cirrusConfigurationEvaluatorServiceClient) JSONSchema(ctx context.Conte
 	return out, nil
 }
 
+func (c *cirrusConfigurationEvaluatorServiceClient) EvaluateFunction(ctx context.Context, in *EvaluateFunctionRequest, opts ...grpc.CallOption) (*EvaluateFunctionResponse, error) {
+	out := new(EvaluateFunctionResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/EvaluateFunction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CirrusConfigurationEvaluatorServiceServer is the server API for CirrusConfigurationEvaluatorService service.
 // All implementations must embed UnimplementedCirrusConfigurationEvaluatorServiceServer
 // for forward compatibility
 type CirrusConfigurationEvaluatorServiceServer interface {
+	// Parser
 	EvaluateConfig(context.Context, *EvaluateConfigRequest) (*EvaluateConfigResponse, error)
 	JSONSchema(context.Context, *JSONSchemaRequest) (*JSONSchemaResponse, error)
+	// Hooks
+	EvaluateFunction(context.Context, *EvaluateFunctionRequest) (*EvaluateFunctionResponse, error)
 	mustEmbedUnimplementedCirrusConfigurationEvaluatorServiceServer()
 }
 
@@ -66,6 +82,9 @@ func (UnimplementedCirrusConfigurationEvaluatorServiceServer) EvaluateConfig(con
 }
 func (UnimplementedCirrusConfigurationEvaluatorServiceServer) JSONSchema(context.Context, *JSONSchemaRequest) (*JSONSchemaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JSONSchema not implemented")
+}
+func (UnimplementedCirrusConfigurationEvaluatorServiceServer) EvaluateFunction(context.Context, *EvaluateFunctionRequest) (*EvaluateFunctionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EvaluateFunction not implemented")
 }
 func (UnimplementedCirrusConfigurationEvaluatorServiceServer) mustEmbedUnimplementedCirrusConfigurationEvaluatorServiceServer() {
 }
@@ -117,6 +136,24 @@ func _CirrusConfigurationEvaluatorService_JSONSchema_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusConfigurationEvaluatorService_EvaluateFunction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EvaluateFunctionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusConfigurationEvaluatorServiceServer).EvaluateFunction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService/EvaluateFunction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusConfigurationEvaluatorServiceServer).EvaluateFunction(ctx, req.(*EvaluateFunctionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CirrusConfigurationEvaluatorService_ServiceDesc is the grpc.ServiceDesc for CirrusConfigurationEvaluatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -131,6 +168,97 @@ var CirrusConfigurationEvaluatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "JSONSchema",
 			Handler:    _CirrusConfigurationEvaluatorService_JSONSchema_Handler,
+		},
+		{
+			MethodName: "EvaluateFunction",
+			Handler:    _CirrusConfigurationEvaluatorService_EvaluateFunction_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cirrus_ci_service.proto",
+}
+
+// CirrusRemoteExecutorServiceClient is the client API for CirrusRemoteExecutorService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CirrusRemoteExecutorServiceClient interface {
+	Capabilities(ctx context.Context, in *CapabilitiesRequest, opts ...grpc.CallOption) (*CapabilitiesResponse, error)
+}
+
+type cirrusRemoteExecutorServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCirrusRemoteExecutorServiceClient(cc grpc.ClientConnInterface) CirrusRemoteExecutorServiceClient {
+	return &cirrusRemoteExecutorServiceClient{cc}
+}
+
+func (c *cirrusRemoteExecutorServiceClient) Capabilities(ctx context.Context, in *CapabilitiesRequest, opts ...grpc.CallOption) (*CapabilitiesResponse, error) {
+	out := new(CapabilitiesResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService/Capabilities", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CirrusRemoteExecutorServiceServer is the server API for CirrusRemoteExecutorService service.
+// All implementations must embed UnimplementedCirrusRemoteExecutorServiceServer
+// for forward compatibility
+type CirrusRemoteExecutorServiceServer interface {
+	Capabilities(context.Context, *CapabilitiesRequest) (*CapabilitiesResponse, error)
+	mustEmbedUnimplementedCirrusRemoteExecutorServiceServer()
+}
+
+// UnimplementedCirrusRemoteExecutorServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedCirrusRemoteExecutorServiceServer struct {
+}
+
+func (UnimplementedCirrusRemoteExecutorServiceServer) Capabilities(context.Context, *CapabilitiesRequest) (*CapabilitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Capabilities not implemented")
+}
+func (UnimplementedCirrusRemoteExecutorServiceServer) mustEmbedUnimplementedCirrusRemoteExecutorServiceServer() {
+}
+
+// UnsafeCirrusRemoteExecutorServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CirrusRemoteExecutorServiceServer will
+// result in compilation errors.
+type UnsafeCirrusRemoteExecutorServiceServer interface {
+	mustEmbedUnimplementedCirrusRemoteExecutorServiceServer()
+}
+
+func RegisterCirrusRemoteExecutorServiceServer(s grpc.ServiceRegistrar, srv CirrusRemoteExecutorServiceServer) {
+	s.RegisterService(&CirrusRemoteExecutorService_ServiceDesc, srv)
+}
+
+func _CirrusRemoteExecutorService_Capabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusRemoteExecutorServiceServer).Capabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService/Capabilities",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusRemoteExecutorServiceServer).Capabilities(ctx, req.(*CapabilitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// CirrusRemoteExecutorService_ServiceDesc is the grpc.ServiceDesc for CirrusRemoteExecutorService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CirrusRemoteExecutorService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService",
+	HandlerType: (*CirrusRemoteExecutorServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Capabilities",
+			Handler:    _CirrusRemoteExecutorService_Capabilities_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
