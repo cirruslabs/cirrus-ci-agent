@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -25,6 +23,6 @@ func checkEndpoint(endpoint string) error {
 	defer clientConn.Close()
 
 	client.InitClient(clientConn)
-	_, err = client.CirrusClient.Ping(context.Background(), &empty.Empty{})
+
 	return err
 }
