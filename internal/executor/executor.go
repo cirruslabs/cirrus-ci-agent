@@ -42,9 +42,10 @@ type Executor struct {
 	sensitiveValues    []string
 	commandFrom        string
 	commandTo          string
+	cleanWorkingDir    bool
 }
 
-func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom string, commandTo string) *Executor {
+func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom string, commandTo string, cleanWorkingDir bool) *Executor {
 	taskIdentification := &api.TaskIdentification{
 		TaskId: taskId,
 		Secret: clientToken,
@@ -57,6 +58,7 @@ func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom stri
 		sensitiveValues:    make([]string, 0),
 		commandFrom:        commandFrom,
 		commandTo:          commandTo,
+		cleanWorkingDir:    cleanWorkingDir,
 	}
 }
 
@@ -139,7 +141,7 @@ func (executor *Executor) RunBuild() {
 		}
 		backgroundCommand.Logs.Finalize()
 	}
-	if executor.commandTo == "" {
+	if executor.cleanWorkingDir {
 		// this was a separate container or the last stage of a pipe
 		// we can clean up working directory now
 		err = os.RemoveAll(workingDir)
