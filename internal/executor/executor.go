@@ -142,8 +142,6 @@ func (executor *Executor) RunBuild() {
 		backgroundCommand.Logs.Finalize()
 	}
 	if executor.cleanWorkingDir {
-		// this was a separate container or the last stage of a pipe
-		// we can clean up working directory now
 		err = os.RemoveAll(workingDir)
 		if err != nil {
 			log.Printf("Failed to clean working directory: %v", err)
