@@ -39,6 +39,7 @@ func main() {
 	stopHook := flag.Bool("stop-hook", false, "pre stop flag")
 	commandFromPtr := flag.String("command-from", "", "Command to star execution from (inclusive)")
 	commandToPtr := flag.String("command-to", "", "Command to stop execution at (exclusive)")
+	cleanWorkingDir := flag.Bool("clean-working-dir", false, "clean working directory before exit")
 	flag.Parse()
 
 	if *help {
@@ -141,7 +142,7 @@ func main() {
 
 	go runHeartbeat(*taskIdPtr, *clientTokenPtr, conn)
 
-	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr)
+	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr, *cleanWorkingDir)
 	buildExecutor.RunBuild()
 
 	logFile.Close()
