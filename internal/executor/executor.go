@@ -139,6 +139,14 @@ func (executor *Executor) RunBuild() {
 		}
 		backgroundCommand.Logs.Finalize()
 	}
+	if executor.commandTo == "" {
+		// this was a separate container or the last stage of a pipe
+		// we can clean up working directory now
+		err = os.RemoveAll(workingDir)
+		if err != nil {
+			log.Printf("Failed to clean working directory: %v", err)
+		}
+	}
 }
 
 // BoundedCommands bounds a slice of commands with unique names to a half-open range [fromName, toName).
