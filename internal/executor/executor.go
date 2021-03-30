@@ -367,6 +367,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	branch := env["CIRRUS_BRANCH"]
 	pr_number, is_pr := env["CIRRUS_PR"]
 	tag, is_tag := env["CIRRUS_TAG"]
+	_, is_clone_modules := env["CIRRUS_CLONE_SUBMODULES"]
 
 	clone_url := env["CIRRUS_REPO_CLONE_URL"]
 	if _, has_clone_token := env["CIRRUS_REPO_CLONE_TOKEN"]; has_clone_token {
@@ -496,6 +497,32 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	if err != nil {
 		logUploader.Write([]byte("\nFailed to get HEAD information!"))
 		return false
+	}
+
+	if is_clone_modules {
+		logUploader.Write([]byte("\nUpdating submodules..."))
+
+		workTree, err := repo.Worktree()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get work tree: %s!", err)))
+			return false
+		}
+
+		submodules, err := workTree.Submodules()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get submodules: %s!", err)))
+			return false
+		}
+
+		if err := submodules.Update(&git.SubmoduleUpdateOptions{
+			Init:              true,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		}); err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodules: %s!", err)))
+			return false
+		}
+
+		logUploader.Write([]byte("\nSucessfully updated submodules!"))
 	}
 
 	if ref.Hash() != plumbing.NewHash(change) {
