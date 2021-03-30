@@ -367,7 +367,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	branch := env["CIRRUS_BRANCH"]
 	pr_number, is_pr := env["CIRRUS_PR"]
 	tag, is_tag := env["CIRRUS_TAG"]
-	_, is_clone_modules := env["CIRRUS_CLONE_SUBMODULES"]
+	is_clone_modules := env["CIRRUS_CLONE_SUBMODULES"] == "true"
 
 	clone_url := env["CIRRUS_REPO_CLONE_URL"]
 	if _, has_clone_token := env["CIRRUS_REPO_CLONE_TOKEN"]; has_clone_token {
