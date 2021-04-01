@@ -50,7 +50,7 @@ task:
   name: Test (FreeBSD)
   alias: test-freebsd
   freebsd_instance:
-    image_family: freebsd-12-2
+    image_family: freebsd-13-0
   test_script:
     - pkg install -y zsh go
     - go test ./...
