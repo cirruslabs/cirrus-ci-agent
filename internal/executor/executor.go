@@ -185,6 +185,16 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 		} else if executor.commandFrom != "" {
 			// Default folder exists and we continue execution. Therefore we need to use it.
 			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
+		} else if executor.cleanWorkingDir {
+			_ = os.RemoveAll(defaultTempDirPath)
+			// try to find random working dirs in case there was a cancellation on a persistent worker for example.
+			dirEntries, _ := os.ReadDir(os.TempDir())
+			for _, dirEntry := range dirEntries {
+				if dirEntry.IsDir() && strings.HasPrefix(dirEntry.Name(), "cirrus-task-") {
+					_ = os.RemoveAll(filepath.Join(os.TempDir(), dirEntry.Name()))
+				}
+			}
+			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
 		} else {
 			uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
 			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(uniqueTempDirPath)
