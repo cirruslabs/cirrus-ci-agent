@@ -499,6 +499,26 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		return false
 	}
 
+	if ref.Hash() != plumbing.NewHash(change) {
+		logUploader.Write([]byte(fmt.Sprintf("\nHEAD is at %s.", ref.Hash())))
+		logUploader.Write([]byte(fmt.Sprintf("\nHard resetting to %s...", change)))
+
+		workTree, err := repo.Worktree()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get work tree: %s!", err)))
+			return false
+		}
+
+		err = workTree.Reset(&git.ResetOptions{
+			Commit: plumbing.NewHash(change),
+			Mode:   git.HardReset,
+		})
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to force reset to %s: %s!", change, err)))
+			return false
+		}
+	}
+
 	if is_clone_modules {
 		logUploader.Write([]byte("\nUpdating submodules..."))
 
@@ -525,27 +545,9 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		logUploader.Write([]byte("\nSucessfully updated submodules!"))
 	}
 
-	if ref.Hash() != plumbing.NewHash(change) {
-		logUploader.Write([]byte(fmt.Sprintf("\nHEAD is at %s.", ref.Hash())))
-		logUploader.Write([]byte(fmt.Sprintf("\nHard resetting to %s...", change)))
-
-		workTree, err := repo.Worktree()
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get work tree: %s!", err)))
-			return false
-		}
-
-		err = workTree.Reset(&git.ResetOptions{
-			Commit: plumbing.NewHash(change),
-			Mode:   git.HardReset,
-		})
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to force reset to %s: %s!", change, err)))
-			return false
-		}
-	}
 	logUploader.Write([]byte(fmt.Sprintf("\nChecked out %s on %s branch.", change, branch)))
 	logUploader.Write([]byte("\nSuccessfully cloned!"))
+
 	return true
 }
 
