@@ -534,12 +534,17 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 			return false
 		}
 
-		if err := submodules.Update(&git.SubmoduleUpdateOptions{
+		opts := &git.SubmoduleUpdateOptions{
 			Init:              true,
 			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		}); err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodules: %s!", err)))
-			return false
+		}
+
+		for _, sub := range submodules {
+			if err := sub.Update(opts); err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodule %q: %s!",
+					sub.Config().Name, err)))
+				return false
+			}
 		}
 
 		logUploader.Write([]byte("\nSucessfully updated submodules!"))
