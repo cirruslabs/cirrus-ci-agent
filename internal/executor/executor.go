@@ -499,32 +499,6 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		return false
 	}
 
-	if is_clone_modules {
-		logUploader.Write([]byte("\nUpdating submodules..."))
-
-		workTree, err := repo.Worktree()
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get work tree: %s!", err)))
-			return false
-		}
-
-		submodules, err := workTree.Submodules()
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get submodules: %s!", err)))
-			return false
-		}
-
-		if err := submodules.Update(&git.SubmoduleUpdateOptions{
-			Init:              true,
-			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		}); err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodules: %s!", err)))
-			return false
-		}
-
-		logUploader.Write([]byte("\nSucessfully updated submodules!"))
-	}
-
 	if ref.Hash() != plumbing.NewHash(change) {
 		logUploader.Write([]byte(fmt.Sprintf("\nHEAD is at %s.", ref.Hash())))
 		logUploader.Write([]byte(fmt.Sprintf("\nHard resetting to %s...", change)))
@@ -544,8 +518,41 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 			return false
 		}
 	}
+
+	if is_clone_modules {
+		logUploader.Write([]byte("\nUpdating submodules..."))
+
+		workTree, err := repo.Worktree()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get work tree: %s!", err)))
+			return false
+		}
+
+		submodules, err := workTree.Submodules()
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to get submodules: %s!", err)))
+			return false
+		}
+
+		opts := &git.SubmoduleUpdateOptions{
+			Init:              true,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		}
+
+		for _, sub := range submodules {
+			if err := sub.Update(opts); err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodule %q: %s!",
+					sub.Config().Name, err)))
+				return false
+			}
+		}
+
+		logUploader.Write([]byte("\nSucessfully updated submodules!"))
+	}
+
 	logUploader.Write([]byte(fmt.Sprintf("\nChecked out %s on %s branch.", change, branch)))
 	logUploader.Write([]byte("\nSuccessfully cloned!"))
+
 	return true
 }
 
