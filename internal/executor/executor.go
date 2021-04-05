@@ -34,31 +34,38 @@ type CommandAndLogs struct {
 }
 
 type Executor struct {
-	taskIdentification *api.TaskIdentification
-	serverToken        string
-	backgroundCommands []CommandAndLogs
-	httpCacheHost      string
-	timeout            <-chan time.Time
-	sensitiveValues    []string
-	commandFrom        string
-	commandTo          string
-	cleanWorkingDir    bool
+	taskIdentification   *api.TaskIdentification
+	serverToken          string
+	backgroundCommands   []CommandAndLogs
+	httpCacheHost        string
+	timeout              <-chan time.Time
+	sensitiveValues      []string
+	commandFrom          string
+	commandTo            string
+	preCreatedWorkingDir string
 }
 
-func NewExecutor(taskId int64, clientToken, serverToken string, commandFrom string, commandTo string, cleanWorkingDir bool) *Executor {
+func NewExecutor(
+	taskId int64,
+	clientToken,
+	serverToken string,
+	commandFrom string,
+	commandTo string,
+	preCreatedWorkingDir string,
+) *Executor {
 	taskIdentification := &api.TaskIdentification{
 		TaskId: taskId,
 		Secret: clientToken,
 	}
 	return &Executor{
-		taskIdentification: taskIdentification,
-		serverToken:        serverToken,
-		backgroundCommands: make([]CommandAndLogs, 0),
-		httpCacheHost:      "",
-		sensitiveValues:    make([]string, 0),
-		commandFrom:        commandFrom,
-		commandTo:          commandTo,
-		cleanWorkingDir:    cleanWorkingDir,
+		taskIdentification:   taskIdentification,
+		serverToken:          serverToken,
+		backgroundCommands:   make([]CommandAndLogs, 0),
+		httpCacheHost:        "",
+		sensitiveValues:      make([]string, 0),
+		commandFrom:          commandFrom,
+		commandTo:            commandTo,
+		preCreatedWorkingDir: preCreatedWorkingDir,
 	}
 }
 
@@ -141,12 +148,6 @@ func (executor *Executor) RunBuild() {
 		}
 		backgroundCommand.Logs.Finalize()
 	}
-	if executor.cleanWorkingDir {
-		err = os.RemoveAll(workingDir)
-		if err != nil {
-			log.Printf("Failed to clean working directory: %v", err)
-		}
-	}
 }
 
 // BoundedCommands bounds a slice of commands with unique names to a half-open range [fromName, toName).
@@ -177,6 +178,13 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 		}
 	}
 	responseEnvironment["CIRRUS_OS"] = runtime.GOOS
+
+	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
+	// was not overridden in the task specification by the user
+	_, needsWorkingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
+	if needsWorkingDir && executor.preCreatedWorkingDir != "" {
+		responseEnvironment["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
+	}
 
 	if _, ok := responseEnvironment["CIRRUS_WORKING_DIR"]; !ok {
 		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
