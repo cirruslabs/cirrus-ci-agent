@@ -39,7 +39,8 @@ func main() {
 	stopHook := flag.Bool("stop-hook", false, "pre stop flag")
 	commandFromPtr := flag.String("command-from", "", "Command to star execution from (inclusive)")
 	commandToPtr := flag.String("command-to", "", "Command to stop execution at (exclusive)")
-	cleanWorkingDir := flag.Bool("clean-working-dir", false, "clean working directory before exit")
+	preCreatedWorkingDir := flag.String("pre-created-working-dir", "",
+		"working directory to use when spawned via Persistent Worker")
 	flag.Parse()
 
 	if *help {
@@ -142,7 +143,8 @@ func main() {
 
 	go runHeartbeat(*taskIdPtr, *clientTokenPtr, conn)
 
-	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr, *cleanWorkingDir)
+	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr,
+		*preCreatedWorkingDir)
 	buildExecutor.RunBuild()
 
 	logFile.Close()
