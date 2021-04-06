@@ -181,8 +181,8 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 
 	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
 	// was not overridden in the task specification by the user
-	_, needsWorkingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
-	if needsWorkingDir && executor.preCreatedWorkingDir != "" {
+	_, hasWorkingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
+	if !hasWorkingDir && executor.preCreatedWorkingDir != "" {
 		responseEnvironment["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
 	}
 
