@@ -187,7 +187,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	}
 
 	if _, ok := responseEnvironment["CIRRUS_WORKING_DIR"]; !ok {
-		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
+		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-build")
 		if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
 			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
 		} else if executor.commandFrom != "" {
