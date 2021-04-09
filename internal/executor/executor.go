@@ -45,6 +45,11 @@ type Executor struct {
 	preCreatedWorkingDir string
 }
 
+var (
+	ErrStepExit   = errors.New("executor step requested to terminate execution")
+	ErrStepFailed = errors.New("executor step failed")
+)
+
 func NewExecutor(
 	taskId int64,
 	clientToken,
@@ -133,7 +138,11 @@ func (executor *Executor) RunBuild() {
 		}
 
 		log.Printf("Executing %s...", command.Name)
-		if !executor.performStep(environment, command) {
+		if err := executor.performStep(environment, command); err != nil {
+			if errors.Is(err, ErrStepExit) {
+				return
+			}
+
 			failedAtLeastOnce = true
 		}
 		log.Printf("%s finished!", command.Name)
@@ -204,14 +213,14 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) bool {
+func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) error {
 	success := false
 	signaledToExit := false
 	start := time.Now()
 
 	switch instruction := currentStep.Instruction.(type) {
 	case *api.Command_ExitInstruction:
-		os.Exit(0)
+		return ErrStepExit
 	case *api.Command_CloneInstruction:
 		success = executor.CloneRepository(env)
 	case *api.Command_FileInstruction:
@@ -269,7 +278,12 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		time.Sleep(10 * time.Second)
 		_, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
 	}
-	return success
+
+	if !success {
+		return ErrStepFailed
+	}
+
+	return nil
 }
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
