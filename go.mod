@@ -5,13 +5,13 @@ go 1.15
 require (
 	github.com/bmatcuk/doublestar v1.3.2
 	github.com/certifi/gocertifi v0.0.0-20200922220541-2c3bb06c6054
-	github.com/cirruslabs/cirrus-ci-annotations v0.2.0
+	github.com/cirruslabs/cirrus-ci-annotations v0.2.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/protobuf v1.4.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/joshdk/go-junit v0.0.0-20200702055522-6efcf4050909 // indirect
+	github.com/joshdk/go-junit v0.0.0-20210226021600-6145f504ca0d // indirect
 	github.com/klauspost/compress v1.11.1 // indirect
 	github.com/klauspost/pgzip v1.2.5
 	github.com/pkg/errors v0.9.1
