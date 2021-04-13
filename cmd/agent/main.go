@@ -199,7 +199,7 @@ func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
 		grpc.WithKeepaliveParams(
 			keepalive.ClientParameters{
 				Time:                30 * time.Second, // make connection is alive every 30 seconds
-				Timeout:             30 * time.Second, // with a timeout of 30 seconds so it takes at most a minute (like heartbeats)
+				Timeout:             60 * time.Second, // with a timeout of 60 seconds
 				PermitWithoutStream: true,             // always send Pings even if there are no RPCs
 			},
 		),
