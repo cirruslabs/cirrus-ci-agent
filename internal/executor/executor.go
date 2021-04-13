@@ -75,21 +75,22 @@ func NewExecutor(
 }
 
 func (executor *Executor) RunBuild() {
-	initialStepsRequest := api.InitialCommandsRequest{
+	log.Println("Getting initial commands...")
+	response, err := client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
 		TaskIdentification:  executor.taskIdentification,
 		LocalTimestamp:      time.Now().Unix(),
 		ContinueFromCommand: executor.commandFrom,
-	}
-	log.Println("Getting initial commands...")
-	response, err := client.CirrusClient.InitialCommands(context.Background(), &initialStepsRequest)
+	})
+	retryDelay := 5 * time.Second
 	for response == nil || err != nil {
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            fmt.Sprintf("Failed to get initial commands: %v", err),
-		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
-		time.Sleep(10 * time.Second)
-		response, err = client.CirrusClient.InitialCommands(context.Background(), &initialStepsRequest)
+		retryDelay *= 2
+		time.Sleep(retryDelay)
+		response, err = client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
+			TaskIdentification:  executor.taskIdentification,
+			LocalTimestamp:      time.Now().Unix(),
+			ContinueFromCommand: executor.commandFrom,
+			Retry:               true,
+		})
 	}
 
 	if response.ServerToken != executor.serverToken {
