@@ -83,6 +83,7 @@ func (executor *Executor) RunBuild() {
 	})
 	retryDelay := 5 * time.Second
 	for response == nil || err != nil {
+		log.Printf("Failed to get initial commands: %v", err)
 		retryDelay *= 2
 		time.Sleep(retryDelay)
 		response, err = client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
