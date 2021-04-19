@@ -212,8 +212,8 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	}
 
 	if _, ok := responseEnvironment["CIRRUS_CLONE_DIR"]; !ok {
-		// Get the working directory here again after we've dealt
-		// with the potentially missing CIRRUS_WORKING_DIR above
+		// Get the working directory here again after we've
+		// dealt with it's potential absence above
 		workingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
 
 		if StartsWithVariable(workingDir, "CIRRUS_CLONE_DIR") {
