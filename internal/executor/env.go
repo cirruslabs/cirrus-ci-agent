@@ -26,6 +26,30 @@ func ExpandTextOSFirst(text string, customEnv map[string]string) string {
 	})
 }
 
+func StartsWithVariable(s string, name string) bool {
+	return variableIndex(s, name) == 0
+}
+
+func ContainsVariable(s string, name string) bool {
+	return variableIndex(s, name) >= 0
+}
+
+func variableIndex(s string, name string) int {
+	if index := strings.Index(s, "$"+name); index >= 0 {
+		return index
+	}
+
+	if index := strings.Index(s, "${"+name); index >= 0 {
+		return index
+	}
+
+	if index := strings.Index(s, "%"+name); index >= 0 {
+		return index
+	}
+
+	return -1
+}
+
 func expandTextExtended(text string, lookup func(string) (string, bool)) string {
 	var re = regexp.MustCompile(`%(\w+)%`)
 	return os.Expand(re.ReplaceAllString(text, `${$1}`), func(text string) string {
@@ -56,10 +80,7 @@ func expandEnvironmentRecursively(environment map[string]string) map[string]stri
 			originalValue := result[key]
 			expandedValue := ExpandTextOSFirst(value, result)
 
-			selfRecursion := strings.Contains(expandedValue, "$"+key) ||
-				strings.Contains(expandedValue, "${"+key) ||
-				strings.Contains(expandedValue, "%"+key)
-			if selfRecursion {
+			if ContainsVariable(expandedValue, key) {
 				// detected self-recursion
 				continue
 			}

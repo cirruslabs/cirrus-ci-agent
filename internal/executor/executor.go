@@ -178,6 +178,19 @@ func BoundedCommands(commands []*api.Command, fromName, toName string) []*api.Co
 	return commands[left:right]
 }
 
+func makeScratchDir(executor *Executor) string {
+	defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
+	if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
+		return filepath.ToSlash(defaultTempDirPath)
+	} else if executor.commandFrom != "" {
+		// Default folder exists and we continue execution. Therefore we need to use it.
+		return filepath.ToSlash(defaultTempDirPath)
+	} else {
+		uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
+		return filepath.ToSlash(uniqueTempDirPath)
+	}
+}
+
 func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[string]string) map[string]string {
 	if responseEnvironment == nil {
 		responseEnvironment = make(map[string]string)
@@ -190,23 +203,23 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	}
 	responseEnvironment["CIRRUS_OS"] = runtime.GOOS
 
-	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
-	// was not overridden in the task specification by the user
-	_, hasWorkingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
-	if !hasWorkingDir && executor.preCreatedWorkingDir != "" {
-		responseEnvironment["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
+	if _, ok := responseEnvironment["CIRRUS_WORKING_DIR"]; !ok {
+		if executor.preCreatedWorkingDir != "" {
+			responseEnvironment["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
+		} else {
+			responseEnvironment["CIRRUS_WORKING_DIR"] = makeScratchDir(executor)
+		}
 	}
 
-	if _, ok := responseEnvironment["CIRRUS_WORKING_DIR"]; !ok {
-		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
-		if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
-			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
-		} else if executor.commandFrom != "" {
-			// Default folder exists and we continue execution. Therefore we need to use it.
-			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
+	if _, ok := responseEnvironment["CIRRUS_CLONE_DIR"]; !ok {
+		// Get the working directory here again after we've dealt
+		// with the potentially missing CIRRUS_WORKING_DIR above
+		workingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
+
+		if StartsWithVariable(workingDir, "CIRRUS_CLONE_DIR") {
+			responseEnvironment["CIRRUS_CLONE_DIR"] = makeScratchDir(executor)
 		} else {
-			uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
-			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(uniqueTempDirPath)
+			responseEnvironment["CIRRUS_CLONE_DIR"] = workingDir
 		}
 	}
 
@@ -386,7 +399,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 
 	logUploader.Write([]byte("Using built-in Git...\n"))
 
-	working_dir := env["CIRRUS_WORKING_DIR"]
+	cloneDir := env["CIRRUS_CLONE_DIR"]
 	change := env["CIRRUS_CHANGE_IN_REPO"]
 	branch := env["CIRRUS_BRANCH"]
 	pr_number, is_pr := env["CIRRUS_PR"]
@@ -426,7 +439,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 	var repo *git.Repository
 
 	if is_pr {
-		repo, err = git.PlainInit(working_dir, false)
+		repo, err = git.PlainInit(cloneDir, false)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to init repository: %s!", err)))
 			return false
@@ -498,13 +511,13 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		}
 		logUploader.Write([]byte(fmt.Sprintf("\nCloning %s...\n", cloneOptions.ReferenceName)))
 
-		repo, err = git.PlainClone(working_dir, false, &cloneOptions)
+		repo, err = git.PlainClone(cloneDir, false, &cloneOptions)
 
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nRetryable error '%s' while cloning! Trying again...", err)))
-			os.RemoveAll(working_dir)
-			EnsureFolderExists(working_dir)
-			repo, err = git.PlainClone(working_dir, false, &cloneOptions)
+			os.RemoveAll(cloneDir)
+			EnsureFolderExists(cloneDir)
+			repo, err = git.PlainClone(cloneDir, false, &cloneOptions)
 		}
 
 		if err != nil {
