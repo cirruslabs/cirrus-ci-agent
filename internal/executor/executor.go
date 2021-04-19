@@ -202,11 +202,7 @@ func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environ
 	}
 
 	if _, ok := result["CIRRUS_WORKING_DIR"]; !ok {
-		if executor.preCreatedWorkingDir != "" {
-			result["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
-		} else {
-			result["CIRRUS_WORKING_DIR"] = makeScratchDir(executor)
-		}
+		result["CIRRUS_WORKING_DIR"] = makeScratchDir(executor)
 	}
 
 	if _, ok := result["CIRRUS_CLONE_DIR"]; !ok {
@@ -225,6 +221,10 @@ func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environ
 }
 
 func makeScratchDir(executor *Executor) string {
+	if executor.preCreatedWorkingDir != "" {
+		return executor.preCreatedWorkingDir
+	}
+
 	defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
 	if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
 		return filepath.ToSlash(defaultTempDirPath)
