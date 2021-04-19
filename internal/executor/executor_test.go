@@ -58,7 +58,7 @@ func TestLimitCommands(t *testing.T) {
 }
 
 func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		t.Skip()
 		return
 	}
