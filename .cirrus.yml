@@ -20,7 +20,6 @@ task:
   alias: test-linux
   env:
     CIRRUS_WORKING_DIR: /tmp/custom-working-dir
-    TMPDIR: /tmp
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
@@ -45,7 +44,6 @@ task:
   alias: test-macos
   env:
     CIRRUS_WORKING_DIR: /tmp/custom-working-dir
-    TMPDIR: /tmp
   macos_instance:
     image: big-sur-base
   test_script:
