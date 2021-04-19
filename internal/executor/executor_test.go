@@ -108,8 +108,8 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 				"CIRRUS_WORKING_DIR": "/tmp/foo",
 			},
 			map[string]string{
-				"CIRRUS_CLONE_DIR":   "/tmp/precreated-build",
-				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR",
+				"CIRRUS_CLONE_DIR":   "$CIRRUS_WORKING_DIR",
+				"CIRRUS_WORKING_DIR": "/tmp/foo",
 			},
 		},
 		{
@@ -152,7 +152,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 				"CIRRUS_CLONE_DIR": "/tmp/foo",
 			},
 			map[string]string{
-				"CIRRUS_CLONE_DIR":   "/tmp/precreated-build",
+				"CIRRUS_CLONE_DIR":   "/tmp/foo",
 				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR",
 			},
 		},
@@ -176,8 +176,8 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 				"CIRRUS_WORKING_DIR": "/tmp/foo",
 			},
 			map[string]string{
-				"CIRRUS_CLONE_DIR":   "/tmp/precreated-build",
-				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR",
+				"CIRRUS_CLONE_DIR":   "/tmp/foo",
+				"CIRRUS_WORKING_DIR": "/tmp/foo",
 			},
 		},
 		{
@@ -200,7 +200,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR/bar",
 			},
 			map[string]string{
-				"CIRRUS_CLONE_DIR":   "/tmp/precreated-build",
+				"CIRRUS_CLONE_DIR":   "/tmp/foo",
 				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR/bar",
 			},
 		},

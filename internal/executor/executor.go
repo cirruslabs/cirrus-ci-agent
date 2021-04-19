@@ -204,18 +204,6 @@ func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environ
 	_, hasCloneDir := result["CIRRUS_CLONE_DIR"]
 	_, hasWorkingDir := result["CIRRUS_WORKING_DIR"]
 
-	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
-	// was not overridden in the task specification by the user
-	if executor.preCreatedWorkingDir != "" {
-		result["CIRRUS_CLONE_DIR"] = executor.preCreatedWorkingDir
-		hasCloneDir = true
-		// Need to override working dir too
-		if hasWorkingDir && !strings.Contains(result["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
-			// If working dir doesn't depend on clone dir then we can default clone dir to the one provided by user
-			result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
-		}
-	}
-
 	if hasCloneDir && !hasWorkingDir {
 		// Only clone was overridden. Make sure $CIRRUS_WORKING_DIR is set
 		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
@@ -225,12 +213,18 @@ func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environ
 		if !strings.Contains(result["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
 			// If working dir doesn't depend on clone dir then we can default clone dir to the one provided by user
 			result["CIRRUS_CLONE_DIR"] = "$CIRRUS_WORKING_DIR"
+			hasCloneDir = true
 		}
 	}
 
 	if !hasCloneDir && !hasWorkingDir {
 		// none of the dirs are explicitly set. Make sure they'll be the same
 		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
+	}
+
+	if !hasCloneDir && executor.preCreatedWorkingDir != "" {
+		// none of the dirs are explicitly set. Make sure they'll be the same
+		result["CIRRUS_CLONE_DIR"] = executor.preCreatedWorkingDir
 	}
 
 	if _, ok := result["CIRRUS_CLONE_DIR"]; !ok {
