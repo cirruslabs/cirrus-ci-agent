@@ -64,16 +64,16 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 	}
 	tmpDirToRestore := os.Getenv("TMPDIR")
 	_ = os.Setenv("TMPDIR", "/tmp")
-	e := &Executor{}
-	ePreCreate := &Executor{}
-	ePreCreate.SetPreCreatedWorkingDir("/tmp/precreated-build")
+	executorDefault := &Executor{}
+	executorPreCreated := &Executor{}
+	executorPreCreated.SetPreCreatedWorkingDir("/tmp/precreated-build")
 	examples := []struct {
 		Executor        *Executor
 		Description     string
 		Given, Expected map[string]string
 	}{
 		{
-			e,
+			executorDefault,
 			"empty",
 			map[string]string{},
 			map[string]string{
@@ -82,7 +82,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"empty (precreated)",
 			map[string]string{},
 			map[string]string{
@@ -91,7 +91,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			e,
+			executorDefault,
 			"only working",
 			map[string]string{
 				"CIRRUS_WORKING_DIR": "/tmp/foo",
@@ -102,7 +102,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"only working (precreated)",
 			map[string]string{
 				"CIRRUS_WORKING_DIR": "/tmp/foo",
@@ -113,7 +113,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			e,
+			executorDefault,
 			"only working (monorepo)",
 			map[string]string{
 				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR/foo",
@@ -124,7 +124,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"only working (monorepo + precreated)",
 			map[string]string{
 				"CIRRUS_WORKING_DIR": "$CIRRUS_CLONE_DIR/foo",
@@ -135,7 +135,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			e,
+			executorDefault,
 			"only clone",
 			map[string]string{
 				"CIRRUS_CLONE_DIR": "/tmp/foo",
@@ -146,7 +146,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"only clone (precreated)",
 			map[string]string{
 				"CIRRUS_CLONE_DIR": "/tmp/foo",
@@ -157,7 +157,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			e,
+			executorDefault,
 			"both",
 			map[string]string{
 				"CIRRUS_CLONE_DIR":   "/tmp/foo",
@@ -169,7 +169,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"both (precreated)",
 			map[string]string{
 				"CIRRUS_CLONE_DIR":   "/tmp/foo",
@@ -181,7 +181,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			e,
+			executorDefault,
 			"both (monorepo)",
 			map[string]string{
 				"CIRRUS_CLONE_DIR":   "/tmp/foo",
@@ -193,7 +193,7 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			},
 		},
 		{
-			ePreCreate,
+			executorPreCreated,
 			"both (monorepo + precreated)",
 			map[string]string{
 				"CIRRUS_CLONE_DIR":   "/tmp/foo",
