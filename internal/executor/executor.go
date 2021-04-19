@@ -74,6 +74,10 @@ func NewExecutor(
 	}
 }
 
+func (executor *Executor) SetPreCreatedWorkingDir(dir string) {
+	executor.preCreatedWorkingDir = dir
+}
+
 func (executor *Executor) RunBuild() {
 	log.Println("Getting initial commands...")
 	response, err := client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
@@ -100,13 +104,6 @@ func (executor *Executor) RunBuild() {
 	}
 
 	environment := executor.GetExpandedScriptEnvironment(response.Environment)
-
-	if _, ok := environment["OS"]; !ok {
-		if _, ok := os.LookupEnv("OS"); !ok {
-			environment["OS"] = runtime.GOOS
-		}
-	}
-	environment["CIRRUS_OS"] = runtime.GOOS
 
 	workingDir, ok := environment["CIRRUS_WORKING_DIR"]
 	if ok {
@@ -186,53 +183,68 @@ func BoundedCommands(commands []*api.Command, fromName, toName string) []*api.Co
 }
 
 func (executor *Executor) GetExpandedScriptEnvironment(responseEnvironment map[string]string) map[string]string {
-	if responseEnvironment == nil {
-		responseEnvironment = make(map[string]string)
+	responseEnvironment = executor.PopulateCloneAndWorkingDirEnvironmentVariables(responseEnvironment)
+
+	if _, ok := responseEnvironment["OS"]; !ok {
+		if _, ok := os.LookupEnv("OS"); !ok {
+			responseEnvironment["OS"] = runtime.GOOS
+		}
+	}
+	responseEnvironment["CIRRUS_OS"] = runtime.GOOS
+
+	return expandEnvironmentRecursively(responseEnvironment)
+}
+
+func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environment map[string]string) map[string]string {
+	result := make(map[string]string)
+	for key, value := range environment {
+		result[key] = value
 	}
 
-	_, hasCloneDir := responseEnvironment["CIRRUS_CLONE_DIR"]
-	_, hasWorkingDir := responseEnvironment["CIRRUS_WORKING_DIR"]
+	_, hasCloneDir := result["CIRRUS_CLONE_DIR"]
+	_, hasWorkingDir := result["CIRRUS_WORKING_DIR"]
 
-	if hasCloneDir && hasWorkingDir {
-		// Do nothing. User did override both dirs
+	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
+	// was not overridden in the task specification by the user
+	if executor.preCreatedWorkingDir != "" {
+		result["CIRRUS_CLONE_DIR"] = executor.preCreatedWorkingDir
+		hasCloneDir = true
+		// Need to override working dir too
+		if hasWorkingDir && !strings.Contains(result["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
+			// If working dir doesn't depend on clone dir then we can default clone dir to the one provided by user
+			result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
+		}
 	}
+
 	if hasCloneDir && !hasWorkingDir {
 		// Only clone was overridden. Make sure $CIRRUS_WORKING_DIR is set
-		responseEnvironment["CIRRUS_WORKING_DIR"] = responseEnvironment["CIRRUS_CLONE_DIR"]
+		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
 	}
 	if !hasCloneDir && hasWorkingDir {
 		// User did override working dir
-		if !strings.Contains(responseEnvironment["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
+		if !strings.Contains(result["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
 			// If working dir doesn't depend on clone dir then we can default clone dir to the one provided by user
-			responseEnvironment["CIRRUS_CLONE_DIR"] = "$CIRRUS_WORKING_DIR"
+			result["CIRRUS_CLONE_DIR"] = "$CIRRUS_WORKING_DIR"
 		}
 	}
 
 	if !hasCloneDir && !hasWorkingDir {
 		// none of the dirs are explicitly set. Make sure they'll be the same
-		responseEnvironment["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
+		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
 	}
 
-	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
-	// was not overridden in the task specification by the user
-	if !hasWorkingDir && executor.preCreatedWorkingDir != "" {
-		responseEnvironment["CIRRUS_CLONE_DIR"] = executor.preCreatedWorkingDir
-	}
-
-	if _, ok := responseEnvironment["CIRRUS_CLONE_DIR"]; !ok {
+	if _, ok := result["CIRRUS_CLONE_DIR"]; !ok {
 		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
 		if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
-			responseEnvironment["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
+			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
 		} else if executor.commandFrom != "" {
 			// Default folder exists and we continue execution. Therefore we need to use it.
-			responseEnvironment["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
+			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
 		} else {
 			uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
-			responseEnvironment["CIRRUS_CLONE_DIR"] = filepath.ToSlash(uniqueTempDirPath)
+			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(uniqueTempDirPath)
 		}
 	}
-
-	result := expandEnvironmentRecursively(responseEnvironment)
 
 	return result
 }
