@@ -1,9 +1,8 @@
-// +build !windows !freebsd
+// +build !windows
 
-package executor_test
+package executor
 
 import (
-	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -12,11 +11,11 @@ import (
 func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 	tmpDirToRestore := os.Getenv("TMPDIR")
 	_ = os.Setenv("TMPDIR", "/tmp")
-	e := &executor.Executor{}
-	ePreCreate := &executor.Executor{}
+	e := &Executor{}
+	ePreCreate := &Executor{}
 	ePreCreate.SetPreCreatedWorkingDir("/tmp/precreated-build")
 	examples := []struct {
-		Executor        *executor.Executor
+		Executor        *Executor
 		Description     string
 		Given, Expected map[string]string
 	}{

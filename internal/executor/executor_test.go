@@ -1,8 +1,7 @@
-package executor_test
+package executor
 
 import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
-	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -51,7 +50,7 @@ func TestLimitCommands(t *testing.T) {
 
 	for _, example := range examples {
 		t.Run(example.Description, func(t *testing.T) {
-			require.Equal(t, example.Expected, executor.BoundedCommands(commands, example.FromName, example.ToName))
+			require.Equal(t, example.Expected, BoundedCommands(commands, example.FromName, example.ToName))
 		})
 	}
 }
