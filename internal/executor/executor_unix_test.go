@@ -5,10 +5,13 @@ package executor_test
 import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
 func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
+	tmpDirToRestore := os.Getenv("TMPDIR")
+	_ = os.Setenv("TMPDIR", "/tmp")
 	e := &executor.Executor{}
 	ePreCreate := &executor.Executor{}
 	ePreCreate.SetPreCreatedWorkingDir("/tmp/precreated-build")
@@ -156,4 +159,5 @@ func TestPopulateCloneAndWorkingDirEnvironmentVariables(t *testing.T) {
 			require.Equal(t, example.Expected, example.Executor.PopulateCloneAndWorkingDirEnvironmentVariables(example.Given))
 		})
 	}
+	_ = os.Setenv("TMPDIR", tmpDirToRestore)
 }
