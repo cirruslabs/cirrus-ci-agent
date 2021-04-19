@@ -201,46 +201,40 @@ func (executor *Executor) PopulateCloneAndWorkingDirEnvironmentVariables(environ
 		result[key] = value
 	}
 
-	_, hasCloneDir := result["CIRRUS_CLONE_DIR"]
-	_, hasWorkingDir := result["CIRRUS_WORKING_DIR"]
-
-	if hasCloneDir && !hasWorkingDir {
-		// Only clone was overridden. Make sure $CIRRUS_WORKING_DIR is set
-		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
-	}
-	if !hasCloneDir && hasWorkingDir {
-		// User did override working dir
-		if !strings.Contains(result["CIRRUS_WORKING_DIR"], "CIRRUS_CLONE_DIR") {
-			// If working dir doesn't depend on clone dir then we can default clone dir to the one provided by user
-			result["CIRRUS_CLONE_DIR"] = "$CIRRUS_WORKING_DIR"
-			hasCloneDir = true
+	if _, ok := result["CIRRUS_WORKING_DIR"]; !ok {
+		if executor.preCreatedWorkingDir != "" {
+			result["CIRRUS_WORKING_DIR"] = executor.preCreatedWorkingDir
+		} else {
+			result["CIRRUS_WORKING_DIR"] = makeScratchDir(executor)
 		}
 	}
 
-	if !hasCloneDir && !hasWorkingDir {
-		// none of the dirs are explicitly set. Make sure they'll be the same
-		result["CIRRUS_WORKING_DIR"] = "$CIRRUS_CLONE_DIR"
-	}
-
-	if !hasCloneDir && executor.preCreatedWorkingDir != "" {
-		// none of the dirs are explicitly set. Make sure they'll be the same
-		result["CIRRUS_CLONE_DIR"] = executor.preCreatedWorkingDir
-	}
-
 	if _, ok := result["CIRRUS_CLONE_DIR"]; !ok {
-		defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
-		if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
-			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
-		} else if executor.commandFrom != "" {
-			// Default folder exists and we continue execution. Therefore we need to use it.
-			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(defaultTempDirPath)
+		// Get the working directory here again after we've
+		// dealt with it's potential absence above
+		workingDir := result["CIRRUS_WORKING_DIR"]
+
+		if strings.Contains(workingDir, "CIRRUS_CLONE_DIR") {
+			result["CIRRUS_CLONE_DIR"] = makeScratchDir(executor)
 		} else {
-			uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
-			result["CIRRUS_CLONE_DIR"] = filepath.ToSlash(uniqueTempDirPath)
+			result["CIRRUS_CLONE_DIR"] = workingDir
 		}
 	}
 
 	return result
+}
+
+func makeScratchDir(executor *Executor) string {
+	defaultTempDirPath := filepath.Join(os.TempDir(), "cirrus-ci-build")
+	if _, err := os.Stat(defaultTempDirPath); os.IsNotExist(err) {
+		return filepath.ToSlash(defaultTempDirPath)
+	} else if executor.commandFrom != "" {
+		// Default folder exists and we continue execution. Therefore we need to use it.
+		return filepath.ToSlash(defaultTempDirPath)
+	} else {
+		uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
+		return filepath.ToSlash(uniqueTempDirPath)
+	}
 }
 
 func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) error {
