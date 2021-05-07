@@ -18,6 +18,8 @@ task:
 task:
   name: Test (Linux)
   alias: test-linux
+  env:
+    CIRRUS_WORKING_DIR: /tmp/custom-working-dir
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
@@ -40,6 +42,8 @@ docker_builder:
 task:
   name: Test (macOS)
   alias: test-macos
+  env:
+    CIRRUS_WORKING_DIR: /tmp/custom-working-dir
   macos_instance:
     image: big-sur-base
   test_script:
