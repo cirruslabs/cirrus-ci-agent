@@ -36,10 +36,12 @@ func ShellCommandsAndGetOutput(scripts []string, custom_env *map[string]string, 
 
 // return true if executed successful
 func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handler ShellOutputHandler, executionTimeout *<-chan time.Time) (*exec.Cmd, error) {
-	cmd, err := ShellCommands(scripts, custom_env, handler)
+	sc, err := NewShellCommands(scripts, custom_env, handler)
 	if err != nil {
 		return nil, err
 	}
+
+	cmd := sc.cmd
 
 	done := make(chan error)
 	go func() {
@@ -64,7 +66,7 @@ func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handl
 	select {
 	case <-timeout:
 		handler([]byte("\nTimed out!"))
-		err = cmd.Process.Kill()
+		err = sc.kill()
 		if err != nil {
 			handler([]byte(fmt.Sprintf("\nFailed to gracefully kill: %s", err)))
 		}
@@ -86,12 +88,14 @@ func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handl
 	}
 }
 
-func ShellCommands(scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*exec.Cmd, error) {
+func NewShellCommands(scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*ShellCommands, error) {
 	var cmd *exec.Cmd
 	var scriptFile *os.File
 	var err error
 
 	cmd, scriptFile, err = createCmd(scripts, custom_env)
+
+	sc := &ShellCommands{cmd: cmd}
 
 	if scriptFile != nil {
 		sigs := make(chan os.Signal, 1)
@@ -144,5 +148,7 @@ func ShellCommands(scripts []string, custom_env *map[string]string, handler Shel
 		return nil, errors.New(message)
 	}
 
-	return cmd, nil
+	sc.afterStart()
+
+	return sc, nil
 }

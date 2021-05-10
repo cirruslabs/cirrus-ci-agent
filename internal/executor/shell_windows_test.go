@@ -3,8 +3,79 @@
 package executor
 
 import (
+	"fmt"
+	"github.com/mitchellh/go-ps"
+	"github.com/stretchr/testify/assert"
+	"os"
+	"os/exec"
+	"os/signal"
+	"regexp"
+	"strconv"
 	"testing"
+	"time"
 )
+
+const (
+	modeProcessTreeSpawner = "process-tree-spawner"
+	modeIdler = "idler"
+)
+
+func TestMain(m *testing.M) {
+	switch os.Getenv("MODE") {
+	case modeProcessTreeSpawner:
+		cmd := exec.Command(os.Args[0])
+		cmd.Env = []string{fmt.Sprintf("MODE=%s", modeIdler)}
+
+		if err := cmd.Start(); err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("target PID is %d\n", cmd.Process.Pid)
+
+		if err := cmd.Wait(); err != nil {
+			panic(err)
+		}
+
+		os.Exit(0)
+	case modeIdler:
+		sigChan := make(chan os.Signal)
+		signal.Notify(sigChan)
+		for {
+			<- sigChan
+		}
+	}
+
+	os.Exit(m.Run())
+}
+
+// TestProcessGroupTermination ensures that we terminate all processes we've automatically
+// tainted by assigning a job object to a shell spawned in ShellCommandsAndGetOutput().
+func TestJobObjectTermination(t *testing.T) {
+	timeout := time.After(10 * time.Second)
+	success, output := ShellCommandsAndGetOutput([]string{os.Args[0]},
+		&map[string]string{"MODE": modeProcessTreeSpawner}, &timeout)
+
+	assert.False(t, success, "the command should fail due to time out error")
+	assert.Contains(t, output, "Timed out!", "the command should time out")
+
+	re := regexp.MustCompile(".*target PID is ([0-9]+).*")
+	matches := re.FindStringSubmatch(output)
+	if len(matches) != 2 {
+		t.Fatal("failed to find target PID")
+	}
+
+	pid, err := strconv.ParseInt(matches[1], 10, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TerminateJobObject is asynchronous
+	time.Sleep(5 * time.Second)
+
+	process, err := ps.FindProcess(int(pid))
+	assert.NoError(t, err)
+	assert.Nil(t, process)
+}
 
 func Test_ShellCommands_Windows(t *testing.T) {
 	test_env := map[string]string{
