@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"google.golang.org/grpc"
@@ -250,24 +251,13 @@ func (uploader *LogUploader) UploadStoredOutput() error {
 }
 
 func InitializeLogStreamClient(taskIdentification *api.TaskIdentification, commandName string, raw bool) (api.CirrusCIService_StreamLogsClient, error) {
-	streamLogClient, err := client.CirrusClient.StreamLogs(
-		context.Background(),
-		grpc.UseCompressor(gzip.Name),
-	)
-	if err != nil {
-		time.Sleep(5 * time.Second)
-		streamLogClient, err = client.CirrusClient.StreamLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
-	if err != nil {
-		time.Sleep(20 * time.Second)
-		streamLogClient, err = client.CirrusClient.StreamLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
+	var streamLogClient api.CirrusCIService_StreamLogsClient
+	var err error
+
+	err = retry.Do(func() error {
+		streamLogClient, err = client.CirrusClient.StreamLogs(context.Background(), grpc.UseCompressor(gzip.Name))
+		return err
+	}, retry.Delay(5*time.Second), retry.Attempts(3))
 	if err != nil {
 		log.Printf("Failed to start streaming logs for %s! %s", commandName, err.Error())
 		request := api.ReportAgentProblemRequest{
@@ -284,24 +274,13 @@ func InitializeLogStreamClient(taskIdentification *api.TaskIdentification, comma
 }
 
 func InitializeLogSaveClient(taskIdentification *api.TaskIdentification, commandName string, raw bool) (api.CirrusCIService_SaveLogsClient, error) {
-	streamLogClient, err := client.CirrusClient.SaveLogs(
-		context.Background(),
-		grpc.UseCompressor(gzip.Name),
-	)
-	if err != nil {
-		time.Sleep(5 * time.Second)
-		streamLogClient, err = client.CirrusClient.SaveLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
-	if err != nil {
-		time.Sleep(20 * time.Second)
-		streamLogClient, err = client.CirrusClient.SaveLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
+	var streamLogClient api.CirrusCIService_StreamLogsClient
+	var err error
+
+	err = retry.Do(func() error {
+		streamLogClient, err = client.CirrusClient.SaveLogs(context.Background(), grpc.UseCompressor(gzip.Name))
+		return err
+	}, retry.Delay(5*time.Second), retry.Attempts(3))
 	if err != nil {
 		log.Printf("Failed to start saving logs for %s! %s", commandName, err.Error())
 		request := api.ReportAgentProblemRequest{

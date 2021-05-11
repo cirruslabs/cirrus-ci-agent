@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -21,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -63,16 +65,15 @@ func main() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
 
 	var conn *grpc.ClientConn
-	for {
-		newConnection, err := dialWithTimeout(*apiEndpointPtr)
-		if err == nil {
-			conn = newConnection
-			log.Printf("Connected!\n")
-			break
-		}
+
+	_ = retry.Do(func() error {
+		conn, err = dialWithTimeout(*apiEndpointPtr)
+		return err
+	}, retry.OnRetry(func(n uint, err error) {
 		log.Printf("Failed to open a connection: %v\n", err)
-		time.Sleep(1 * time.Second)
-	}
+	}), retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second), retry.Attempts(math.MaxUint32))
+
+	log.Printf("Connected!\n")
 	defer conn.Close()
 
 	client.InitClient(conn)

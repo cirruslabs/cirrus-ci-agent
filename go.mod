@@ -3,6 +3,7 @@ module github.com/cirruslabs/cirrus-ci-agent
 go 1.15
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.2
 	github.com/certifi/gocertifi v0.0.0-20200922220541-2c3bb06c6054
 	github.com/cirruslabs/cirrus-ci-annotations v0.2.1

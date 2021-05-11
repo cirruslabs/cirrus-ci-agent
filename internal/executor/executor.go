@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -16,6 +17,7 @@ import (
 	"golang.org/x/net/context"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -76,23 +78,23 @@ func NewExecutor(
 
 func (executor *Executor) RunBuild() {
 	log.Println("Getting initial commands...")
-	response, err := client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
-		TaskIdentification:  executor.taskIdentification,
-		LocalTimestamp:      time.Now().Unix(),
-		ContinueFromCommand: executor.commandFrom,
-	})
-	retryDelay := 5 * time.Second
-	for response == nil || err != nil {
-		log.Printf("Failed to get initial commands: %v", err)
-		retryDelay *= 2
-		time.Sleep(retryDelay)
+
+	var response *api.CommandsResponse
+	var err error
+	var numRetries uint
+
+	_ = retry.Do(func() error {
 		response, err = client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
 			TaskIdentification:  executor.taskIdentification,
 			LocalTimestamp:      time.Now().Unix(),
 			ContinueFromCommand: executor.commandFrom,
-			Retry:               true,
+			Retry:               numRetries != 0,
 		})
-	}
+		return err
+	}, retry.OnRetry(func(n uint, err error) {
+		numRetries = n + 1
+		log.Printf("Failed to get initial commands: %v", err)
+	}), retry.Delay(5*time.Second), retry.Attempts(math.MaxUint32))
 
 	if response.ServerToken != executor.serverToken {
 		log.Panic("Server token is incorrect!")
@@ -265,21 +267,19 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 		success = false
 	}
 
-	duration := time.Since(start)
-	reportRequest := api.ReportSingleCommandRequest{
-		TaskIdentification: executor.taskIdentification,
-		CommandName:        (*currentStep).Name,
-		Succeded:           success,
-		DurationInSeconds:  int64(duration.Seconds()),
-		SignaledToExit:     signaledToExit,
-		LocalTimestamp:     time.Now().Unix(),
-	}
-	_, err := client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
-	for err != nil {
+	_ = retry.Do(func() error {
+		_, err := client.CirrusClient.ReportSingleCommand(context.Background(), &api.ReportSingleCommandRequest{
+			TaskIdentification: executor.taskIdentification,
+			CommandName:        (*currentStep).Name,
+			Succeded:           success,
+			DurationInSeconds:  int64(time.Since(start).Seconds()),
+			SignaledToExit:     signaledToExit,
+			LocalTimestamp:     time.Now().Unix(),
+		})
+		return err
+	}, retry.OnRetry(func(n uint, err error) {
 		log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
-		time.Sleep(10 * time.Second)
-		_, err = client.CirrusClient.ReportSingleCommand(context.Background(), &reportRequest)
-	}
+	}), retry.Delay(10*time.Second), retry.Attempts(2))
 
 	if !success {
 		return ErrStepFailed
