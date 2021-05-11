@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-type ShellCommands struct{
+type ShellCommands struct {
 	cmd *exec.Cmd
 }
 

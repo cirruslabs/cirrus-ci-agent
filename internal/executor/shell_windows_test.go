@@ -17,7 +17,7 @@ import (
 
 const (
 	modeProcessTreeSpawner = "process-tree-spawner"
-	modeIdler = "idler"
+	modeIdler              = "idler"
 )
 
 func TestMain(m *testing.M) {
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 		sigChan := make(chan os.Signal)
 		signal.Notify(sigChan)
 		for {
-			<- sigChan
+			<-sigChan
 		}
 	}
 

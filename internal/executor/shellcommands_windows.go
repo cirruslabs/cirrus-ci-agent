@@ -5,8 +5,8 @@ import (
 	"os/exec"
 )
 
-type ShellCommands struct{
-	cmd *exec.Cmd
+type ShellCommands struct {
+	cmd       *exec.Cmd
 	jobHandle windows.Handle
 }
 
@@ -17,7 +17,7 @@ func (sc *ShellCommands) afterStart() {
 	}
 	sc.jobHandle = jobHandle
 
-	process, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA | windows.PROCESS_TERMINATE,
+	process, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE,
 		false, uint32(sc.cmd.Process.Pid))
 	if err != nil {
 		return
