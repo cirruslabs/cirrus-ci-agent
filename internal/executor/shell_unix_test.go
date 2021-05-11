@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
 	"regexp"
@@ -16,8 +17,10 @@ import (
 // the shell spawned in ShellCommandsAndGetOutput() has been placed into, thus killing
 // it's children processes.
 func TestProcessGroupTermination(t *testing.T) {
-	timeout := time.After(1 * time.Second)
-	success, output := ShellCommandsAndGetOutput([]string{"sleep 86400& echo target PID is $!; sleep 60"}, nil, &timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 86400& echo target PID is $!; sleep 60"}, nil)
 
 	assert.False(t, success, "the command should fail due to time out error")
 	assert.Contains(t, output, "Timed out!", "the command should time out")
@@ -44,13 +47,15 @@ func TestProcessGroupTermination(t *testing.T) {
 }
 
 func TestZshDoesNotHang(t *testing.T) {
-	timeout := time.After(5 * time.Second)
-	success, _ := ShellCommandsAndGetOutput([]string{"zsh -c 'echo \"a:b\" | read -d \":\" piece'"}, nil, &timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	success, _ := ShellCommandsAndGetOutput(ctx, []string{"zsh -c 'echo \"a:b\" | read -d \":\" piece'"}, nil)
 	assert.True(t, success)
 }
 
 func Test_ShellCommands_Unix(t *testing.T) {
-	_, output := ShellCommandsAndGetOutput([]string{"echo 'Foo'"}, nil, nil)
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'"}, nil)
 	if output == "echo 'Foo'\nFoo\n" {
 		t.Log("Passed")
 	} else {
@@ -59,7 +64,7 @@ func Test_ShellCommands_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_Multiline_Unix(t *testing.T) {
-	_, output := ShellCommandsAndGetOutput([]string{"echo 'Foo'", "echo 'Bar'"}, nil, nil)
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'", "echo 'Bar'"}, nil)
 	if output == "echo 'Foo'\nFoo\necho 'Bar'\nBar\n" {
 		t.Log("Passed")
 	} else {
@@ -68,11 +73,11 @@ func Test_ShellCommands_Multiline_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_Fail_Fast_Unix(t *testing.T) {
-	success, output := ShellCommandsAndGetOutput([]string{
+	success, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo 'Hello!'",
 		"exit 1",
 		"echo 'Unreachable!'",
-	}, nil, nil)
+	}, nil)
 	if success {
 		t.Error("Should fail!")
 	}
@@ -88,9 +93,9 @@ func Test_ShellCommands_Environment_Unix(t *testing.T) {
 	testEnv := map[string]string{
 		"FOO": "BAR",
 	}
-	_, output := ShellCommandsAndGetOutput([]string{
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo $FOO",
-	}, &testEnv, nil)
+	}, &testEnv)
 
 	if output == "echo $FOO\nBAR\n" {
 		t.Log("Passed")
@@ -103,9 +108,9 @@ func Test_ShellCommands_CustomWorkingDir_Unix(t *testing.T) {
 	testEnv := map[string]string{
 		"CIRRUS_WORKING_DIR": "/tmp/cirrus-go-agent",
 	}
-	_, output := ShellCommandsAndGetOutput([]string{
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"pwd",
-	}, &testEnv, nil)
+	}, &testEnv)
 
 	expectedOutput := "pwd\n/tmp/cirrus-go-agent\n"
 
@@ -121,8 +126,10 @@ func Test_ShellCommands_CustomWorkingDir_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_Timeout_Unix(t *testing.T) {
-	timeout := time.After(5 * time.Second)
-	_, output := ShellCommandsAndGetOutput([]string{"sleep 60"}, nil, &timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60"}, nil)
 	if output == "sleep 60\n\nTimed out!" {
 		t.Log("Passed")
 	} else {

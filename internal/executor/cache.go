@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"github.com/bmatcuk/doublestar"
@@ -36,7 +37,7 @@ var httpClient = &http.Client{
 	Timeout: time.Minute * 5,
 }
 
-func DownloadCache(executor *Executor, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
+func DownloadCache(ctx context.Context, executor *Executor, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
 	logUploader, err := NewLogUploader(executor, commandName, custom_env)
 	if err != nil {
 		return false
@@ -45,10 +46,10 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 	cacheKeyHash := sha256.New()
 
 	if len(instruction.FingerprintScripts) > 0 {
-		cmd, err := ShellCommandsAndWait(instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
+		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
 			cacheKeyHash.Write(bytes)
 			return logUploader.Write(bytes)
-		}, &executor.timeout)
+		})
 		if err != nil || !cmd.ProcessState.Success() {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to execute fingerprint script for %s cache!", commandName)))
 			return false
@@ -123,9 +124,9 @@ func DownloadCache(executor *Executor, commandName string, cacheHost string, ins
 
 	if !cachePopulated && len(instruction.PopulateScripts) > 0 {
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s! Populating...\n", cacheKey)))
-		cmd, err := ShellCommandsAndWait(instruction.PopulateScripts, &custom_env, func(bytes []byte) (int, error) {
+		cmd, err := ShellCommandsAndWait(ctx, instruction.PopulateScripts, &custom_env, func(bytes []byte) (int, error) {
 			return logUploader.Write(bytes)
-		}, &executor.timeout)
+		})
 		if err != nil || cmd == nil || cmd.ProcessState == nil || !cmd.ProcessState.Success() {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to execute populate script for %s cache!", commandName)))
 			return false

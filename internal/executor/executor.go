@@ -40,7 +40,6 @@ type Executor struct {
 	serverToken          string
 	backgroundCommands   []CommandAndLogs
 	httpCacheHost        string
-	timeout              <-chan time.Time
 	sensitiveValues      []string
 	commandFrom          string
 	commandTo            string
@@ -124,7 +123,8 @@ func (executor *Executor) RunBuild() {
 	}
 
 	executor.httpCacheHost = environment["CIRRUS_HTTP_CACHE_HOST"]
-	executor.timeout = time.After(time.Duration(response.TimeoutInSeconds) * time.Second)
+	subCtx, cancel := context.WithTimeout(context.Background(), time.Duration(response.TimeoutInSeconds)*time.Second)
+	defer cancel()
 	executor.sensitiveValues = response.SecretsToMask
 
 	if len(commands) == 0 {
@@ -142,7 +142,7 @@ func (executor *Executor) RunBuild() {
 		}
 
 		log.Printf("Executing %s...", command.Name)
-		if err := executor.performStep(environment, command); err != nil {
+		if err := executor.performStep(subCtx, environment, command); err != nil {
 			if errors.Is(err, ErrStepExit) {
 				return
 			}
@@ -217,7 +217,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(env map[string]string, currentStep *api.Command) error {
+func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) error {
 	success := false
 	signaledToExit := false
 	start := time.Now()
@@ -230,7 +230,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 	case *api.Command_FileInstruction:
 		success = executor.CreateFile(currentStep.Name, instruction.FileInstruction, env)
 	case *api.Command_ScriptInstruction:
-		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(currentStep.Name, instruction.ScriptInstruction.Scripts, env)
+		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, currentStep.Name, instruction.ScriptInstruction.Scripts, env)
 		success = err == nil && cmd.ProcessState.Success()
 		if err == nil {
 			if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
@@ -257,7 +257,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 			success = false
 		}
 	case *api.Command_CacheInstruction:
-		success = DownloadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
+		success = DownloadCache(ctx, executor, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
 	case *api.Command_UploadCacheInstruction:
 		success = UploadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
 	case *api.Command_ArtifactsInstruction:
@@ -289,6 +289,7 @@ func (executor *Executor) performStep(env map[string]string, currentStep *api.Co
 }
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
+	ctx context.Context,
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, error) {
@@ -303,9 +304,9 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 		return nil, errors.New(message)
 	}
 	defer logUploader.Finalize()
-	cmd, err := ShellCommandsAndWait(scripts, &env, func(bytes []byte) (int, error) {
+	cmd, err := ShellCommandsAndWait(ctx, scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
-	}, &executor.timeout)
+	})
 	return cmd, err
 }
 
