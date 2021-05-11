@@ -323,9 +323,13 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
 		return nil, logUploader, errors.New(message)
 	}
-	cmd, err := ShellCommands(scripts, &env, func(bytes []byte) (int, error) {
+	sc, err := NewShellCommands(scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	})
+	var cmd *exec.Cmd
+	if sc != nil {
+		cmd = sc.cmd
+	}
 	return cmd, logUploader, err
 }
 
