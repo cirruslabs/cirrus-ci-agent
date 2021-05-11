@@ -1,6 +1,7 @@
 package network_test
 
 import (
+	"context"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
 	"github.com/stretchr/testify/assert"
 	"net"
@@ -24,8 +25,11 @@ func TestEarlyExit(t *testing.T) {
 
 	port := lis.Addr().(*net.TCPAddr).Port
 
+	ctx, cancel := context.WithTimeout(context.Background(), maxAllowedWaitTime)
+	defer cancel()
+
 	start := time.Now()
-	network.WaitForLocalPort(port, maxAllowedWaitTime)
+	network.WaitForLocalPort(ctx, port)
 	stop := time.Now()
 
 	assert.WithinDuration(t, stop, start, maxExpectedWaitTime)

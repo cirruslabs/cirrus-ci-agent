@@ -17,7 +17,7 @@ require (
 	github.com/klauspost/pgzip v1.2.5
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9

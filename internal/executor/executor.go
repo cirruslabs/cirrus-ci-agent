@@ -75,25 +75,34 @@ func NewExecutor(
 	}
 }
 
-func (executor *Executor) RunBuild() {
+func (executor *Executor) RunBuild(ctx context.Context) {
 	log.Println("Getting initial commands...")
 
 	var response *api.CommandsResponse
 	var err error
 	var numRetries uint
 
-	_ = retry.Do(func() error {
-		response, err = client.CirrusClient.InitialCommands(context.Background(), &api.InitialCommandsRequest{
-			TaskIdentification:  executor.taskIdentification,
-			LocalTimestamp:      time.Now().Unix(),
-			ContinueFromCommand: executor.commandFrom,
-			Retry:               numRetries != 0,
-		})
-		return err
-	}, retry.OnRetry(func(n uint, err error) {
-		numRetries = n + 1
-		log.Printf("Failed to get initial commands: %v", err)
-	}), retry.Delay(5*time.Second), retry.Attempts(math.MaxUint32))
+	err = retry.Do(
+		func() error {
+			response, err = client.CirrusClient.InitialCommands(ctx, &api.InitialCommandsRequest{
+				TaskIdentification:  executor.taskIdentification,
+				LocalTimestamp:      time.Now().Unix(),
+				ContinueFromCommand: executor.commandFrom,
+				Retry:               numRetries != 0,
+			})
+			return err
+		}, retry.OnRetry(func(n uint, err error) {
+			numRetries++
+			log.Printf("Failed to get initial commands: %v", err)
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	)
+	if err != nil {
+		// Context was cancelled before we had a chance to get initial commands
+		return
+	}
 
 	if response.ServerToken != executor.serverToken {
 		log.Panic("Server token is incorrect!")
@@ -123,7 +132,7 @@ func (executor *Executor) RunBuild() {
 	}
 
 	executor.httpCacheHost = environment["CIRRUS_HTTP_CACHE_HOST"]
-	subCtx, cancel := context.WithTimeout(context.Background(), time.Duration(response.TimeoutInSeconds)*time.Second)
+	subCtx, cancel := context.WithTimeout(ctx, time.Duration(response.TimeoutInSeconds)*time.Second)
 	defer cancel()
 	executor.sensitiveValues = response.SecretsToMask
 
@@ -226,9 +235,9 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 	case *api.Command_ExitInstruction:
 		return ErrStepExit
 	case *api.Command_CloneInstruction:
-		success = executor.CloneRepository(env)
+		success = executor.CloneRepository(ctx, env)
 	case *api.Command_FileInstruction:
-		success = executor.CreateFile(currentStep.Name, instruction.FileInstruction, env)
+		success = executor.CreateFile(ctx, currentStep.Name, instruction.FileInstruction, env)
 	case *api.Command_ScriptInstruction:
 		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, currentStep.Name, instruction.ScriptInstruction.Scripts, env)
 		success = err == nil && cmd.ProcessState.Success()
@@ -241,7 +250,7 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 			signaledToExit = false
 		}
 	case *api.Command_BackgroundScriptInstruction:
-		cmd, logClient, err := executor.ExecuteScriptsAndStreamLogs(currentStep.Name, instruction.BackgroundScriptInstruction.Scripts, env)
+		cmd, logClient, err := executor.ExecuteScriptsAndStreamLogs(ctx, currentStep.Name, instruction.BackgroundScriptInstruction.Scripts, env)
 		if err == nil {
 			executor.backgroundCommands = append(executor.backgroundCommands, CommandAndLogs{
 				Name: currentStep.Name,
@@ -257,29 +266,34 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 			success = false
 		}
 	case *api.Command_CacheInstruction:
-		success = DownloadCache(ctx, executor, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
+		success = executor.DownloadCache(ctx, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
 	case *api.Command_UploadCacheInstruction:
-		success = UploadCache(executor, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
+		success = executor.UploadCache(ctx, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
 	case *api.Command_ArtifactsInstruction:
-		success = UploadArtifacts(executor, currentStep.Name, instruction.ArtifactsInstruction, env)
+		success = executor.UploadArtifacts(ctx, currentStep.Name, instruction.ArtifactsInstruction, env)
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
 		success = false
 	}
 
-	_ = retry.Do(func() error {
-		_, err := client.CirrusClient.ReportSingleCommand(context.Background(), &api.ReportSingleCommandRequest{
-			TaskIdentification: executor.taskIdentification,
-			CommandName:        (*currentStep).Name,
-			Succeded:           success,
-			DurationInSeconds:  int64(time.Since(start).Seconds()),
-			SignaledToExit:     signaledToExit,
-			LocalTimestamp:     time.Now().Unix(),
-		})
-		return err
-	}, retry.OnRetry(func(n uint, err error) {
-		log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
-	}), retry.Delay(10*time.Second), retry.Attempts(2))
+	_ = retry.Do(
+		func() error {
+			_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
+				TaskIdentification: executor.taskIdentification,
+				CommandName:        (*currentStep).Name,
+				Succeded:           success,
+				DurationInSeconds:  int64(time.Since(start).Seconds()),
+				SignaledToExit:     signaledToExit,
+				LocalTimestamp:     time.Now().Unix(),
+			})
+			return err
+		}, retry.OnRetry(func(n uint, err error) {
+			log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
+		}),
+		retry.Delay(10*time.Second),
+		retry.Attempts(2),
+		retry.Context(ctx),
+	)
 
 	if !success {
 		return ErrStepFailed
@@ -293,14 +307,14 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, error) {
-	logUploader, err := NewLogUploader(executor, commandName, env)
+	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            message,
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return nil, errors.New(message)
 	}
 	defer logUploader.Finalize()
@@ -311,17 +325,18 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 }
 
 func (executor *Executor) ExecuteScriptsAndStreamLogs(
+	ctx context.Context,
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, *LogUploader, error) {
-	logUploader, err := NewLogUploader(executor, commandName, env)
+	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            message,
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return nil, logUploader, errors.New(message)
 	}
 	sc, err := NewShellCommands(scripts, &env, func(bytes []byte) (int, error) {
@@ -335,17 +350,18 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 }
 
 func (executor *Executor) CreateFile(
+	ctx context.Context,
 	commandName string,
 	instruction *api.FileInstruction,
 	env map[string]string,
 ) bool {
-	logUploader, err := NewLogUploader(executor, commandName, env)
+	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return false
 	}
 	defer logUploader.Finalize()
@@ -377,14 +393,14 @@ func (executor *Executor) CreateFile(
 	}
 }
 
-func (executor *Executor) CloneRepository(env map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, "clone", env)
+func (executor *Executor) CloneRepository(ctx context.Context, env map[string]string) bool {
+	logUploader, err := NewLogUploader(ctx, executor, "clone", env)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return false
 	}
 	defer logUploader.Finalize()
@@ -456,7 +472,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		if clone_depth > 0 {
 			fetchOptions.Depth = clone_depth
 		}
-		err = repo.Fetch(fetchOptions)
+		err = repo.FetchContext(ctx, fetchOptions)
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFetch failed: %s!", err)))
 			logUploader.Write([]byte("\nRe-trying to fetch..."))
@@ -503,7 +519,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		}
 		logUploader.Write([]byte(fmt.Sprintf("\nCloning %s...\n", cloneOptions.ReferenceName)))
 
-		repo, err = git.PlainClone(working_dir, false, &cloneOptions)
+		repo, err = git.PlainCloneContext(ctx, working_dir, false, &cloneOptions)
 
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nRetryable error '%s' while cloning! Trying again...", err)))
@@ -569,7 +585,7 @@ func (executor *Executor) CloneRepository(env map[string]string) bool {
 		}
 
 		for _, sub := range submodules {
-			if err := sub.Update(opts); err != nil {
+			if err := sub.UpdateContext(ctx, opts); err != nil {
 				logUploader.Write([]byte(fmt.Sprintf("\nFailed to update submodule %q: %s!",
 					sub.Config().Name, err)))
 				return false

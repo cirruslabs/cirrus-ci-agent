@@ -55,8 +55,8 @@ func TestJobObjectTermination(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	success, output := ShellCommandsAndGetOutput([]string{os.Args[0]},
-		&map[string]string{"MODE": modeProcessTreeSpawner}, &timeout)
+	success, output := ShellCommandsAndGetOutput(ctx, []string{os.Args[0]},
+		&map[string]string{"MODE": modeProcessTreeSpawner})
 
 	assert.False(t, success, "the command should fail due to time out error")
 	assert.Contains(t, output, "Timed out!", "the command should time out")

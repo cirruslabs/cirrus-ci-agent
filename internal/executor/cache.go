@@ -37,8 +37,8 @@ var httpClient = &http.Client{
 	Timeout: time.Minute * 5,
 }
 
-func DownloadCache(ctx context.Context, executor *Executor, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, commandName, custom_env)
+func (executor *Executor) DownloadCache(ctx context.Context, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
+	logUploader, err := NewLogUploader(ctx, executor, commandName, custom_env)
 	if err != nil {
 		return false
 	}
@@ -100,7 +100,7 @@ func DownloadCache(ctx context.Context, executor *Executor, commandName string, 
 		}
 	}
 
-	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(logUploader, commandName, cacheHost, cacheKey, baseFolder)
+	cachePopulated, cacheAvailable := tryToDownloadAndPopulateCache(ctx, logUploader, commandName, cacheHost, cacheKey, baseFolder)
 
 	if glob != "" {
 		// Expand the glob so we can calculate the hashes for directories that already exist
@@ -156,13 +156,14 @@ func pathLooksLikeGlob(path string) bool {
 }
 
 func tryToDownloadAndPopulateCache(
+	ctx context.Context,
 	logUploader *LogUploader,
 	commandName string,
 	cacheHost string,
 	cacheKey string,
 	folderToCache string,
 ) (bool, bool) { // successfully populated, available remotely
-	cacheFile, err := FetchCache(logUploader, commandName, cacheHost, cacheKey)
+	cacheFile, err := FetchCache(ctx, logUploader, commandName, cacheHost, cacheKey)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to fetch archive for %s cache: %s!", commandName, err)))
 		if err, ok := err.(net.Error); ok && err.Timeout() {
@@ -180,7 +181,7 @@ func tryToDownloadAndPopulateCache(
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to unarchive %s cache because of %s! Retrying...\n", commandName, err)))
 		os.RemoveAll(folderToCache)
-		cacheFile, err := FetchCache(logUploader, commandName, cacheHost, cacheKey)
+		cacheFile, err := FetchCache(ctx, logUploader, commandName, cacheHost, cacheKey)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to fetch archive for %s cache: %s!", commandName, err)))
 			if err, ok := err.(net.Error); ok && err.Timeout() {
@@ -217,7 +218,7 @@ func unarchiveCache(
 	return targz.Unarchive(cacheFile.Name(), folderToCache)
 }
 
-func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, cacheKey string) (*os.File, error) {
+func FetchCache(ctx context.Context, logUploader *LogUploader, commandName string, cacheHost string, cacheKey string) (*os.File, error) {
 	cacheFile, err := ioutil.TempFile(os.TempDir(), commandName)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s!", commandName)))
@@ -226,7 +227,11 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	defer cacheFile.Close()
 
 	downloadStartTime := time.Now()
-	resp, err := httpClient.Get(fmt.Sprintf("http://%s/%s", cacheHost, cacheKey))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", cacheHost, cacheKey), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -256,8 +261,8 @@ func FetchCache(logUploader *LogUploader, commandName string, cacheHost string, 
 	return cacheFile, nil
 }
 
-func UploadCache(executor *Executor, commandName string, cacheHost string, instruction *api.UploadCacheInstruction, env map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, commandName, env)
+func (executor *Executor) UploadCache(ctx context.Context, commandName string, cacheHost string, instruction *api.UploadCacheInstruction, env map[string]string) bool {
+	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
 	if err != nil {
 		return false
 	}
@@ -348,7 +353,13 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 
 	if !cache.CacheAvailable {
 		// check if some other task has uploaded the cache already
-		response, _ := httpClient.Head(fmt.Sprintf("http://%s/%s", cacheHost, cache.Key))
+		url := fmt.Sprintf("http://%s/%s", cacheHost, cache.Key)
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+		if err != nil {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to create cache check request to URL %s!", url)))
+			return false
+		}
+		response, _ := httpClient.Do(req)
 		if response != nil && response.StatusCode == http.StatusOK {
 			createdByTaskId := response.Header.Get(http_cache.CirrusHeaderCreatedBy)
 			if createdByTaskId != "" {
@@ -361,7 +372,7 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	}
 
 	logUploader.Write([]byte(fmt.Sprintf("\nUploading cache %s...", instruction.CacheName)))
-	err = UploadCacheFile(cacheHost, cache.Key, cacheFile)
+	err = UploadCacheFile(ctx, cacheHost, cache.Key, cacheFile)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload cache '%s': %s!", commandName, err)))
 		logUploader.Write([]byte("\nIgnoring the error..."))
@@ -371,12 +382,13 @@ func UploadCache(executor *Executor, commandName string, cacheHost string, instr
 	return true
 }
 
-func UploadCacheFile(cacheHost string, cacheKey string, cacheFile *os.File) error {
-	response, err := httpClient.Post(
-		fmt.Sprintf("http://%s/%s", cacheHost, cacheKey),
-		"application/octet-stream",
-		cacheFile,
-	)
+func UploadCacheFile(ctx context.Context, cacheHost string, cacheKey string, cacheFile *os.File) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("http://%s/%s", cacheHost, cacheKey), cacheFile)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	response, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
