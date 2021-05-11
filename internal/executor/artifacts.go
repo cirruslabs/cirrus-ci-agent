@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/bmatcuk/doublestar"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -16,28 +17,34 @@ import (
 	"path/filepath"
 )
 
-func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.ArtifactsInstruction, customEnv map[string]string) bool {
-	logUploader, err := NewLogUploader(executor, name, customEnv)
+func (executor *Executor) UploadArtifacts(ctx context.Context, name string, artifactsInstruction *api.ArtifactsInstruction, customEnv map[string]string) bool {
+	logUploader, err := NewLogUploader(ctx, executor, name, customEnv)
 	if err != nil {
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return false
 	}
 	defer logUploader.Finalize()
 
-	allAnnotations, err := uploadArtifactsAndParseAnnotations(executor, name, artifactsInstruction, customEnv, logUploader)
-	if err != nil {
-		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts: %s", err)))
-		logUploader.Write([]byte("\nRe-trying to upload artifacts..."))
+	var allAnnotations []model.Annotation
 
-		allAnnotations, err = uploadArtifactsAndParseAnnotations(executor, name, artifactsInstruction, customEnv, logUploader)
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts again: %s", err)))
-			return false
-		}
+	err = retry.Do(
+		func() error {
+			allAnnotations, err = executor.uploadArtifactsAndParseAnnotations(ctx, name, artifactsInstruction, customEnv, logUploader)
+			return err
+		}, retry.OnRetry(func(n uint, err error) {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts: %s", err)))
+			logUploader.Write([]byte("\nRe-trying to upload artifacts..."))
+		}),
+		retry.Attempts(2),
+		retry.Context(ctx),
+	)
+	if err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts after multiple tries: %s", err)))
+		return false
 	}
 
 	workingDir := customEnv["CIRRUS_WORKING_DIR"]
@@ -52,12 +59,17 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 			Annotations:        protoAnnotations,
 		}
 
-		_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to report %d annotations: %s", len(allAnnotations), err)))
-			logUploader.Write([]byte("\nRetrying..."))
-			_, err = client.CirrusClient.ReportAnnotations(context.Background(), &reportAnnotationsCommandRequest)
-		}
+		err = retry.Do(
+			func() error {
+				_, err = client.CirrusClient.ReportAnnotations(ctx, &reportAnnotationsCommandRequest)
+				return err
+			}, retry.OnRetry(func(n uint, err error) {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to report %d annotations: %s", len(allAnnotations), err)))
+				logUploader.Write([]byte("\nRetrying..."))
+			}),
+			retry.Attempts(2),
+			retry.Context(ctx),
+		)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nStill failed to report %d annotations: %s. Ignoring...", len(allAnnotations), err)))
 			return true
@@ -68,8 +80,8 @@ func UploadArtifacts(executor *Executor, name string, artifactsInstruction *api.
 	return true
 }
 
-func uploadArtifactsAndParseAnnotations(
-	executor *Executor,
+func (executor *Executor) uploadArtifactsAndParseAnnotations(
+	ctx context.Context,
 	name string,
 	artifactsInstruction *api.ArtifactsInstruction,
 	customEnv map[string]string,
@@ -77,7 +89,7 @@ func uploadArtifactsAndParseAnnotations(
 ) ([]model.Annotation, error) {
 	allAnnotations := make([]model.Annotation, 0)
 
-	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(context.Background())
+	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(ctx)
 	if err != nil {
 		return allAnnotations, errors.Wrapf(err, "failed to initialize artifacts upload client")
 	}

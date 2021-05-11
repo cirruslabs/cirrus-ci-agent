@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"google.golang.org/grpc"
@@ -36,8 +37,8 @@ type LogUploader struct {
 	mutex sync.RWMutex
 }
 
-func NewLogUploader(executor *Executor, commandName string, env map[string]string) (*LogUploader, error) {
-	logClient, err := InitializeLogStreamClient(executor.taskIdentification, commandName, false)
+func NewLogUploader(ctx context.Context, executor *Executor, commandName string, env map[string]string) (*LogUploader, error) {
+	logClient, err := InitializeLogStreamClient(ctx, executor.taskIdentification, commandName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +66,12 @@ func NewLogUploader(executor *Executor, commandName string, env map[string]strin
 	return &logUploader, nil
 }
 
-func (uploader *LogUploader) reInitializeClient() error {
+func (uploader *LogUploader) reInitializeClient(ctx context.Context) error {
 	err := uploader.client.CloseSend()
 	if err != nil {
 		log.Printf("Failed to close log for %s for reinitialization: %s\n", uploader.commandName, err.Error())
 	}
-	logClient, err := InitializeLogStreamClient(uploader.taskIdentification, uploader.commandName, false)
+	logClient, err := InitializeLogStreamClient(ctx, uploader.taskIdentification, uploader.commandName, false)
 	if err != nil {
 		return err
 	}
@@ -132,6 +133,8 @@ func (uploader *LogUploader) Write(bytes []byte) (int, error) {
 }
 
 func (uploader *LogUploader) StreamLogs() {
+	ctx := context.Background()
+
 	for {
 		logs, finished := uploader.ReadAvailableChunks()
 		_, err := uploader.WriteChunk(logs)
@@ -141,7 +144,7 @@ func (uploader *LogUploader) StreamLogs() {
 		}
 		if err == io.EOF {
 			log.Printf("Got EOF while streaming logs for %s! Trying to reinitilize logs uploader...\n", uploader.commandName)
-			err := uploader.reInitializeClient()
+			err := uploader.reInitializeClient(ctx)
 			if err == nil {
 				log.Printf("Successfully reinitilized log uploader for %s!\n", uploader.commandName)
 			} else {
@@ -151,7 +154,7 @@ func (uploader *LogUploader) StreamLogs() {
 	}
 	uploader.client.CloseAndRecv()
 
-	err := uploader.UploadStoredOutput()
+	err := uploader.UploadStoredOutput(ctx)
 	if err != nil {
 		log.Printf("Failed to upload stored logs for %s: %s", uploader.commandName, err.Error())
 	} else {
@@ -209,8 +212,8 @@ func (uploader *LogUploader) Finalize() {
 	<-uploader.doneLogUpload
 }
 
-func (uploader *LogUploader) UploadStoredOutput() error {
-	logClient, err := InitializeLogSaveClient(uploader.taskIdentification, uploader.commandName, true)
+func (uploader *LogUploader) UploadStoredOutput(ctx context.Context) error {
+	logClient, err := InitializeLogSaveClient(ctx, uploader.taskIdentification, uploader.commandName, true)
 	if err != nil {
 		return err
 	}
@@ -249,32 +252,21 @@ func (uploader *LogUploader) UploadStoredOutput() error {
 	return nil
 }
 
-func InitializeLogStreamClient(taskIdentification *api.TaskIdentification, commandName string, raw bool) (api.CirrusCIService_StreamLogsClient, error) {
-	streamLogClient, err := client.CirrusClient.StreamLogs(
-		context.Background(),
-		grpc.UseCompressor(gzip.Name),
-	)
-	if err != nil {
-		time.Sleep(5 * time.Second)
-		streamLogClient, err = client.CirrusClient.StreamLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
-	if err != nil {
-		time.Sleep(20 * time.Second)
-		streamLogClient, err = client.CirrusClient.StreamLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
+func InitializeLogStreamClient(ctx context.Context, taskIdentification *api.TaskIdentification, commandName string, raw bool) (api.CirrusCIService_StreamLogsClient, error) {
+	var streamLogClient api.CirrusCIService_StreamLogsClient
+	var err error
+
+	err = retry.Do(func() error {
+		streamLogClient, err = client.CirrusClient.StreamLogs(ctx, grpc.UseCompressor(gzip.Name))
+		return err
+	}, retry.Delay(5*time.Second), retry.Attempts(3), retry.Context(ctx))
 	if err != nil {
 		log.Printf("Failed to start streaming logs for %s! %s", commandName, err.Error())
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: taskIdentification,
 			Message:            fmt.Sprintf("Failed to start streaming logs for command %v: %v", commandName, err),
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return nil, err
 	}
 	logEntryKey := api.LogEntry_LogKey{TaskIdentification: taskIdentification, CommandName: commandName, Raw: raw}
@@ -283,32 +275,30 @@ func InitializeLogStreamClient(taskIdentification *api.TaskIdentification, comma
 	return streamLogClient, nil
 }
 
-func InitializeLogSaveClient(taskIdentification *api.TaskIdentification, commandName string, raw bool) (api.CirrusCIService_SaveLogsClient, error) {
-	streamLogClient, err := client.CirrusClient.SaveLogs(
-		context.Background(),
-		grpc.UseCompressor(gzip.Name),
+func InitializeLogSaveClient(
+	ctx context.Context,
+	taskIdentification *api.TaskIdentification,
+	commandName string,
+	raw bool,
+) (api.CirrusCIService_SaveLogsClient, error) {
+	var streamLogClient api.CirrusCIService_StreamLogsClient
+	var err error
+
+	err = retry.Do(
+		func() error {
+			streamLogClient, err = client.CirrusClient.SaveLogs(ctx, grpc.UseCompressor(gzip.Name))
+			return err
+		},
+		retry.Delay(5*time.Second),
+		retry.Attempts(3),
 	)
-	if err != nil {
-		time.Sleep(5 * time.Second)
-		streamLogClient, err = client.CirrusClient.SaveLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
-	if err != nil {
-		time.Sleep(20 * time.Second)
-		streamLogClient, err = client.CirrusClient.SaveLogs(
-			context.Background(),
-			grpc.UseCompressor(gzip.Name),
-		)
-	}
 	if err != nil {
 		log.Printf("Failed to start saving logs for %s! %s", commandName, err.Error())
 		request := api.ReportAgentProblemRequest{
 			TaskIdentification: taskIdentification,
 			Message:            fmt.Sprintf("Failed to start saving logs for command %v: %v", commandName, err),
 		}
-		client.CirrusClient.ReportAgentWarning(context.Background(), &request)
+		client.CirrusClient.ReportAgentWarning(ctx, &request)
 		return nil, err
 	}
 	logEntryKey := api.LogEntry_LogKey{TaskIdentification: taskIdentification, CommandName: commandName, Raw: raw}

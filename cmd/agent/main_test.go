@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -15,7 +16,7 @@ func Test_DialNoSchema(t *testing.T) {
 }
 
 func checkEndpoint(endpoint string) error {
-	clientConn, err := dialWithTimeout(endpoint)
+	clientConn, err := dialWithTimeout(context.Background(), endpoint)
 	if err != nil {
 		return err
 	}

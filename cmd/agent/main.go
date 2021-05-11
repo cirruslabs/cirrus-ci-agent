@@ -5,11 +5,13 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/signalfilter"
 	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
@@ -21,12 +23,14 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -57,22 +61,59 @@ func main() {
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
 	if err != nil {
 		log.Printf("Failed to create log file: %v", err)
+	} else {
+		defer func() {
+			_ = logFile.Close()
+			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
+		}()
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
 
-	var conn *grpc.ClientConn
-	for {
-		newConnection, err := dialWithTimeout(*apiEndpointPtr)
-		if err == nil {
-			conn = newConnection
-			log.Printf("Connected!\n")
-			break
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	signalChannel := make(chan os.Signal)
+	signal.Notify(signalChannel)
+	go func() {
+		for {
+			sig := <-signalChannel
+
+			if signalfilter.IsNoisy(sig) {
+				// Too much noise both for the text logs and the RPC with little debugging value
+				continue
+			}
+
+			log.Printf("Captured %v...", sig)
+
+			if sig == os.Interrupt || sig == syscall.SIGTERM {
+				cancel()
+			}
+
+			reportSignal(context.Background(), sig, *taskIdPtr, *clientTokenPtr)
 		}
-		log.Printf("Failed to open a connection: %v\n", err)
-		time.Sleep(1 * time.Second)
+	}()
+
+	var conn *grpc.ClientConn
+
+	err = retry.Do(
+		func() error {
+			conn, err = dialWithTimeout(ctx, *apiEndpointPtr)
+			return err
+		}, retry.OnRetry(func(n uint, err error) {
+			log.Printf("Failed to open a connection: %v\n", err)
+		}),
+		retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second),
+		retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	)
+	if err != nil {
+		// Context was cancelled before we had a chance to connect
+		return
 	}
+
+	log.Printf("Connected!\n")
 	defer conn.Close()
 
 	client.InitClient(conn)
@@ -86,7 +127,7 @@ func main() {
 		request := api.ReportStopHookRequest{
 			TaskIdentification: &taskIdentification,
 		}
-		_, err = client.CirrusClient.ReportStopHook(context.Background(), &request)
+		_, err = client.CirrusClient.ReportStopHook(ctx, &request)
 		if err != nil {
 			log.Printf("Failed to report stop hook for task %d: %v\n", *taskIdPtr, err)
 		} else {
@@ -112,22 +153,6 @@ func main() {
 		}
 	}()
 
-	signalChannel := make(chan os.Signal)
-	signal.Notify(signalChannel)
-	go func() {
-		sig := <-signalChannel
-		log.Printf("Captured %v...", sig)
-		taskIdentification := api.TaskIdentification{
-			TaskId: *taskIdPtr,
-			Secret: *clientTokenPtr,
-		}
-		request := api.ReportAgentSignalRequest{
-			TaskIdentification: &taskIdentification,
-			Signal:             sig.String(),
-		}
-		_, _ = client.CirrusClient.ReportAgentSignal(context.Background(), &request)
-	}()
-
 	if portsToWait, ok := os.LookupEnv("CIRRUS_PORTS_WAIT_FOR"); ok {
 		ports := strings.Split(portsToWait, ",")
 
@@ -136,8 +161,12 @@ func main() {
 			if err != nil {
 				continue
 			}
+
 			log.Printf("Waiting on port %v...\n", port)
-			network.WaitForLocalPort(portNumber, 60*time.Second)
+
+			subCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+			network.WaitForLocalPort(subCtx, portNumber)
+			cancel()
 		}
 	}
 
@@ -145,13 +174,14 @@ func main() {
 
 	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr,
 		*preCreatedWorkingDir)
-	buildExecutor.RunBuild()
-
-	logFile.Close()
-	uploadAgentLogs(logFilePath, *taskIdPtr, *clientTokenPtr)
+	buildExecutor.RunBuild(ctx)
 }
 
-func uploadAgentLogs(logFilePath string, taskId int64, clientToken string) {
+func uploadAgentLogs(ctx context.Context, logFilePath string, taskId int64, clientToken string) {
+	if client.CirrusClient == nil {
+		return
+	}
+
 	logContents, readErr := ioutil.ReadFile(logFilePath)
 	if readErr != nil {
 		return
@@ -164,14 +194,30 @@ func uploadAgentLogs(logFilePath string, taskId int64, clientToken string) {
 		TaskIdentification: &taskIdentification,
 		Logs:               string(logContents),
 	}
-	_, err := client.CirrusClient.ReportAgentLogs(context.Background(), &request)
+	_, err := client.CirrusClient.ReportAgentLogs(ctx, &request)
 	if err == nil {
 		os.Remove(logFilePath)
 	}
 }
 
-func dialWithTimeout(apiEndpoint string) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+func reportSignal(ctx context.Context, sig os.Signal, taskId int64, clientToken string) {
+	if client.CirrusClient == nil {
+		return
+	}
+
+	taskIdentification := api.TaskIdentification{
+		TaskId: taskId,
+		Secret: clientToken,
+	}
+	request := api.ReportAgentSignalRequest{
+		TaskIdentification: &taskIdentification,
+		Signal:             sig.String(),
+	}
+	_, _ = client.CirrusClient.ReportAgentSignal(ctx, &request)
+}
+
+func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	target, insecure := grpchelper.TransportSettings(apiEndpoint)

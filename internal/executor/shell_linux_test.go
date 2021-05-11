@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"testing"
 )
 
@@ -10,9 +11,9 @@ func Test_DirectShell_Unix(t *testing.T) {
 	testEnv := map[string]string{
 		"CIRRUS_SHELL": "direct",
 	}
-	_, output := ShellCommandsAndGetOutput([]string{
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"bash -c 'echo $CIRRUS_SHELL'",
-	}, &testEnv, nil)
+	}, &testEnv)
 
 	if output == "direct\n" {
 		t.Log("Passed")

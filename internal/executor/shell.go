@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,16 +27,16 @@ func (writer ShellOutputWriter) Write(bytes []byte) (int, error) {
 	return writer.handler(bytes)
 }
 
-func ShellCommandsAndGetOutput(scripts []string, custom_env *map[string]string, timeout *<-chan time.Time) (bool, string) {
+func ShellCommandsAndGetOutput(ctx context.Context, scripts []string, custom_env *map[string]string) (bool, string) {
 	var buffer bytes.Buffer
-	cmd, err := ShellCommandsAndWait(scripts, custom_env, func(bytes []byte) (int, error) {
+	cmd, err := ShellCommandsAndWait(ctx, scripts, custom_env, func(bytes []byte) (int, error) {
 		return buffer.Write(bytes)
-	}, timeout)
+	})
 	return err == nil && cmd.ProcessState.Success(), buffer.String()
 }
 
 // return true if executed successful
-func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handler ShellOutputHandler, executionTimeout *<-chan time.Time) (*exec.Cmd, error) {
+func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*exec.Cmd, error) {
 	sc, err := NewShellCommands(scripts, custom_env, handler)
 	if err != nil {
 		return nil, err
@@ -58,13 +59,8 @@ func ShellCommandsAndWait(scripts []string, custom_env *map[string]string, handl
 		}
 	}()
 
-	timeout := make(<-chan time.Time)
-	if executionTimeout != nil {
-		timeout = *executionTimeout
-	}
-
 	select {
-	case <-timeout:
+	case <-ctx.Done():
 		handler([]byte("\nTimed out!"))
 		err = sc.kill()
 		if err != nil {
