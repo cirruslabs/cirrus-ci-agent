@@ -48,7 +48,6 @@ type Executor struct {
 
 var (
 	ErrStepExit   = errors.New("executor step requested to terminate execution")
-	ErrStepFailed = errors.New("executor step failed")
 )
 
 func NewExecutor(
@@ -151,14 +150,36 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		}
 
 		log.Printf("Executing %s...", command.Name)
-		if err := executor.performStep(subCtx, environment, command); err != nil {
-			if errors.Is(err, ErrStepExit) {
-				return
-			}
 
+		stepResult, err := executor.performStep(subCtx, environment, command)
+		if err != nil {
+			return
+		}
+
+		if !stepResult.Success {
 			failedAtLeastOnce = true
 		}
+
 		log.Printf("%s finished!", command.Name)
+
+		_ = retry.Do(
+			func() error {
+				_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
+					TaskIdentification: executor.taskIdentification,
+					CommandName:        command.Name,
+					Succeded:           stepResult.Success,
+					DurationInSeconds:  int64(stepResult.Duration.Seconds()),
+					SignaledToExit:     stepResult.SignaledToExit,
+					LocalTimestamp:     time.Now().Unix(),
+				})
+				return err
+			}, retry.OnRetry(func(n uint, err error) {
+				log.Printf("Failed to report command %v: %v\nRetrying...\n", command.Name, err)
+			}),
+			retry.Delay(10*time.Second),
+			retry.Attempts(2),
+			retry.Context(ctx),
+		)
 	}
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
@@ -226,14 +247,20 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) error {
+type StepResult struct {
+	Success bool
+	SignaledToExit bool
+	Duration time.Duration
+}
+
+func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) (*StepResult, error) {
 	success := false
 	signaledToExit := false
 	start := time.Now()
 
 	switch instruction := currentStep.Instruction.(type) {
 	case *api.Command_ExitInstruction:
-		return ErrStepExit
+		return nil, ErrStepExit
 	case *api.Command_CloneInstruction:
 		success = executor.CloneRepository(ctx, env)
 	case *api.Command_FileInstruction:
@@ -276,30 +303,11 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 		success = false
 	}
 
-	_ = retry.Do(
-		func() error {
-			_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
-				TaskIdentification: executor.taskIdentification,
-				CommandName:        (*currentStep).Name,
-				Succeded:           success,
-				DurationInSeconds:  int64(time.Since(start).Seconds()),
-				SignaledToExit:     signaledToExit,
-				LocalTimestamp:     time.Now().Unix(),
-			})
-			return err
-		}, retry.OnRetry(func(n uint, err error) {
-			log.Printf("Failed to report command %v: %v\nRetrying...\n", (*currentStep).Name, err)
-		}),
-		retry.Delay(10*time.Second),
-		retry.Attempts(2),
-		retry.Context(ctx),
-	)
-
-	if !success {
-		return ErrStepFailed
-	}
-
-	return nil
+	return &StepResult{
+		Success: success,
+		SignaledToExit: signaledToExit,
+		Duration: time.Since(start),
+	}, nil
 }
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
