@@ -46,6 +46,12 @@ type Executor struct {
 	preCreatedWorkingDir string
 }
 
+type StepResult struct {
+	Success bool
+	SignaledToExit bool
+	Duration time.Duration
+}
+
 var (
 	ErrStepExit   = errors.New("executor step requested to terminate execution")
 )
@@ -245,12 +251,6 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	result := expandEnvironmentRecursively(responseEnvironment)
 
 	return result
-}
-
-type StepResult struct {
-	Success bool
-	SignaledToExit bool
-	Duration time.Duration
 }
 
 func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) (*StepResult, error) {
