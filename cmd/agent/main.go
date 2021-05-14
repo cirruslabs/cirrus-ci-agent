@@ -52,6 +52,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	var conn *grpc.ClientConn
+
 	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
 	if *stopHook {
 		// In case of a failure the log file will be persisted on the machine for debugging purposes.
@@ -65,6 +67,9 @@ func main() {
 		defer func() {
 			_ = logFile.Close()
 			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
+			if conn != nil {
+				conn.Close()
+			}
 		}()
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
@@ -95,8 +100,6 @@ func main() {
 		}
 	}()
 
-	var conn *grpc.ClientConn
-
 	err = retry.Do(
 		func() error {
 			conn, err = dialWithTimeout(ctx, *apiEndpointPtr)
@@ -114,7 +117,6 @@ func main() {
 	}
 
 	log.Printf("Connected!\n")
-	defer conn.Close()
 
 	client.InitClient(conn)
 
