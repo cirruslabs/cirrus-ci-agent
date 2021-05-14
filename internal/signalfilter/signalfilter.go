@@ -8,5 +8,5 @@ import (
 )
 
 func IsNoisy(sig os.Signal) bool {
-	return sig == syscall.SIGURG
+	return sig == syscall.SIGURG || sig == syscall.SIGCHLD
 }
