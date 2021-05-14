@@ -47,13 +47,13 @@ type Executor struct {
 }
 
 type StepResult struct {
-	Success bool
+	Success        bool
 	SignaledToExit bool
-	Duration time.Duration
+	Duration       time.Duration
 }
 
 var (
-	ErrStepExit   = errors.New("executor step requested to terminate execution")
+	ErrStepExit = errors.New("executor step requested to terminate execution")
 )
 
 func NewExecutor(
@@ -304,9 +304,9 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 	}
 
 	return &StepResult{
-		Success: success,
+		Success:        success,
 		SignaledToExit: signaledToExit,
-		Duration: time.Since(start),
+		Duration:       time.Since(start),
 	}, nil
 }
 
