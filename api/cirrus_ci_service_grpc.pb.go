@@ -524,6 +524,7 @@ type CirrusCIServiceClient interface {
 	ReportAgentWarning(ctx context.Context, in *ReportAgentProblemRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ReportAgentSignal(ctx context.Context, in *ReportAgentSignalRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ReportAgentLogs(ctx context.Context, in *ReportAgentLogsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ReportAgentFinished(ctx context.Context, in *ReportAgentFinishedRequest, opts ...grpc.CallOption) (*ReportAgentFinishedResponse, error)
 	ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error)
 }
 
@@ -793,6 +794,15 @@ func (c *cirrusCIServiceClient) ReportAgentLogs(ctx context.Context, in *ReportA
 	return out, nil
 }
 
+func (c *cirrusCIServiceClient) ReportAgentFinished(ctx context.Context, in *ReportAgentFinishedRequest, opts ...grpc.CallOption) (*ReportAgentFinishedResponse, error) {
+	out := new(ReportAgentFinishedResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentFinished", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cirrusCIServiceClient) ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error) {
 	out := new(ParseConfigResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ParseConfig", in, out, opts...)
@@ -821,6 +831,7 @@ type CirrusCIServiceServer interface {
 	ReportAgentWarning(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
 	ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*empty.Empty, error)
 	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
+	ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error)
 	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 	mustEmbedUnimplementedCirrusCIServiceServer()
 }
@@ -873,6 +884,9 @@ func (UnimplementedCirrusCIServiceServer) ReportAgentSignal(context.Context, *Re
 }
 func (UnimplementedCirrusCIServiceServer) ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentLogs not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentFinished not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ParseConfig not implemented")
@@ -1195,6 +1209,24 @@ func _CirrusCIService_ReportAgentLogs_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusCIService_ReportAgentFinished_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportAgentFinishedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).ReportAgentFinished(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentFinished",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).ReportAgentFinished(ctx, req.(*ReportAgentFinishedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CirrusCIService_ParseConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ParseConfigRequest)
 	if err := dec(in); err != nil {
@@ -1259,6 +1291,10 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportAgentLogs",
 			Handler:    _CirrusCIService_ReportAgentLogs_Handler,
+		},
+		{
+			MethodName: "ReportAgentFinished",
+			Handler:    _CirrusCIService_ReportAgentFinished_Handler,
 		},
 		{
 			MethodName: "ParseConfig",
