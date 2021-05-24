@@ -44,7 +44,7 @@ type Executor struct {
 	commandFrom          string
 	commandTo            string
 	preCreatedWorkingDir string
-	cacheAttempts        CacheAttempts
+	cacheAttempts        *CacheAttempts
 }
 
 type StepResult struct {
@@ -78,6 +78,7 @@ func NewExecutor(
 		commandFrom:          commandFrom,
 		commandTo:            commandTo,
 		preCreatedWorkingDir: preCreatedWorkingDir,
+		cacheAttempts:        NewCacheAttempts(),
 	}
 }
 

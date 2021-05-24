@@ -9,6 +9,12 @@ type CacheAttempts struct {
 	cacheRetrievalAttempts map[string]*api.CacheRetrievalAttempt
 }
 
+func NewCacheAttempts() *CacheAttempts {
+	return &CacheAttempts{
+		cacheRetrievalAttempts: make(map[string]*api.CacheRetrievalAttempt),
+	}
+}
+
 func (ca *CacheAttempts) Failed(key string, error string) {
 	ca.cacheRetrievalAttempts[key] = &api.CacheRetrievalAttempt{Error: error}
 }
