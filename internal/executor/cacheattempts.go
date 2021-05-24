@@ -23,9 +23,9 @@ func (ca *CacheAttempts) Hit(key string, size uint64, downloadedIn, extractedIn 
 	ca.cacheRetrievalAttempts[key] = &api.CacheRetrievalAttempt{
 		Result: &api.CacheRetrievalAttempt_Hit_{
 			Hit: &api.CacheRetrievalAttempt_Hit{
-				SizeBytes: size,
+				SizeBytes:         size,
 				DownloadedInNanos: uint64(downloadedIn.Nanoseconds()),
-				ExtractedInNanos: uint64(extractedIn.Nanoseconds()),
+				ExtractedInNanos:  uint64(extractedIn.Nanoseconds()),
 			},
 		},
 	}
@@ -54,7 +54,7 @@ func (ca *CacheAttempts) Miss(key string, size uint64, archivedIn, uploadedIn ti
 	ca.cacheRetrievalAttempts[key] = &api.CacheRetrievalAttempt{
 		Result: &api.CacheRetrievalAttempt_Miss_{
 			Miss: &api.CacheRetrievalAttempt_Miss{
-				SizeBytes: size,
+				SizeBytes:       size,
 				ArchivedInNanos: uint64(archivedIn.Nanoseconds()),
 				UploadedInNanos: uint64(uploadedIn.Nanoseconds()),
 			},
