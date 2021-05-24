@@ -29,7 +29,7 @@ func (ca *CacheAttempts) PopulatedIn(key string, populatedIn time.Duration) {
 	ca.cacheRetrievalAttempts[key] = &api.CacheRetrievalAttempt{
 		Result: &api.CacheRetrievalAttempt_Miss_{
 			Miss: &api.CacheRetrievalAttempt_Miss{
-				PopulatedInMs: uint64(populatedIn.Nanoseconds()),
+				PopulatedInNanos: uint64(populatedIn.Nanoseconds()),
 			},
 		},
 	}
