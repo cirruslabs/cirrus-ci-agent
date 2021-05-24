@@ -40,6 +40,7 @@ func (ca *CacheAttempts) Miss(key string, size uint64, archivedIn, uploadedIn ti
 		if miss, ok := attempt.Result.(*api.CacheRetrievalAttempt_Miss_); ok {
 			miss.Miss.SizeBytes = size
 			miss.Miss.ArchivedInNanos = uint64(archivedIn.Nanoseconds())
+			miss.Miss.UploadedInNanos = uint64(uploadedIn.Nanoseconds())
 			return
 		}
 	}
@@ -49,6 +50,7 @@ func (ca *CacheAttempts) Miss(key string, size uint64, archivedIn, uploadedIn ti
 			Miss: &api.CacheRetrievalAttempt_Miss{
 				SizeBytes: size,
 				ArchivedInNanos: uint64(archivedIn.Nanoseconds()),
+				UploadedInNanos: uint64(uploadedIn.Nanoseconds()),
 			},
 		},
 	}
