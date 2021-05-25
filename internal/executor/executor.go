@@ -187,6 +187,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			SignaledToExit:     stepResult.SignaledToExit,
 			LocalTimestamp:     time.Now().Unix(),
 		})
+		log.Printf("Failed to report command %v: %v\n", command.Name, err)
 	}
 
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
