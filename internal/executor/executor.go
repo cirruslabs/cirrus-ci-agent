@@ -44,6 +44,7 @@ type Executor struct {
 	commandFrom          string
 	commandTo            string
 	preCreatedWorkingDir string
+	cacheAttempts        *CacheAttempts
 }
 
 type StepResult struct {
@@ -77,6 +78,7 @@ func NewExecutor(
 		commandFrom:          commandFrom,
 		commandTo:            commandTo,
 		preCreatedWorkingDir: preCreatedWorkingDir,
+		cacheAttempts:        NewCacheAttempts(),
 	}
 }
 
@@ -197,6 +199,21 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		}
 		backgroundCommand.Logs.Finalize()
 	}
+
+	_ = retry.Do(
+		func() error {
+			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
+				TaskIdentification:     executor.taskIdentification,
+				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
+			})
+			return err
+		}, retry.OnRetry(func(n uint, err error) {
+			log.Printf("Failed to report that the agent has finished: %v\nRetrying...\n", err)
+		}),
+		retry.Delay(10*time.Second),
+		retry.Attempts(2),
+		retry.Context(ctx),
+	)
 }
 
 // BoundedCommands bounds a slice of commands with unique names to a half-open range [fromName, toName).
