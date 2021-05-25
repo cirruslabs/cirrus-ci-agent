@@ -149,6 +149,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
 
+	var commandResults []*api.ReportAgentFinishedRequest_CommandResult
+
 	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
 		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
 			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
@@ -170,26 +172,16 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("%s finished!", command.Name)
 
-		_ = retry.Do(
-			func() error {
-				_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
-					TaskIdentification: executor.taskIdentification,
-					CommandName:        command.Name,
-					Succeded:           stepResult.Success,
-					DurationInSeconds:  int64(stepResult.Duration.Seconds()),
-					SignaledToExit:     stepResult.SignaledToExit,
-					LocalTimestamp:     time.Now().Unix(),
-				})
-				return err
-			}, retry.OnRetry(func(n uint, err error) {
-				log.Printf("Failed to report command %v: %v\nRetrying...\n", command.Name, err)
-			}),
-			retry.Delay(10*time.Second),
-			retry.Attempts(2),
-			retry.Context(ctx),
-		)
+		commandResults = append(commandResults, &api.ReportAgentFinishedRequest_CommandResult{
+			Name:            command.Name,
+			Succeded:        stepResult.Success,
+			DurationInNanos: stepResult.Duration.Nanoseconds(),
+			SignaledToExit:  stepResult.SignaledToExit,
+		})
 	}
+
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
+
 	for i := 0; i < len(executor.backgroundCommands); i++ {
 		backgroundCommand := executor.backgroundCommands[i]
 		log.Printf("Cleaning up after background command %s...\n", backgroundCommand.Name)
@@ -205,6 +197,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
+				CommandResults:         commandResults,
 			})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
