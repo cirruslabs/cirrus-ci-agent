@@ -203,6 +203,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	_ = retry.Do(
 		func() error {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
+				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
 			})
 			return err
