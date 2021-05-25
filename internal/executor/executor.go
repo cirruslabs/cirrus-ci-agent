@@ -178,6 +178,15 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			DurationInNanos: stepResult.Duration.Nanoseconds(),
 			SignaledToExit:  stepResult.SignaledToExit,
 		})
+
+		_, err = client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
+			TaskIdentification: executor.taskIdentification,
+			CommandName:        command.Name,
+			Succeded:           stepResult.Success,
+			DurationInSeconds:  int64(stepResult.Duration.Seconds()),
+			SignaledToExit:     stepResult.SignaledToExit,
+			LocalTimestamp:     time.Now().Unix(),
+		})
 	}
 
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
