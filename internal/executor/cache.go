@@ -10,7 +10,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -187,9 +186,9 @@ func (executor *Executor) tryToDownloadAndPopulateCache(
 		return false, false
 	}
 
-	offset, seekErr := cacheFile.Seek(0, io.SeekCurrent)
-	if seekErr != nil {
-		executor.cacheAttempts.Failed(cacheKey, fmt.Sprintf("failed to determine cache file size: %v", seekErr))
+	cacheFileInfo, statErr := os.Stat(cacheFile.Name())
+	if statErr != nil {
+		executor.cacheAttempts.Failed(cacheKey, fmt.Sprintf("failed to determine cache file size: %v", statErr))
 	}
 
 	_, _ = logUploader.Write([]byte(fmt.Sprintf("\nCache hit for %s!", cacheKey)))
@@ -224,8 +223,8 @@ func (executor *Executor) tryToDownloadAndPopulateCache(
 		}
 	}
 
-	if seekErr == nil {
-		executor.cacheAttempts.Hit(cacheKey, uint64(offset), fetchDuration, time.Since(unarchiveStartTime))
+	if statErr == nil {
+		executor.cacheAttempts.Hit(cacheKey, uint64(cacheFileInfo.Size()), fetchDuration, time.Since(unarchiveStartTime))
 	}
 
 	return true, true
