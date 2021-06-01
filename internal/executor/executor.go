@@ -298,7 +298,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		defer logUploader.Finalize()
 	}
 
-	cirrusEnv, err := cirrusenv.New()
+	cirrusEnv, err := cirrusenv.New(executor.taskIdentification.TaskId)
 	if err != nil {
 		message := fmt.Sprintf("Failed initialize CIRRUS_ENV subsystem: %v", err)
 		log.Print(message)

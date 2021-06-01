@@ -8,7 +8,7 @@ import (
 )
 
 func TestCirrusEnv(t *testing.T) {
-	ce, err := cirrusenv.New()
+	ce, err := cirrusenv.New(42)
 	if err != nil {
 		t.Fatal(err)
 	}
