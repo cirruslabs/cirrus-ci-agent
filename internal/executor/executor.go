@@ -7,6 +7,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
@@ -297,6 +298,16 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		defer logUploader.Finalize()
 	}
 
+	cirrusEnv, err := cirrusenv.New()
+	if err != nil {
+		message := fmt.Sprintf("Failed initialize CIRRUS_ENV subsystem: %v", err)
+		log.Print(message)
+		fmt.Fprintln(logUploader, message)
+		return &StepResult{Success: false}, nil
+	}
+	defer cirrusEnv.Close()
+	executor.env["CIRRUS_ENV"] = cirrusEnv.Path()
+
 	switch instruction := currentStep.Instruction.(type) {
 	case *api.Command_ExitInstruction:
 		return nil, ErrStepExit
@@ -345,6 +356,22 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
 		success = false
+	}
+
+	cirrusEnvVariables, err := cirrusEnv.Consume()
+	if err != nil {
+		message := fmt.Sprintf("Failed collect CIRRUS_ENV subsystem results: %v", err)
+		log.Print(message)
+		fmt.Fprintln(logUploader, message)
+		return &StepResult{Success: false}, nil
+	}
+	if len(cirrusEnvVariables) != 0 {
+		// Accommodate new environment variables
+		executor.env = cirrusenv.Merge(executor.env, cirrusEnvVariables)
+
+		// Do one more expansion pass since we've introduced
+		// new and potentially unexpanded variables
+		executor.env = expandEnvironmentRecursively(executor.env)
 	}
 
 	return &StepResult{
