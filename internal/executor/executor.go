@@ -7,6 +7,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
@@ -45,6 +46,7 @@ type Executor struct {
 	commandTo            string
 	preCreatedWorkingDir string
 	cacheAttempts        *CacheAttempts
+	env                  map[string]string
 }
 
 type StepResult struct {
@@ -79,6 +81,7 @@ func NewExecutor(
 		commandTo:            commandTo,
 		preCreatedWorkingDir: preCreatedWorkingDir,
 		cacheAttempts:        NewCacheAttempts(),
+		env:                  make(map[string]string),
 	}
 }
 
@@ -116,9 +119,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
-	environment := getExpandedScriptEnvironment(executor, response.Environment)
+	executor.env = getExpandedScriptEnvironment(executor, response.Environment)
 
-	workingDir, ok := environment["CIRRUS_WORKING_DIR"]
+	workingDir, ok := executor.env["CIRRUS_WORKING_DIR"]
 	if ok {
 		EnsureFolderExists(workingDir)
 		if err := os.Chdir(workingDir); err != nil {
@@ -131,14 +134,14 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	commands := response.Commands
 
 	if cacheHost, ok := os.LookupEnv("CIRRUS_HTTP_CACHE_HOST"); ok {
-		environment["CIRRUS_HTTP_CACHE_HOST"] = cacheHost
+		executor.env["CIRRUS_HTTP_CACHE_HOST"] = cacheHost
 	}
 
-	if _, ok := environment["CIRRUS_HTTP_CACHE_HOST"]; !ok {
-		environment["CIRRUS_HTTP_CACHE_HOST"] = http_cache.Start(executor.taskIdentification)
+	if _, ok := executor.env["CIRRUS_HTTP_CACHE_HOST"]; !ok {
+		executor.env["CIRRUS_HTTP_CACHE_HOST"] = http_cache.Start(executor.taskIdentification)
 	}
 
-	executor.httpCacheHost = environment["CIRRUS_HTTP_CACHE_HOST"]
+	executor.httpCacheHost = executor.env["CIRRUS_HTTP_CACHE_HOST"]
 	subCtx, cancel := context.WithTimeout(ctx, time.Duration(response.TimeoutInSeconds)*time.Second)
 	defer cancel()
 	executor.sensitiveValues = response.SecretsToMask
@@ -159,7 +162,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("Executing %s...", command.Name)
 
-		stepResult, err := executor.performStep(subCtx, environment, command)
+		stepResult, err := executor.performStep(subCtx, command)
 		if err != nil {
 			return
 		}
@@ -270,20 +273,51 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) (*StepResult, error) {
+func (executor *Executor) performStep(ctx context.Context, currentStep *api.Command) (*StepResult, error) {
 	success := false
 	signaledToExit := false
 	start := time.Now()
+
+	logUploader, err := NewLogUploader(ctx, executor, currentStep.Name)
+	if err != nil {
+		message := fmt.Sprintf("Failed to initialize command %s log upload: %v", currentStep.Name, err)
+
+		_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
+			TaskIdentification: executor.taskIdentification,
+			Message:            message,
+		})
+
+		return &StepResult{
+			Success:        false,
+			SignaledToExit: false,
+			Duration:       time.Since(start),
+		}, nil
+	}
+
+	if _, ok := currentStep.Instruction.(*api.Command_BackgroundScriptInstruction); !ok {
+		defer logUploader.Finalize()
+	}
+
+	cirrusEnv, err := cirrusenv.New(executor.taskIdentification.TaskId)
+	if err != nil {
+		message := fmt.Sprintf("Failed initialize CIRRUS_ENV subsystem: %v", err)
+		log.Print(message)
+		fmt.Fprintln(logUploader, message)
+		return &StepResult{Success: false}, nil
+	}
+	defer cirrusEnv.Close()
+	executor.env["CIRRUS_ENV"] = cirrusEnv.Path()
 
 	switch instruction := currentStep.Instruction.(type) {
 	case *api.Command_ExitInstruction:
 		return nil, ErrStepExit
 	case *api.Command_CloneInstruction:
-		success = executor.CloneRepository(ctx, env)
+		success = executor.CloneRepository(ctx, logUploader, executor.env)
 	case *api.Command_FileInstruction:
-		success = executor.CreateFile(ctx, currentStep.Name, instruction.FileInstruction, env)
+		success = executor.CreateFile(ctx, logUploader, instruction.FileInstruction, executor.env)
 	case *api.Command_ScriptInstruction:
-		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, currentStep.Name, instruction.ScriptInstruction.Scripts, env)
+		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, logUploader, currentStep.Name,
+			instruction.ScriptInstruction.Scripts, executor.env)
 		success = err == nil && cmd.ProcessState.Success()
 		if err == nil {
 			if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
@@ -294,30 +328,50 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 			signaledToExit = false
 		}
 	case *api.Command_BackgroundScriptInstruction:
-		cmd, logClient, err := executor.ExecuteScriptsAndStreamLogs(ctx, currentStep.Name, instruction.BackgroundScriptInstruction.Scripts, env)
+		cmd, err := executor.ExecuteScriptsAndStreamLogs(ctx, logUploader,
+			instruction.BackgroundScriptInstruction.Scripts, executor.env)
 		if err == nil {
 			executor.backgroundCommands = append(executor.backgroundCommands, CommandAndLogs{
 				Name: currentStep.Name,
 				Cmd:  cmd,
-				Logs: logClient,
+				Logs: logUploader,
 			})
 			log.Printf("Started execution of #%d background command %s\n", len(executor.backgroundCommands), currentStep.Name)
 			success = true
 		} else {
 			log.Printf("Failed to create command line for background command %s: %s\n", currentStep.Name, err)
-			_, _ = logClient.Write([]byte(fmt.Sprintf("Failed to create command line: %s", err)))
-			logClient.Finalize()
+			_, _ = logUploader.Write([]byte(fmt.Sprintf("Failed to create command line: %s", err)))
+			logUploader.Finalize()
 			success = false
 		}
 	case *api.Command_CacheInstruction:
-		success = executor.DownloadCache(ctx, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
+		success = executor.DownloadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost,
+			instruction.CacheInstruction, executor.env)
 	case *api.Command_UploadCacheInstruction:
-		success = executor.UploadCache(ctx, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
+		success = executor.UploadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost,
+			instruction.UploadCacheInstruction, executor.env)
 	case *api.Command_ArtifactsInstruction:
-		success = executor.UploadArtifacts(ctx, currentStep.Name, instruction.ArtifactsInstruction, env)
+		success = executor.UploadArtifacts(ctx, logUploader, currentStep.Name,
+			instruction.ArtifactsInstruction, executor.env)
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
 		success = false
+	}
+
+	cirrusEnvVariables, err := cirrusEnv.Consume()
+	if err != nil {
+		message := fmt.Sprintf("Failed collect CIRRUS_ENV subsystem results: %v", err)
+		log.Print(message)
+		fmt.Fprintln(logUploader, message)
+		return &StepResult{Success: false}, nil
+	}
+	if len(cirrusEnvVariables) != 0 {
+		// Accommodate new environment variables
+		executor.env = cirrusenv.Merge(executor.env, cirrusEnvVariables)
+
+		// Do one more expansion pass since we've introduced
+		// new and potentially unexpanded variables
+		executor.env = expandEnvironmentRecursively(executor.env)
 	}
 
 	return &StepResult{
@@ -329,20 +383,10 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 
 func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	ctx context.Context,
+	logUploader *LogUploader,
 	commandName string,
 	scripts []string,
 	env map[string]string) (*exec.Cmd, error) {
-	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
-	if err != nil {
-		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            message,
-		}
-		client.CirrusClient.ReportAgentWarning(ctx, &request)
-		return nil, errors.New(message)
-	}
-	defer logUploader.Finalize()
 	cmd, err := ShellCommandsAndWait(ctx, scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	})
@@ -351,19 +395,10 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 
 func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	ctx context.Context,
-	commandName string,
+	logUploader *LogUploader,
 	scripts []string,
-	env map[string]string) (*exec.Cmd, *LogUploader, error) {
-	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
-	if err != nil {
-		message := fmt.Sprintf("Failed to initialize command %v log upload: %v", commandName, err)
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            message,
-		}
-		client.CirrusClient.ReportAgentWarning(ctx, &request)
-		return nil, logUploader, errors.New(message)
-	}
+	env map[string]string,
+) (*exec.Cmd, error) {
 	sc, err := NewShellCommands(scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	})
@@ -371,26 +406,15 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	if sc != nil {
 		cmd = sc.cmd
 	}
-	return cmd, logUploader, err
+	return cmd, err
 }
 
 func (executor *Executor) CreateFile(
 	ctx context.Context,
-	commandName string,
+	logUploader *LogUploader,
 	instruction *api.FileInstruction,
 	env map[string]string,
 ) bool {
-	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
-	if err != nil {
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
-		}
-		client.CirrusClient.ReportAgentWarning(ctx, &request)
-		return false
-	}
-	defer logUploader.Finalize()
-
 	switch source := instruction.GetSource().(type) {
 	case *api.FileInstruction_FromEnvironmentVariable:
 		envName := source.FromEnvironmentVariable
@@ -418,18 +442,7 @@ func (executor *Executor) CreateFile(
 	}
 }
 
-func (executor *Executor) CloneRepository(ctx context.Context, env map[string]string) bool {
-	logUploader, err := NewLogUploader(ctx, executor, "clone", env)
-	if err != nil {
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
-		}
-		client.CirrusClient.ReportAgentWarning(ctx, &request)
-		return false
-	}
-	defer logUploader.Finalize()
-
+func (executor *Executor) CloneRepository(ctx context.Context, logUploader *LogUploader, env map[string]string) bool {
 	logUploader.Write([]byte("Using built-in Git...\n"))
 
 	working_dir := env["CIRRUS_WORKING_DIR"]
