@@ -17,18 +17,14 @@ import (
 	"path/filepath"
 )
 
-func (executor *Executor) UploadArtifacts(ctx context.Context, name string, artifactsInstruction *api.ArtifactsInstruction, customEnv map[string]string) bool {
-	logUploader, err := NewLogUploader(ctx, executor, name, customEnv)
-	if err != nil {
-		request := api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            fmt.Sprintf("Failed to initialize command clone log upload: %v", err),
-		}
-		client.CirrusClient.ReportAgentWarning(ctx, &request)
-		return false
-	}
-	defer logUploader.Finalize()
-
+func (executor *Executor) UploadArtifacts(
+	ctx context.Context,
+	logUploader *LogUploader,
+	name string,
+	artifactsInstruction *api.ArtifactsInstruction,
+	customEnv map[string]string,
+) bool {
+	var err error
 	var allAnnotations []model.Annotation
 
 	err = retry.Do(

@@ -37,12 +37,14 @@ var httpClient = &http.Client{
 	Timeout: time.Minute * 5,
 }
 
-func (executor *Executor) DownloadCache(ctx context.Context, commandName string, cacheHost string, instruction *api.CacheInstruction, custom_env map[string]string) bool {
-	logUploader, err := NewLogUploader(ctx, executor, commandName, custom_env)
-	if err != nil {
-		return false
-	}
-	defer logUploader.Finalize()
+func (executor *Executor) DownloadCache(
+	ctx context.Context,
+	logUploader *LogUploader,
+	commandName string,
+	cacheHost string,
+	instruction *api.CacheInstruction,
+	custom_env map[string]string,
+) bool {
 	cacheKeyHash := sha256.New()
 
 	if len(instruction.FingerprintScripts) > 0 {
@@ -63,7 +65,7 @@ func (executor *Executor) DownloadCache(ctx context.Context, commandName string,
 
 	folderToCache := ExpandText(instruction.Folder, custom_env)
 
-	folderToCache, err = filepath.Abs(folderToCache)
+	folderToCache, err := filepath.Abs(folderToCache)
 	if err != nil {
 		message := fmt.Sprintf("\nFailed to compute absolute path for cache folder '%s': %s\n",
 			folderToCache, err)
@@ -288,12 +290,15 @@ func FetchCache(
 	return cacheFile, downloadDuration, nil
 }
 
-func (executor *Executor) UploadCache(ctx context.Context, commandName string, cacheHost string, instruction *api.UploadCacheInstruction, env map[string]string) bool {
-	logUploader, err := NewLogUploader(ctx, executor, commandName, env)
-	if err != nil {
-		return false
-	}
-	defer logUploader.Finalize()
+func (executor *Executor) UploadCache(
+	ctx context.Context,
+	logUploader *LogUploader,
+	commandName string,
+	cacheHost string,
+	instruction *api.UploadCacheInstruction,
+	env map[string]string,
+) bool {
+	var err error
 
 	cache := FindCache(instruction.CacheName)
 
