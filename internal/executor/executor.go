@@ -45,6 +45,7 @@ type Executor struct {
 	commandTo            string
 	preCreatedWorkingDir string
 	cacheAttempts        *CacheAttempts
+	env                  map[string]string
 }
 
 type StepResult struct {
@@ -79,6 +80,7 @@ func NewExecutor(
 		commandTo:            commandTo,
 		preCreatedWorkingDir: preCreatedWorkingDir,
 		cacheAttempts:        NewCacheAttempts(),
+		env:                  make(map[string]string),
 	}
 }
 
@@ -116,9 +118,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
-	environment := getExpandedScriptEnvironment(executor, response.Environment)
+	executor.env = getExpandedScriptEnvironment(executor, response.Environment)
 
-	workingDir, ok := environment["CIRRUS_WORKING_DIR"]
+	workingDir, ok := executor.env["CIRRUS_WORKING_DIR"]
 	if ok {
 		EnsureFolderExists(workingDir)
 		if err := os.Chdir(workingDir); err != nil {
@@ -131,14 +133,14 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	commands := response.Commands
 
 	if cacheHost, ok := os.LookupEnv("CIRRUS_HTTP_CACHE_HOST"); ok {
-		environment["CIRRUS_HTTP_CACHE_HOST"] = cacheHost
+		executor.env["CIRRUS_HTTP_CACHE_HOST"] = cacheHost
 	}
 
-	if _, ok := environment["CIRRUS_HTTP_CACHE_HOST"]; !ok {
-		environment["CIRRUS_HTTP_CACHE_HOST"] = http_cache.Start(executor.taskIdentification)
+	if _, ok := executor.env["CIRRUS_HTTP_CACHE_HOST"]; !ok {
+		executor.env["CIRRUS_HTTP_CACHE_HOST"] = http_cache.Start(executor.taskIdentification)
 	}
 
-	executor.httpCacheHost = environment["CIRRUS_HTTP_CACHE_HOST"]
+	executor.httpCacheHost = executor.env["CIRRUS_HTTP_CACHE_HOST"]
 	subCtx, cancel := context.WithTimeout(ctx, time.Duration(response.TimeoutInSeconds)*time.Second)
 	defer cancel()
 	executor.sensitiveValues = response.SecretsToMask
@@ -159,7 +161,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("Executing %s...", command.Name)
 
-		stepResult, err := executor.performStep(subCtx, environment, command)
+		stepResult, err := executor.performStep(subCtx, command)
 		if err != nil {
 			return
 		}
@@ -270,12 +272,12 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 	return result
 }
 
-func (executor *Executor) performStep(ctx context.Context, env map[string]string, currentStep *api.Command) (*StepResult, error) {
+func (executor *Executor) performStep(ctx context.Context, currentStep *api.Command) (*StepResult, error) {
 	success := false
 	signaledToExit := false
 	start := time.Now()
 
-	logUploader, err := NewLogUploader(ctx, executor, currentStep.Name, env)
+	logUploader, err := NewLogUploader(ctx, executor, currentStep.Name)
 	if err != nil {
 		message := fmt.Sprintf("Failed to initialize command %s log upload: %v", currentStep.Name, err)
 
@@ -299,11 +301,12 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 	case *api.Command_ExitInstruction:
 		return nil, ErrStepExit
 	case *api.Command_CloneInstruction:
-		success = executor.CloneRepository(ctx, logUploader, env)
+		success = executor.CloneRepository(ctx, logUploader, executor.env)
 	case *api.Command_FileInstruction:
-		success = executor.CreateFile(ctx, logUploader, instruction.FileInstruction, env)
+		success = executor.CreateFile(ctx, logUploader, instruction.FileInstruction, executor.env)
 	case *api.Command_ScriptInstruction:
-		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, logUploader, currentStep.Name, instruction.ScriptInstruction.Scripts, env)
+		cmd, err := executor.ExecuteScriptsStreamLogsAndWait(ctx, logUploader, currentStep.Name,
+			instruction.ScriptInstruction.Scripts, executor.env)
 		success = err == nil && cmd.ProcessState.Success()
 		if err == nil {
 			if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
@@ -314,7 +317,8 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 			signaledToExit = false
 		}
 	case *api.Command_BackgroundScriptInstruction:
-		cmd, err := executor.ExecuteScriptsAndStreamLogs(ctx, logUploader, instruction.BackgroundScriptInstruction.Scripts, env)
+		cmd, err := executor.ExecuteScriptsAndStreamLogs(ctx, logUploader,
+			instruction.BackgroundScriptInstruction.Scripts, executor.env)
 		if err == nil {
 			executor.backgroundCommands = append(executor.backgroundCommands, CommandAndLogs{
 				Name: currentStep.Name,
@@ -330,11 +334,14 @@ func (executor *Executor) performStep(ctx context.Context, env map[string]string
 			success = false
 		}
 	case *api.Command_CacheInstruction:
-		success = executor.DownloadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost, instruction.CacheInstruction, env)
+		success = executor.DownloadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost,
+			instruction.CacheInstruction, executor.env)
 	case *api.Command_UploadCacheInstruction:
-		success = executor.UploadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost, instruction.UploadCacheInstruction, env)
+		success = executor.UploadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost,
+			instruction.UploadCacheInstruction, executor.env)
 	case *api.Command_ArtifactsInstruction:
-		success = executor.UploadArtifacts(ctx, logUploader, currentStep.Name, instruction.ArtifactsInstruction, env)
+		success = executor.UploadArtifacts(ctx, logUploader, currentStep.Name,
+			instruction.ArtifactsInstruction, executor.env)
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
 		success = false
