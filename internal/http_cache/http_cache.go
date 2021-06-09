@@ -152,10 +152,8 @@ func proxyDownloadFromURL(w http.ResponseWriter, url string) {
 	bytesRead, err := io.Copy(w, resp.Body)
 	if err != nil {
 		log.Printf("Proxying cache download for %s failed with %v\n", url, err)
-		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -168,16 +166,16 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
 		log.Print(errorMsg)
-		w.Write([]byte(errorMsg))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errorMsg))
 		return
 	}
 	post, err := httpProxyClient.Post(response.Url, "application/octet-stream", bufio.NewReader(r.Body))
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to proxy upload of %s cache! %s", cacheKey, err)
 		log.Print(errorMsg)
-		w.Write([]byte(errorMsg))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errorMsg))
 		return
 	}
 	w.WriteHeader(post.StatusCode)
