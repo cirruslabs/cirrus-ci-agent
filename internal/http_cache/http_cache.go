@@ -122,36 +122,17 @@ func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 }
 
 func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
-	downloadCacheRequest := api.DownloadCacheRequest{
+	key := api.CacheKey{
 		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
-	cacheStream, err := client.CirrusClient.DownloadCache(context.Background(), &downloadCacheRequest)
+	response, err := client.CirrusClient.GenerateCacheDownloadURL(context.Background(), &key)
 	if err != nil {
 		log.Println("Not found!")
 		w.WriteHeader(http.StatusNotFound)
 	} else {
-		for {
-			in, err := cacheStream.Recv()
-			if in != nil && in.RedirectUrl != "" {
-				log.Printf("Redirecting cache download of %s\n", cacheKey)
-				proxyDownloadFromURL(w, in.RedirectUrl)
-				break
-			}
-			if in != nil && in.Data != nil && len(in.Data) > 0 {
-				_, _ = w.Write(in.Data)
-			}
-			if err == io.EOF {
-				w.WriteHeader(http.StatusOK)
-				log.Printf("Finished downloading %s...\n", cacheKey)
-				break
-			}
-			if err != nil {
-				log.Printf("Failed to download %s cache! %s", cacheKey, err)
-				w.WriteHeader(http.StatusNotFound)
-				break
-			}
-		}
+		log.Printf("Redirecting cache download of %s\n", cacheKey)
+		proxyDownloadFromURL(w, response.Url)
 	}
 }
 
@@ -171,66 +152,31 @@ func proxyDownloadFromURL(w http.ResponseWriter, url string) {
 	bytesRead, err := io.Copy(w, resp.Body)
 	if err != nil {
 		log.Printf("Proxying cache download for %s failed with %v\n", url, err)
-		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
-	uploadCacheClient, err := client.CirrusClient.UploadCache(context.Background())
+	key := api.CacheKey{
+		TaskIdentification: cirrusTaskIdentification,
+		CacheKey:           cacheKey,
+	}
+	response, err := client.CirrusClient.GenerateCacheUploadURL(context.Background(), &key)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
 		log.Print(errorMsg)
-		w.Write([]byte(errorMsg))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errorMsg))
 		return
 	}
-	cacheKeyMsg := api.CacheEntry_CacheKey{TaskIdentification: cirrusTaskIdentification, CacheKey: cacheKey}
-	keyMsg := api.CacheEntry_Key{Key: &cacheKeyMsg}
-	uploadCacheClient.Send(&api.CacheEntry{Value: &keyMsg})
-
-	readBufferSize := int(1024 * 1024)
-	readBuffer := make([]byte, readBufferSize)
-	bufferedBodyReader := bufio.NewReaderSize(r.Body, readBufferSize)
-	bytesUploaded := 0
-	for {
-		n, err := bufferedBodyReader.Read(readBuffer)
-
-		if n > 0 {
-			chunkMsg := api.CacheEntry_Chunk{Chunk: &api.DataChunk{Data: readBuffer[:n]}}
-			err := uploadCacheClient.Send(&api.CacheEntry{Value: &chunkMsg})
-			if err != nil {
-				errorMsg := fmt.Sprintf("Failed to send a chunk: %s!", err)
-				log.Print(errorMsg)
-				w.Write([]byte(errorMsg))
-				w.WriteHeader(http.StatusInternalServerError)
-				uploadCacheClient.CloseAndRecv()
-				break
-			}
-			bytesUploaded += n
-		}
-
-		if err == io.EOF || n == 0 {
-			uploadCacheClient.CloseAndRecv()
-			w.WriteHeader(http.StatusCreated)
-			break
-		}
-		if err != nil {
-			errorMsg := fmt.Sprintf("Failed read cache body! %s", err)
-			log.Print(errorMsg)
-			w.Write([]byte(errorMsg))
-			w.WriteHeader(http.StatusBadRequest)
-			uploadCacheClient.CloseAndRecv()
-			break
-		}
+	post, err := httpProxyClient.Post(response.Url, "application/octet-stream", bufio.NewReader(r.Body))
+	if err != nil {
+		errorMsg := fmt.Sprintf("Failed to proxy upload of %s cache! %s", cacheKey, err)
+		log.Print(errorMsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errorMsg))
+		return
 	}
-	if bytesUploaded < 1024 {
-		w.Write([]byte(fmt.Sprintf("Uploaded %d bytes.\n", bytesUploaded)))
-	} else if bytesUploaded < 1024*1024 {
-		w.Write([]byte(fmt.Sprintf("Uploaded %dKb.\n", bytesUploaded/1024)))
-	} else {
-		w.Write([]byte(fmt.Sprintf("Uploaded %dMb.\n", bytesUploaded/1024/1024)))
-	}
+	w.WriteHeader(post.StatusCode)
 }

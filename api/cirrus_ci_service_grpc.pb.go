@@ -526,6 +526,8 @@ type CirrusCIServiceClient interface {
 	ReportAgentLogs(ctx context.Context, in *ReportAgentLogsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ReportAgentFinished(ctx context.Context, in *ReportAgentFinishedRequest, opts ...grpc.CallOption) (*ReportAgentFinishedResponse, error)
 	ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error)
+	GenerateCacheUploadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
+	GenerateCacheDownloadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
 }
 
 type cirrusCIServiceClient struct {
@@ -812,6 +814,24 @@ func (c *cirrusCIServiceClient) ParseConfig(ctx context.Context, in *ParseConfig
 	return out, nil
 }
 
+func (c *cirrusCIServiceClient) GenerateCacheUploadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error) {
+	out := new(GenerateURLResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheUploadURL", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusCIServiceClient) GenerateCacheDownloadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error) {
+	out := new(GenerateURLResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheDownloadURL", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CirrusCIServiceServer is the server API for CirrusCIService service.
 // All implementations must embed UnimplementedCirrusCIServiceServer
 // for forward compatibility
@@ -833,6 +853,8 @@ type CirrusCIServiceServer interface {
 	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*empty.Empty, error)
 	ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error)
 	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
+	GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
+	GenerateCacheDownloadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
 	mustEmbedUnimplementedCirrusCIServiceServer()
 }
 
@@ -890,6 +912,12 @@ func (UnimplementedCirrusCIServiceServer) ReportAgentFinished(context.Context, *
 }
 func (UnimplementedCirrusCIServiceServer) ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ParseConfig not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheUploadURL not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) GenerateCacheDownloadURL(context.Context, *CacheKey) (*GenerateURLResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheDownloadURL not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) mustEmbedUnimplementedCirrusCIServiceServer() {}
 
@@ -1245,6 +1273,42 @@ func _CirrusCIService_ParseConfig_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusCIService_GenerateCacheUploadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).GenerateCacheUploadURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheUploadURL",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).GenerateCacheUploadURL(ctx, req.(*CacheKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusCIService_GenerateCacheDownloadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).GenerateCacheDownloadURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheDownloadURL",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).GenerateCacheDownloadURL(ctx, req.(*CacheKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CirrusCIService_ServiceDesc is the grpc.ServiceDesc for CirrusCIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1299,6 +1363,14 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ParseConfig",
 			Handler:    _CirrusCIService_ParseConfig_Handler,
+		},
+		{
+			MethodName: "GenerateCacheUploadURL",
+			Handler:    _CirrusCIService_GenerateCacheUploadURL_Handler,
+		},
+		{
+			MethodName: "GenerateCacheDownloadURL",
+			Handler:    _CirrusCIService_GenerateCacheDownloadURL_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
