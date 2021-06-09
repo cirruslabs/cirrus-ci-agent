@@ -162,7 +162,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
-	response, err := client.CirrusClient.GenerateCacheUploadURL(context.Background(), &key)
+	generateResp, err := client.CirrusClient.GenerateCacheUploadURL(context.Background(), &key)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
 		log.Print(errorMsg)
@@ -170,7 +170,16 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		w.Write([]byte(errorMsg))
 		return
 	}
-	post, err := httpProxyClient.Post(response.Url, "application/octet-stream", bufio.NewReader(r.Body))
+	req, err := http.NewRequest("PUT", generateResp.Url, bufio.NewReader(r.Body))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	if r.ContentLength >= 0 {
+		req.Header.Set("Content-Length", strconv.FormatInt(r.ContentLength, 10))
+	}
+	resp, err := httpProxyClient.Do(req)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to proxy upload of %s cache! %s", cacheKey, err)
 		log.Print(errorMsg)
@@ -178,5 +187,5 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		w.Write([]byte(errorMsg))
 		return
 	}
-	w.WriteHeader(post.StatusCode)
+	w.WriteHeader(resp.StatusCode)
 }
