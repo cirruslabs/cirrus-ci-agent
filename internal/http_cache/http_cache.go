@@ -179,6 +179,9 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	if r.ContentLength >= 0 {
 		req.Header.Set("Content-Length", strconv.FormatInt(r.ContentLength, 10))
 	}
+	for k, v := range generateResp.GetExtraHeaders() {
+		req.Header.Set(k, v)
+	}
 	resp, err := httpProxyClient.Do(req)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to proxy upload of %s cache! %s", cacheKey, err)
