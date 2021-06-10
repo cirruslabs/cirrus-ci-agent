@@ -95,9 +95,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "HEAD" {
 		checkCacheExists(w, key)
 	} else if r.Method == "POST" {
-		uploadCache(w, r, key)
+		uploadCacheEntry(w, r, key)
 	} else if r.Method == "PUT" {
-		uploadCache(w, r, key)
+		uploadCacheEntry(w, r, key)
 	} else {
 		log.Printf("Not supported request method: %s\n", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -157,7 +157,7 @@ func proxyDownloadFromURL(w http.ResponseWriter, url string) {
 	}
 }
 
-func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
+func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	key := api.CacheKey{
 		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
@@ -165,7 +165,7 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	generateResp, err := client.CirrusClient.GenerateCacheUploadURL(context.Background(), &key)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
-		log.Print(errorMsg)
+		log.Println(errorMsg)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(errorMsg))
 		return
@@ -185,10 +185,17 @@ func uploadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	resp, err := httpProxyClient.Do(req)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to proxy upload of %s cache! %s", cacheKey, err)
-		log.Print(errorMsg)
+		log.Println(errorMsg)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(errorMsg))
 		return
+	}
+	if resp.StatusCode >= 400 {
+		log.Printf("Failed to proxy upload of %s cache! %s", cacheKey, resp.Status)
+		log.Printf("Headers for PUT request to  %s\n", generateResp.Url)
+		req.Header.Write(log.Writer())
+		log.Println("Failed response:")
+		resp.Write(log.Writer())
 	}
 	w.WriteHeader(resp.StatusCode)
 }
