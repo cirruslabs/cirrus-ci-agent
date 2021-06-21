@@ -288,9 +288,8 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		})
 
 		return &StepResult{
-			Success:        false,
-			SignaledToExit: false,
-			Duration:       time.Since(start),
+			Success:  false,
+			Duration: time.Since(start),
 		}, nil
 	}
 
@@ -303,7 +302,10 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		message := fmt.Sprintf("Failed initialize CIRRUS_ENV subsystem: %v", err)
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
-		return &StepResult{Success: false}, nil
+		return &StepResult{
+			Success:  false,
+			Duration: time.Since(start),
+		}, nil
 	}
 	defer cirrusEnv.Close()
 	executor.env["CIRRUS_ENV"] = cirrusEnv.Path()
@@ -363,7 +365,10 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		message := fmt.Sprintf("Failed collect CIRRUS_ENV subsystem results: %v", err)
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
-		return &StepResult{Success: false}, nil
+		return &StepResult{
+			Success:  false,
+			Duration: time.Since(start),
+		}, nil
 	}
 	if len(cirrusEnvVariables) != 0 {
 		// Accommodate new environment variables
