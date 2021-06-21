@@ -14,9 +14,5 @@ func TransportSettings(apiEndpoint string) (string, bool) {
 	}
 
 	// HTTPS and other cases are always secure
-	if strings.HasPrefix(apiEndpoint, "https://") {
-		apiEndpoint = strings.TrimPrefix(apiEndpoint, "https://")
-	}
-
-	return apiEndpoint, false
+	return strings.TrimPrefix(apiEndpoint, "https://"), false
 }
