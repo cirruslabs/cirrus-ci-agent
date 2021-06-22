@@ -16,6 +16,7 @@ steps:
     id: 'build-multi-architecture-container-image'
 options:
   env:
+    # to use buildx for multiarch build via buildx
     - 'DOCKER_CLI_EXPERIMENTAL=enabled'
-timeout: 1200s
+timeout: 3600s
 images: ['gcr.io/cirrus-ci-community/cirrus-ci-agent:$TAG_NAME', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:latest']
