@@ -374,7 +374,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 	case *api.Command_WaitForTerminalInstruction:
 		operationChan := executor.terminalWrapper.Wait()
 
-		WaitForTerminalInstructionFor:
+	WaitForTerminalInstructionFor:
 		for {
 			switch operation := (<-operationChan).(type) {
 			case *terminalwrapper.LogOperation:
