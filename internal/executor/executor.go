@@ -154,16 +154,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	// Launch terminal session for remote access (in case requested by the user)
 	var hasWaitForTerminalInstruction bool
+	var terminalServerAddress string
 
 	for _, command := range commands {
-		if _, ok := command.Instruction.(*api.Command_WaitForTerminalInstruction); ok {
+		if instruction, ok := command.Instruction.(*api.Command_WaitForTerminalInstruction); ok {
 			hasWaitForTerminalInstruction = true
+			if instruction.WaitForTerminalInstruction != nil {
+				terminalServerAddress = instruction.WaitForTerminalInstruction.TerminalServerAddress
+			}
 			break
 		}
 	}
 
 	if hasWaitForTerminalInstruction {
-		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification)
+		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress)
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce

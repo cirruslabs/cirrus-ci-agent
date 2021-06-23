@@ -8,6 +8,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/cirruslabs/terminal/pkg/host"
 	"math"
 	"time"
@@ -19,7 +20,7 @@ type Wrapper struct {
 	terminalHost  *host.TerminalHost
 }
 
-func New(ctx context.Context, taskIdentification *api.TaskIdentification) *Wrapper {
+func New(ctx context.Context, taskIdentification *api.TaskIdentification, serverAddress string) *Wrapper {
 	wrapper := &Wrapper{
 		ctx:           ctx,
 		operationChan: make(chan Operation),
@@ -43,10 +44,22 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification) *Wrapp
 		return err
 	}
 
-	wrapper.terminalHost, err = host.New(
+	terminalHostOpts := []host.Option{
 		host.WithTrustedSecret(trustedSecret),
 		host.WithLocatorCallback(locatorCallback),
-	)
+	}
+
+	if serverAddress != "" {
+		parsedAddress, insecure := grpchelper.TransportSettings(serverAddress)
+
+		terminalHostOpts = append(terminalHostOpts, host.WithServerAddress(parsedAddress))
+
+		if insecure {
+			terminalHostOpts = append(terminalHostOpts, host.WithServerInsecure())
+		}
+	}
+
+	wrapper.terminalHost, err = host.New(terminalHostOpts...)
 	if err != nil {
 		wrapper.operationChan <- &LogOperation{Message: fmt.Sprintf("Failed to initialize a terminal host: %v", err)}
 		return wrapper
