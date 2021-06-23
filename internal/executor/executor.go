@@ -163,7 +163,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	if hasWaitForTerminalInstruction {
-		executor.terminalWrapper = terminalwrapper.New(subCtx)
+		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification)
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce

@@ -19,7 +19,7 @@ type Wrapper struct {
 	terminalHost  *host.TerminalHost
 }
 
-func New(ctx context.Context) *Wrapper {
+func New(ctx context.Context, taskIdentification *api.TaskIdentification) *Wrapper {
 	wrapper := &Wrapper{
 		ctx:           ctx,
 		operationChan: make(chan Operation),
@@ -36,8 +36,9 @@ func New(ctx context.Context) *Wrapper {
 	// A callback that will be called once the terminal host connects and registers on the terminal server
 	locatorCallback := func(locator string) error {
 		_, err := client.CirrusClient.ReportTerminalAttached(ctx, &api.ReportTerminalAttachedRequest{
-			Locator:       locator,
-			TrustedSecret: trustedSecret,
+			TaskIdentification: taskIdentification,
+			Locator:            locator,
+			TrustedSecret:      trustedSecret,
 		})
 		return err
 	}
