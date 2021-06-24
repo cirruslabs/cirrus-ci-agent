@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -47,6 +48,7 @@ type Executor struct {
 	preCreatedWorkingDir string
 	cacheAttempts        *CacheAttempts
 	env                  map[string]string
+	terminalWrapper      *terminalwrapper.Wrapper
 }
 
 type StepResult struct {
@@ -148,6 +150,24 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	if len(commands) == 0 {
 		return
+	}
+
+	// Launch terminal session for remote access (in case requested by the user)
+	var hasWaitForTerminalInstruction bool
+	var terminalServerAddress string
+
+	for _, command := range commands {
+		if instruction, ok := command.Instruction.(*api.Command_WaitForTerminalInstruction); ok {
+			hasWaitForTerminalInstruction = true
+			if instruction.WaitForTerminalInstruction != nil {
+				terminalServerAddress = instruction.WaitForTerminalInstruction.TerminalServerAddress
+			}
+			break
+		}
+	}
+
+	if hasWaitForTerminalInstruction {
+		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress)
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
@@ -288,9 +308,8 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		})
 
 		return &StepResult{
-			Success:        false,
-			SignaledToExit: false,
-			Duration:       time.Since(start),
+			Success:  false,
+			Duration: time.Since(start),
 		}, nil
 	}
 
@@ -303,7 +322,10 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		message := fmt.Sprintf("Failed initialize CIRRUS_ENV subsystem: %v", err)
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
-		return &StepResult{Success: false}, nil
+		return &StepResult{
+			Success:  false,
+			Duration: time.Since(start),
+		}, nil
 	}
 	defer cirrusEnv.Close()
 	executor.env["CIRRUS_ENV"] = cirrusEnv.Path()
@@ -353,6 +375,20 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 	case *api.Command_ArtifactsInstruction:
 		success = executor.UploadArtifacts(ctx, logUploader, currentStep.Name,
 			instruction.ArtifactsInstruction, executor.env)
+	case *api.Command_WaitForTerminalInstruction:
+		operationChan := executor.terminalWrapper.Wait()
+
+	WaitForTerminalInstructionFor:
+		for {
+			switch operation := (<-operationChan).(type) {
+			case *terminalwrapper.LogOperation:
+				log.Println(operation.Message)
+				_, _ = logUploader.Write([]byte(operation.Message))
+			case *terminalwrapper.ExitOperation:
+				success = operation.Success
+				break WaitForTerminalInstructionFor
+			}
+		}
 	default:
 		log.Printf("Unsupported instruction %T", instruction)
 		success = false
@@ -363,7 +399,10 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		message := fmt.Sprintf("Failed collect CIRRUS_ENV subsystem results: %v", err)
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
-		return &StepResult{Success: false}, nil
+		return &StepResult{
+			Success:  false,
+			Duration: time.Since(start),
+		}, nil
 	}
 	if len(cirrusEnvVariables) != 0 {
 		// Accommodate new environment variables

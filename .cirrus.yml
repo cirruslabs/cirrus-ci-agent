@@ -43,6 +43,7 @@ task:
   macos_instance:
     image: big-sur-base
   test_script:
+    - brew update
     - brew install go
     - go test ./...
 

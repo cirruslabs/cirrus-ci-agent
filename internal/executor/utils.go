@@ -61,10 +61,10 @@ func ConvertAnnotations(annotations []model.Annotation) []*api.Annotation {
 	result := make([]*api.Annotation, 0)
 	for _, annotation := range annotations {
 		protoAnnotation := api.Annotation{
-			Type:               api.Annotation_GENERIC,
-			Level:              api.Annotation_Level(api.Annotation_Level_value[strings.ToUpper(annotation.Level.String())]),
-			Message:            annotation.Message,
-			RawDetails:         annotation.RawDetails,
+			Type:       api.Annotation_GENERIC,
+			Level:      api.Annotation_Level(api.Annotation_Level_value[strings.ToUpper(annotation.Level.String())]),
+			Message:    annotation.Message,
+			RawDetails: annotation.RawDetails,
 		}
 		if annotation.Location != nil {
 			protoAnnotation.FileLocation = &api.Annotation_FileLocation{
