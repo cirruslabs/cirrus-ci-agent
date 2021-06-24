@@ -46,8 +46,8 @@ github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d/go.mod h1:sGbDF6
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/cirruslabs/cirrus-ci-annotations v0.3.0 h1:VDFzTvXZ5yi4KPTct4xNbAurnSpKJnzIXgbKoDWAZww=
 github.com/cirruslabs/cirrus-ci-annotations v0.3.0/go.mod h1:xrmxzL58Pf4cSSQCmQEOPGQ3poeARxJdHneurUrqjZk=
-github.com/cirruslabs/terminal v0.2.4 h1:RoWmTSNM53hUXbKUMI7zQ5iWxD+JVxK3iFB/krc3nAg=
-github.com/cirruslabs/terminal v0.2.4/go.mod h1:ubLe9fvd4FYeQV08ob5TNp9tsAfE0efkFtPrlKAwIKw=
+github.com/cirruslabs/terminal v0.2.5 h1:7EtrZgvO7L+OniC9prx0c3YJdvn3KjZ0cXAgmpQk1Eo=
+github.com/cirruslabs/terminal v0.2.5/go.mod h1:ubLe9fvd4FYeQV08ob5TNp9tsAfE0efkFtPrlKAwIKw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
