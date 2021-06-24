@@ -10,6 +10,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/cirruslabs/terminal/pkg/host"
+	"github.com/cirruslabs/terminal/pkg/host/session"
 	"math"
 	"time"
 )
@@ -112,8 +113,23 @@ func (wrapper *Wrapper) Wait() chan Operation {
 
 			select {
 			case <-time.After(timeToWait):
-				message := fmt.Sprintf("Waited %v, but there's still activity. Perhaps there are"+
-					" terminal sessions open which generate the input/output?", timeToWait)
+				now := time.Now()
+
+				numActiveSessions := wrapper.terminalHost.NumSessionsFunc(func(session *session.Session) bool {
+					sessionLastActivity := session.LastActivity()
+
+					// Unlikely, but let's check this anyway, since there's no utility method
+					// for safely diffing time in the time package
+					if sessionLastActivity.After(now) {
+						return true
+					}
+
+					return now.Sub(session.LastActivity()) < minIdleDuration
+				})
+
+				message := fmt.Sprintf("Waited %v, but there are still %d terminal sessions open, "+
+					"and %d of them generated input in the last %v.",
+					timeToWait, wrapper.terminalHost.NumSessions(), numActiveSessions, minIdleDuration)
 				wrapper.operationChan <- &LogOperation{Message: message}
 
 				continue
