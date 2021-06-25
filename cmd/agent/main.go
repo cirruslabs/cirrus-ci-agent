@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/avast/retry-go"
-	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
@@ -17,7 +15,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
 	"io"
@@ -222,20 +219,8 @@ func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn,
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
-	target, insecure := grpchelper.TransportSettings(apiEndpoint)
+	target, transportSecurity := grpchelper.TransportSettingsAsDialOption(apiEndpoint)
 
-	// use embedded root certificates because the agent can be executed with a distroless container, for example
-	// also don't check for error since then the default certificates from the host will be used
-	certPool, _ := gocertifi.CACerts()
-	tlsCredentials := credentials.NewTLS(&tls.Config{
-		MinVersion: tls.VersionTLS13,
-		RootCAs:    certPool,
-	})
-	transportSecurity := grpc.WithTransportCredentials(tlsCredentials)
-
-	if insecure {
-		transportSecurity = grpc.WithInsecure()
-	}
 	retryCodes := []codes.Code{
 		codes.Unavailable, codes.Internal, codes.Unknown, codes.ResourceExhausted, codes.DeadlineExceeded,
 	}
