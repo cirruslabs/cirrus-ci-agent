@@ -78,7 +78,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 				wrapper.operationChan <- &LogOperation{Message: fmt.Sprintf("Terminal host failed: %v", err)}
 			}),
 			retry.Context(ctx),
-			retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second),
+			retry.Delay(5*time.Second), retry.MaxDelay(5*time.Second),
 			retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
 		)
 	}()
