@@ -8,7 +8,6 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
-	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/cirruslabs/terminal/pkg/host"
 	"github.com/cirruslabs/terminal/pkg/host/session"
 	"math"
@@ -51,13 +50,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 	}
 
 	if serverAddress != "" {
-		parsedAddress, insecure := grpchelper.TransportSettings(serverAddress)
-
-		terminalHostOpts = append(terminalHostOpts, host.WithServerAddress(parsedAddress))
-
-		if insecure {
-			terminalHostOpts = append(terminalHostOpts, host.WithServerInsecure())
-		}
+		terminalHostOpts = append(terminalHostOpts, host.WithServerAddress(serverAddress))
 	}
 
 	wrapper.terminalHost, err = host.New(terminalHostOpts...)
@@ -78,7 +71,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 				wrapper.operationChan <- &LogOperation{Message: fmt.Sprintf("Terminal host failed: %v", err)}
 			}),
 			retry.Context(ctx),
-			retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second),
+			retry.Delay(5*time.Second), retry.MaxDelay(5*time.Second),
 			retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
 		)
 	}()
@@ -104,7 +97,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			durationSinceLastActivity := time.Since(wrapper.terminalHost.LastActivity())
 
 			if durationSinceLastActivity >= minIdleDuration {
-				break
+				wrapper.operationChan <- &ExitOperation{Success: true}
+
+				return
 			}
 
 			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
