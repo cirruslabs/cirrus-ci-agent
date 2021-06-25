@@ -97,7 +97,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			durationSinceLastActivity := time.Since(wrapper.terminalHost.LastActivity())
 
 			if durationSinceLastActivity >= minIdleDuration {
-				break
+				wrapper.operationChan <- &ExitOperation{Success: true}
+
+				return
 			}
 
 			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
