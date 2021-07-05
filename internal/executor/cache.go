@@ -21,14 +21,13 @@ import (
 )
 
 type Cache struct {
-	Name           string
-	Key            string
-	BaseFolder     string
-	FoldersToCache []string
-	Glob           string
-	FileHasher     *hasher.Hasher
-	SkipUpload     bool
-	CacheAvailable bool
+	Name                     string
+	Key                      string
+	BaseFolder               string
+	PartiallyExpandedFolders []string
+	FileHasher               *hasher.Hasher
+	SkipUpload               bool
+	CacheAvailable           bool
 }
 
 var caches = make([]Cache, 0)
@@ -63,63 +62,70 @@ func (executor *Executor) DownloadCache(
 
 	cacheKey := fmt.Sprintf("%s-%x", commandName, cacheKeyHash.Sum(nil))
 
-	folderToCache := ExpandText(instruction.Folder, custom_env)
+	// Partially expand cache folders without and keep them for further re-evaluation in UploadCache()
+	//
+	// Once in UploadCache(), the cache will be populated, and the globbing may yield a different result.
+	var partiallyExpandedFolders []string
 
-	folderToCache, err := filepath.Abs(folderToCache)
-	if err != nil {
-		message := fmt.Sprintf("\nFailed to compute absolute path for cache folder '%s': %s\n",
-			folderToCache, err)
+	for _, folder := range instruction.Folders {
+		folder = ExpandText(folder, custom_env)
+
+		folder, err := filepath.Abs(folder)
+		if err != nil {
+			message := fmt.Sprintf("\nFailed to compute absolute path for cache folder '%s': %v\n", folder, err)
+			executor.cacheAttempts.Failed(cacheKey, message)
+			logUploader.Write([]byte(message))
+			return false
+		}
+
+		partiallyExpandedFolders = append(partiallyExpandedFolders, folder)
+	}
+
+	// Expand cache folders in case they contain potential globs,
+	// so we can calculate the hashes for directories that already exist
+	foldersToCache, message := executor.expandAndDeduplicateGlobs(partiallyExpandedFolders)
+	if message != "" {
 		executor.cacheAttempts.Failed(cacheKey, message)
 		logUploader.Write([]byte(message))
 		return false
 	}
 
-	var glob string
-	baseFolder := folderToCache
-	foldersToCache := []string{folderToCache}
-	if pathLooksLikeGlob(folderToCache) {
-		glob = folderToCache
+	// Determine the base folder and perform a sanity check against it
+	//
+	// When we're dealing with multiple cache folders, the semantics is
+	// clearly defined only when all folders are scoped to the current
+	// working directory, otherwise it's impossible to make paths inside
+	// of the archive portable (i.e. independent on the location of the
+	// working directory).
+	//
+	// Note: this is not a security stop-gap but merely a hint to the users
+	// that they are doing something wrong.
+	var baseFolder string
+
+	if len(foldersToCache) == 1 {
+		baseFolder = foldersToCache[0]
+	} else if len(foldersToCache) > 1 {
 		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
 
-		// Sanity check
-		//
-		// When glob is used, the semantics are clearly defined only when
-		// it's matches are scoped to the current working directory,
-		// because otherwise it's impossible to make paths inside of the
-		// archive portable (i.e. independent on the location of the working
-		// directory).
-		//
-		// Note: this is not a security stop-gap but merely a hint to the users
-		// that they are doing something potentially wrong.
-		terminatedWorkingDir := custom_env["CIRRUS_WORKING_DIR"]
+		for _, folderToCache := range foldersToCache {
+			terminatedWorkingDir := baseFolder
 
-		if !strings.HasSuffix(terminatedWorkingDir, string(os.PathSeparator)) {
-			terminatedWorkingDir += string(os.PathSeparator)
-		}
+			if !strings.HasSuffix(terminatedWorkingDir, string(os.PathSeparator)) {
+				terminatedWorkingDir += string(os.PathSeparator)
+			}
 
-		if !strings.HasPrefix(glob, terminatedWorkingDir) {
-			message := fmt.Sprintf("\nCannot expand cache folder glob '%s' that points above the current working directory %s\n",
-				glob, terminatedWorkingDir)
-			executor.cacheAttempts.Failed(cacheKey, message)
-			logUploader.Write([]byte(message))
-			return false
+			if !strings.HasPrefix(folderToCache, terminatedWorkingDir) {
+				message := fmt.Sprintf("\nWhen using globs or multiple cache folders, all folders should be relative to "+
+					"the current working directory, yet, folder '%s' points above the current working directory '%s'\n",
+					folderToCache, terminatedWorkingDir)
+				executor.cacheAttempts.Failed(cacheKey, message)
+				logUploader.Write([]byte(message))
+				return false
+			}
 		}
 	}
 
 	cachePopulated, cacheAvailable := executor.tryToDownloadAndPopulateCache(ctx, logUploader, commandName, cacheHost, cacheKey, baseFolder)
-
-	if glob != "" {
-		// Expand the glob so we can calculate the hashes for directories that already exist
-		foldersToCache, err = doublestar.Glob(glob)
-		if err != nil {
-			message := fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", glob, err)
-			executor.cacheAttempts.Failed(cacheKey, message)
-			logUploader.Write([]byte(message))
-			return false
-		}
-
-		foldersToCache = DeduplicatePaths(foldersToCache)
-	}
 
 	fileHasher := hasher.New()
 	if cachePopulated {
@@ -150,21 +156,34 @@ func (executor *Executor) DownloadCache(
 	caches = append(
 		caches,
 		Cache{
-			Name:           commandName,
-			Key:            cacheKey,
-			BaseFolder:     baseFolder,
-			FoldersToCache: foldersToCache,
-			Glob:           glob,
-			FileHasher:     fileHasher,
-			SkipUpload:     cacheAvailable && !instruction.ReuploadOnChanges,
-			CacheAvailable: cacheAvailable,
+			Name:                     commandName,
+			Key:                      cacheKey,
+			BaseFolder:               baseFolder,
+			PartiallyExpandedFolders: partiallyExpandedFolders,
+			FileHasher:               fileHasher,
+			SkipUpload:               cacheAvailable && !instruction.ReuploadOnChanges,
+			CacheAvailable:           cacheAvailable,
 		},
 	)
 	return true
 }
 
-func pathLooksLikeGlob(path string) bool {
-	return strings.Contains(path, "*")
+func (executor *Executor) expandAndDeduplicateGlobs(folders []string) ([]string, string) {
+	var result []string
+
+	for _, folder := range folders {
+		expandedGlob, err := doublestar.Glob(folder)
+		if err != nil {
+			return nil, fmt.Sprintf("\nCannot expand cache folder glob '%s': %v\n", folder, err)
+		}
+
+		result = append(result, expandedGlob...)
+	}
+
+	// Deduplicate paths to improve UX
+	result = DeduplicatePaths(result)
+
+	return result, ""
 }
 
 func (executor *Executor) tryToDownloadAndPopulateCache(
@@ -312,26 +331,21 @@ func (executor *Executor) UploadCache(
 		return true
 	}
 
-	if cache.Glob != "" {
-		// Expand the glob again to capture the folders that were created after the first expansion in DownloadCache()
-		cache.FoldersToCache, err = doublestar.Glob(cache.Glob)
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nCannot expand cache folder glob '%s': %s\n", cache.Glob, err)))
-			return false
-		}
-
-		cache.FoldersToCache = DeduplicatePaths(cache.FoldersToCache)
+	foldersToCache, message := executor.expandAndDeduplicateGlobs(cache.PartiallyExpandedFolders)
+	if message != "" {
+		logUploader.Write([]byte(message))
+		return false
 	}
 
-	commaSeparatedFolders := strings.Join(cache.FoldersToCache, ", ")
+	commaSeparatedFolders := strings.Join(foldersToCache, ", ")
 
-	if allDirsEmpty(cache.FoldersToCache) {
+	if allDirsEmpty(foldersToCache) {
 		logUploader.Write([]byte(fmt.Sprintf("All cache folders (%s) are empty! Skipping uploading ...", commaSeparatedFolders)))
 		return true
 	}
 
 	fileHasher := hasher.New()
-	for _, folder := range cache.FoldersToCache {
+	for _, folder := range foldersToCache {
 		if err := fileHasher.AddFolder(cache.BaseFolder, folder); err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("Failed to calculate hash of %s! %s", folder, err)))
 			logUploader.Write([]byte("Skipping uploading of cache!"))
@@ -358,7 +372,7 @@ func (executor *Executor) UploadCache(
 	defer os.Remove(cacheFile.Name())
 
 	archiveStartTime := time.Now()
-	err = targz.Archive(cache.BaseFolder, cache.FoldersToCache, cacheFile.Name())
+	err = targz.Archive(cache.BaseFolder, foldersToCache, cacheFile.Name())
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to tar caches for %s with %s!", commandName, err)))
 		return false
