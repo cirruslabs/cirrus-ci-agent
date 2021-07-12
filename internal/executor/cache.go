@@ -83,7 +83,7 @@ func (executor *Executor) DownloadCache(
 
 	// Determine the base folder
 	baseFolder := custom_env["CIRRUS_WORKING_DIR"]
-	if len(partiallyExpandedFolders) == 1 {
+	if len(partiallyExpandedFolders) == 1 && !pathLooksLikeGlob(partiallyExpandedFolders[0]) {
 		baseFolder = partiallyExpandedFolders[0]
 	}
 
