@@ -172,18 +172,26 @@ func (executor *Executor) expandAndDeduplicateGlobs(folders []string) ([]string,
 	var result []string
 
 	for _, folder := range folders {
-		expandedGlob, err := doublestar.Glob(folder)
-		if err != nil {
-			return nil, fmt.Sprintf("\nCannot expand cache folder glob '%s': %v\n", folder, err)
-		}
+		if pathLooksLikeGlob(folder) {
+			expandedGlob, err := doublestar.Glob(folder)
+			if err != nil {
+				return nil, fmt.Sprintf("\nCannot expand cache folder glob '%s': %v\n", folder, err)
+			}
 
-		result = append(result, expandedGlob...)
+			result = append(result, expandedGlob...)
+		} else {
+			result = append(result, folder)
+		}
 	}
 
 	// Deduplicate paths to improve UX
 	result = DeduplicatePaths(result)
 
 	return result, ""
+}
+
+func pathLooksLikeGlob(path string) bool {
+	return strings.Contains(path, "*")
 }
 
 func (executor *Executor) tryToDownloadAndPopulateCache(
