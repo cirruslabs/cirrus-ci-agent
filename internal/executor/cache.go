@@ -81,16 +81,13 @@ func (executor *Executor) DownloadCache(
 		partiallyExpandedFolders = append(partiallyExpandedFolders, folder)
 	}
 
-	// Expand cache folders in case they contain potential globs,
-	// so we can calculate the hashes for directories that already exist
-	foldersToCache, message := executor.expandAndDeduplicateGlobs(partiallyExpandedFolders)
-	if message != "" {
-		executor.cacheAttempts.Failed(cacheKey, message)
-		logUploader.Write([]byte(message))
-		return false
+	// Determine the base folder
+	baseFolder := custom_env["CIRRUS_WORKING_DIR"]
+	if len(partiallyExpandedFolders) == 1 && !pathLooksLikeGlob(partiallyExpandedFolders[0]) {
+		baseFolder = partiallyExpandedFolders[0]
 	}
 
-	// Determine the base folder and perform a sanity check against it
+	// Perform a sanity check against the base folder
 	//
 	// When we're dealing with multiple cache folders, the semantics is
 	// clearly defined only when all folders are scoped to the current
@@ -100,24 +97,18 @@ func (executor *Executor) DownloadCache(
 	//
 	// Note: this is not a security stop-gap but merely a hint to the users
 	// that they are doing something wrong.
-	var baseFolder string
-
-	if len(foldersToCache) == 1 {
-		baseFolder = foldersToCache[0]
-	} else if len(foldersToCache) > 1 {
-		baseFolder = custom_env["CIRRUS_WORKING_DIR"]
-
-		for _, folderToCache := range foldersToCache {
+	if len(partiallyExpandedFolders) > 1 {
+		for _, partiallyExpandedFolder := range partiallyExpandedFolders {
 			terminatedWorkingDir := baseFolder
 
 			if !strings.HasSuffix(terminatedWorkingDir, string(os.PathSeparator)) {
 				terminatedWorkingDir += string(os.PathSeparator)
 			}
 
-			if !strings.HasPrefix(folderToCache, terminatedWorkingDir) {
+			if !strings.HasPrefix(partiallyExpandedFolder, terminatedWorkingDir) {
 				message := fmt.Sprintf("\nWhen using globs or multiple cache folders, all folders should be relative to "+
 					"the current working directory, yet, folder '%s' points above the current working directory '%s'\n",
-					folderToCache, terminatedWorkingDir)
+					partiallyExpandedFolder, terminatedWorkingDir)
 				executor.cacheAttempts.Failed(cacheKey, message)
 				logUploader.Write([]byte(message))
 				return false
@@ -126,6 +117,15 @@ func (executor *Executor) DownloadCache(
 	}
 
 	cachePopulated, cacheAvailable := executor.tryToDownloadAndPopulateCache(ctx, logUploader, commandName, cacheHost, cacheKey, baseFolder)
+
+	// Expand cache folders in case they contain potential globs,
+	// so we can calculate the hashes for directories that already exist
+	foldersToCache, message := executor.expandAndDeduplicateGlobs(partiallyExpandedFolders)
+	if message != "" {
+		executor.cacheAttempts.Failed(cacheKey, message)
+		logUploader.Write([]byte(message))
+		return false
+	}
 
 	fileHasher := hasher.New()
 	if cachePopulated {
@@ -172,18 +172,26 @@ func (executor *Executor) expandAndDeduplicateGlobs(folders []string) ([]string,
 	var result []string
 
 	for _, folder := range folders {
-		expandedGlob, err := doublestar.Glob(folder)
-		if err != nil {
-			return nil, fmt.Sprintf("\nCannot expand cache folder glob '%s': %v\n", folder, err)
-		}
+		if pathLooksLikeGlob(folder) {
+			expandedGlob, err := doublestar.Glob(folder)
+			if err != nil {
+				return nil, fmt.Sprintf("\nCannot expand cache folder glob '%s': %v\n", folder, err)
+			}
 
-		result = append(result, expandedGlob...)
+			result = append(result, expandedGlob...)
+		} else {
+			result = append(result, folder)
+		}
 	}
 
 	// Deduplicate paths to improve UX
 	result = DeduplicatePaths(result)
 
 	return result, ""
+}
+
+func pathLooksLikeGlob(path string) bool {
+	return strings.Contains(path, "*")
 }
 
 func (executor *Executor) tryToDownloadAndPopulateCache(
