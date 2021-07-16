@@ -383,7 +383,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 			switch operation := (<-operationChan).(type) {
 			case *terminalwrapper.LogOperation:
 				log.Println(operation.Message)
-				_, _ = logUploader.Write([]byte(operation.Message))
+				_, _ = fmt.Fprintln(logUploader, operation.Message)
 			case *terminalwrapper.ExitOperation:
 				success = operation.Success
 				break WaitForTerminalInstructionFor
