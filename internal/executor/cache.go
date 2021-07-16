@@ -46,7 +46,9 @@ func (executor *Executor) DownloadCache(
 ) bool {
 	cacheKeyHash := sha256.New()
 
-	if len(instruction.FingerprintScripts) > 0 {
+	if instruction.FingerprintKey != "" {
+		cacheKeyHash.Write([]byte(instruction.FingerprintKey))
+	} else if len(instruction.FingerprintScripts) > 0 {
 		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
 			cacheKeyHash.Write(bytes)
 			return logUploader.Write(bytes)
