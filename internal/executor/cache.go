@@ -44,23 +44,10 @@ func (executor *Executor) DownloadCache(
 	instruction *api.CacheInstruction,
 	custom_env map[string]string,
 ) bool {
-	cacheKeyHash := sha256.New()
-
-	if len(instruction.FingerprintScripts) > 0 {
-		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
-			cacheKeyHash.Write(bytes)
-			return logUploader.Write(bytes)
-		})
-		if err != nil || !cmd.ProcessState.Success() {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to execute fingerprint script for %s cache!", commandName)))
-			return false
-		}
-	} else {
-		cacheKeyHash.Write([]byte(custom_env["CIRRUS_TASK_NAME"]))
-		cacheKeyHash.Write([]byte(custom_env["CI_NODE_INDEX"]))
+	cacheKey, ok := generateCacheKey(ctx, logUploader, commandName, instruction, custom_env)
+	if !ok {
+		return false
 	}
-
-	cacheKey := fmt.Sprintf("%s-%x", commandName, cacheKeyHash.Sum(nil))
 
 	// Partially expand cache folders without and keep them for further re-evaluation in UploadCache()
 	//
@@ -166,6 +153,36 @@ func (executor *Executor) DownloadCache(
 		},
 	)
 	return true
+}
+
+func generateCacheKey(
+	ctx context.Context,
+	logUploader *LogUploader,
+	commandName string,
+	instruction *api.CacheInstruction,
+	custom_env map[string]string,
+) (string, bool) {
+	if instruction.FingerprintKey != "" {
+		return instruction.FingerprintKey, true
+	}
+
+	cacheKeyHash := sha256.New()
+
+	if len(instruction.FingerprintScripts) > 0 {
+		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
+			cacheKeyHash.Write(bytes)
+			return logUploader.Write(bytes)
+		})
+		if err != nil || !cmd.ProcessState.Success() {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to execute fingerprint script for %s cache!", commandName)))
+			return "", false
+		}
+	} else {
+		cacheKeyHash.Write([]byte(custom_env["CIRRUS_TASK_NAME"]))
+		cacheKeyHash.Write([]byte(custom_env["CI_NODE_INDEX"]))
+	}
+
+	return fmt.Sprintf("%s-%x", commandName, cacheKeyHash.Sum(nil)), true
 }
 
 func (executor *Executor) expandAndDeduplicateGlobs(folders []string) ([]string, string) {
