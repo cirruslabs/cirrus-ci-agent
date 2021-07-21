@@ -267,6 +267,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 		}
 	}
 	responseEnvironment["CIRRUS_OS"] = runtime.GOOS
+	responseEnvironment["CIRRUS_ARCH"] = runtime.GOARCH
 
 	// Use directory created by the persistent worker if CIRRUS_WORKING_DIR
 	// was not overridden in the task specification by the user
