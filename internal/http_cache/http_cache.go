@@ -176,9 +176,7 @@ func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
-	if r.ContentLength >= 0 {
-		req.Header.Set("Content-Length", strconv.FormatInt(r.ContentLength, 10))
-	}
+	req.ContentLength = r.ContentLength
 	for k, v := range generateResp.GetExtraHeaders() {
 		req.Header.Set(k, v)
 	}
