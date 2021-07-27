@@ -463,6 +463,11 @@ func UploadCacheFile(ctx context.Context, cacheHost string, cacheKey string, cac
 	if err != nil {
 		return err
 	}
+	fileStat, err := cacheFile.Stat()
+	if err != nil {
+		return err
+	}
+	req.ContentLength = fileStat.Size()
 	req.Header.Set("Content-Type", "application/octet-stream")
 	response, err := httpClient.Do(req)
 	if err != nil {
