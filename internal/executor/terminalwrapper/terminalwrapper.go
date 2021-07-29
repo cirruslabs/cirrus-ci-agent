@@ -89,8 +89,12 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			return
 		}
 
-		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %v...",
-			minIdleDuration)
+		if !wrapper.waitForSession() {
+			return
+		}
+
+		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %.1f seconds...",
+			minIdleDuration.Seconds())
 		wrapper.operationChan <- &LogOperation{Message: message}
 
 		for {
@@ -122,9 +126,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 					return now.Sub(session.LastActivity()) < minIdleDuration
 				})
 
-				message := fmt.Sprintf("Waited %v, but there are still %d terminal sessions open, "+
-					"and %d of them generated input in the last %v.",
-					timeToWait, wrapper.terminalHost.NumSessions(), numActiveSessions, minIdleDuration)
+				message := fmt.Sprintf("Waited %.1f seconds, but there are still %d terminal sessions open, "+
+					"and %d of them generated input in the last %.1f seconds.",
+					timeToWait.Seconds(), wrapper.terminalHost.NumSessions(), numActiveSessions, minIdleDuration.Seconds())
 				wrapper.operationChan <- &LogOperation{Message: message}
 
 				continue
@@ -135,6 +139,28 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	}()
 
 	return wrapper.operationChan
+}
+
+func (wrapper *Wrapper) waitForSession() bool {
+	wrapper.operationChan <- &LogOperation{
+		Message: "Waiting for the terminal session to be established...",
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			defaultTime := time.Time{}
+			if wrapper.terminalHost.LastRegistration() != defaultTime {
+				return true
+			}
+		case <-wrapper.ctx.Done():
+			wrapper.operationChan <- &ExitOperation{Success: true}
+			return false
+		}
+	}
 }
 
 func generateTrustedSecret() (string, error) {
