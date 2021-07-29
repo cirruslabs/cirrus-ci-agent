@@ -153,7 +153,7 @@ func (wrapper *Wrapper) waitForSession() bool {
 		select {
 		case <-ticker.C:
 			defaultTime := time.Time{}
-			if wrapper.terminalHost.LastActivity() != defaultTime {
+			if wrapper.terminalHost.LastRegistration() != defaultTime {
 				return true
 			}
 		case <-wrapper.ctx.Done():
