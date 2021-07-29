@@ -89,6 +89,8 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			return
 		}
 
+		wrapper.waitForSession()
+
 		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %v...",
 			minIdleDuration)
 		wrapper.operationChan <- &LogOperation{Message: message}
@@ -135,6 +137,24 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	}()
 
 	return wrapper.operationChan
+}
+
+func (wrapper *Wrapper) waitForSession() {
+	wrapper.operationChan <- &LogOperation{
+		Message: fmt.Sprintf("Waiting for the terminal session to be established..."),
+	}
+
+	for {
+		select {
+		case <-time.Tick(1 * time.Second):
+			defaultTime := time.Time{}
+			if wrapper.terminalHost.LastActivity() != defaultTime {
+				return
+			}
+		case <-wrapper.ctx.Done():
+			wrapper.operationChan <- &ExitOperation{Success: true}
+		}
+	}
 }
 
 func generateTrustedSecret() (string, error) {
