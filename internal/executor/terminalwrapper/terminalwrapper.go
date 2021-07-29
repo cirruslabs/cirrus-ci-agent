@@ -141,7 +141,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 
 func (wrapper *Wrapper) waitForSession() {
 	wrapper.operationChan <- &LogOperation{
-		Message: fmt.Sprintf("Waiting for the terminal session to be established..."),
+		Message: "Waiting for the terminal session to be established...",
 	}
 
 	for {
