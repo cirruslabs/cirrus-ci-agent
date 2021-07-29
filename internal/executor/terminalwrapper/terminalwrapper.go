@@ -89,7 +89,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			return
 		}
 
-		wrapper.waitForSession()
+		if !wrapper.waitForSession() {
+			return
+		}
 
 		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %v...",
 			minIdleDuration)
@@ -139,7 +141,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	return wrapper.operationChan
 }
 
-func (wrapper *Wrapper) waitForSession() {
+func (wrapper *Wrapper) waitForSession() bool {
 	wrapper.operationChan <- &LogOperation{
 		Message: "Waiting for the terminal session to be established...",
 	}
@@ -152,10 +154,11 @@ func (wrapper *Wrapper) waitForSession() {
 		case <-ticker.C:
 			defaultTime := time.Time{}
 			if wrapper.terminalHost.LastActivity() != defaultTime {
-				return
+				return true
 			}
 		case <-wrapper.ctx.Done():
 			wrapper.operationChan <- &ExitOperation{Success: true}
+			return false
 		}
 	}
 }
