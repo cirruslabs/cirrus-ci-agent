@@ -144,9 +144,12 @@ func (wrapper *Wrapper) waitForSession() {
 		Message: "Waiting for the terminal session to be established...",
 	}
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-time.Tick(1 * time.Second):
+		case <-ticker.C:
 			defaultTime := time.Time{}
 			if wrapper.terminalHost.LastActivity() != defaultTime {
 				return
