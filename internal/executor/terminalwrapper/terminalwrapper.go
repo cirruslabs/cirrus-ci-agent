@@ -98,7 +98,16 @@ func (wrapper *Wrapper) Wait() chan Operation {
 		wrapper.operationChan <- &LogOperation{Message: message}
 
 		for {
-			durationSinceLastActivity := time.Since(wrapper.terminalHost.LastActivity())
+			lastActivity := wrapper.terminalHost.LastActivity()
+
+			// Take into account the last registration time too,
+			// since for us this is also a substantial activity
+			lastRegistration := wrapper.terminalHost.LastRegistration()
+			if lastRegistration.After(lastActivity) {
+				lastActivity = lastRegistration
+			}
+
+			durationSinceLastActivity := time.Since(lastActivity)
 
 			if durationSinceLastActivity >= minIdleDuration {
 				wrapper.operationChan <- &ExitOperation{Success: true}
