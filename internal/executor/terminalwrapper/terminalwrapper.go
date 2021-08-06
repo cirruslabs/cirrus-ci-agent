@@ -81,7 +81,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 
 func (wrapper *Wrapper) Wait() chan Operation {
 	go func() {
-		const minIdleDuration = 1 * time.Minute
+		const minIdleDuration = 10 * time.Minute
 
 		if wrapper.terminalHost == nil {
 			wrapper.operationChan <- &ExitOperation{Success: false}
@@ -98,7 +98,16 @@ func (wrapper *Wrapper) Wait() chan Operation {
 		wrapper.operationChan <- &LogOperation{Message: message}
 
 		for {
-			durationSinceLastActivity := time.Since(wrapper.terminalHost.LastActivity())
+			lastActivity := wrapper.terminalHost.LastActivity()
+
+			// Take into account the last registration time too,
+			// since for us this is also a substantial activity
+			lastRegistration := wrapper.terminalHost.LastRegistration()
+			if lastRegistration.After(lastActivity) {
+				lastActivity = lastRegistration
+			}
+
+			durationSinceLastActivity := time.Since(lastActivity)
 
 			if durationSinceLastActivity >= minIdleDuration {
 				wrapper.operationChan <- &ExitOperation{Success: true}
