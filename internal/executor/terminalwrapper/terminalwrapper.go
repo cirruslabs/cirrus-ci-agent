@@ -81,7 +81,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 
 func (wrapper *Wrapper) Wait() chan Operation {
 	go func() {
-		const minIdleDuration = 1 * time.Minute
+		const minIdleDuration = 10 * time.Minute
 
 		if wrapper.terminalHost == nil {
 			wrapper.operationChan <- &ExitOperation{Success: false}
