@@ -1,3 +1,5 @@
+// +build !windows !arm
+
 package metrics
 
 import (
