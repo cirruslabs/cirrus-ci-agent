@@ -133,6 +133,7 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 			info, err := os.Stat(artifactPath)
 
 			if err == nil && info.IsDir() {
+				logUploader.Write([]byte(fmt.Sprintf("Skipping uploading of '%s' because it's a folder", artifactPath)))
 				continue
 			}
 
