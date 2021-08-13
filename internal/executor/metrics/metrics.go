@@ -25,7 +25,7 @@ func Run(ctx context.Context) (chan *api.ResourceUtilization, chan error) {
 		result := &api.ResourceUtilization{}
 
 		pollInterval := 1 * time.Second
-		timeSinceStart := time.Duration(0)
+		startTime := time.Now()
 
 		for {
 			// CPU usage
@@ -56,7 +56,7 @@ func Run(ctx context.Context) (chan *api.ResourceUtilization, chan error) {
 				return
 			}
 
-			timeSinceStart += pollInterval
+			timeSinceStart := time.Since(startTime)
 
 			result.CpuChart = append(result.CpuChart, &api.ChartPoint{
 				SecondsFromStart: uint32(timeSinceStart.Seconds()),
