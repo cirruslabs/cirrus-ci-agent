@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
@@ -88,6 +89,11 @@ func NewExecutor(
 }
 
 func (executor *Executor) RunBuild(ctx context.Context) {
+	// Start collecting metrics
+	metricsCtx, metricsCancel := context.WithCancel(ctx)
+	defer metricsCancel()
+	metricsResultChan, metricsErrChan := metrics.Run(metricsCtx)
+
 	log.Println("Getting initial commands...")
 
 	var response *api.CommandsResponse
@@ -223,11 +229,40 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		backgroundCommand.Logs.Finalize()
 	}
 
+	// Retrieve resource utilization metrics
+	metricsCancel()
+
+	var resourceUtilization *api.ResourceUtilization
+
+	select {
+	case result := <-metricsResultChan:
+		resourceUtilization = result
+	case err := <-metricsErrChan:
+		message := fmt.Sprintf("Failed to retrieve resource utilization metrics: %v", err)
+		log.Print(message)
+		_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
+			TaskIdentification: executor.taskIdentification,
+			Message:            message,
+		})
+	case <-time.After(3 * time.Second):
+		// Yes, we already use context.Context, but it seems that gopsutil is somewhat lacking it's support[1],
+		// so we err on the side of caution here.
+		//
+		// [1]: https://github.com/shirou/gopsutil/issues/724
+		message := "Failed to retrieve resource utilization metrics in time"
+		log.Print(message)
+		_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
+			TaskIdentification: executor.taskIdentification,
+			Message:            message,
+		})
+	}
+
 	_ = retry.Do(
 		func() error {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
+				ResourceUtilization:    resourceUtilization,
 			})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
