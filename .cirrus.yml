@@ -71,7 +71,7 @@ task:
     - test-freebsd
   macos_instance:
     image: big-sur-xcode
-  install_script: brew update && brew install goreleaser
+  install_script: brew update && brew install go goreleaser
   release_script: goreleaser build --snapshot
   binaries_artifacts:
     path: "dist/agent_*/agent*"
@@ -88,5 +88,5 @@ task:
     GITHUB_TOKEN: ENCRYPTED[!98ace8259c6024da912c14d5a3c5c6aac186890a8d4819fad78f3e0c41a4e0cd3a2537dd6e91493952fb056fa434be7c!]
   macos_instance:
     image: big-sur-xcode
-  install_script: brew update && brew install goreleaser
+  install_script: brew update && brew install go goreleaser
   release_script: goreleaser
