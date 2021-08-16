@@ -69,9 +69,7 @@ func Run(ctx context.Context) (chan *api.ResourceUtilization, chan error) {
 
 			// Gradually increase the poll interval to avoid missing data for
 			// short-running tasks, but to preserve memory for long-running tasks
-			if timeSinceStart > (5 * time.Minute) {
-				pollInterval = 1 * time.Minute
-			} else if timeSinceStart > (1 * time.Minute) {
+			if timeSinceStart > (1 * time.Minute) {
 				pollInterval = 10 * time.Second
 			}
 		}
