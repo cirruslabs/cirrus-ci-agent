@@ -181,6 +181,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	commandsIterator := commanditerator.New(BoundedCommands(commands, executor.commandFrom, executor.commandTo))
 
+	var allUpdates []*api.CommandResult
 	var unsentUpdates []*api.CommandResult
 
 	for {
@@ -216,6 +217,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			DurationInNanos: stepResult.Duration.Nanoseconds(),
 			SignaledToExit:  stepResult.SignaledToExit,
 		}
+		allUpdates = append(allUpdates, currentCommandUpdate)
 		currentUpdates = append(currentUpdates, currentCommandUpdate)
 
 		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
@@ -282,6 +284,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
 				ResourceUtilization:    resourceUtilization,
+				CommandResults:         allUpdates,
 			})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
