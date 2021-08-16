@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/commanditerator"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
@@ -178,12 +179,12 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
 
-	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
-		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
-			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
-			command.ExecutionBehaviour == api.Command_ALWAYS
-		if !shouldRun {
-			continue
+	commandsIterator := commanditerator.New(BoundedCommands(commands, executor.commandFrom, executor.commandTo))
+
+	for {
+		command := commandsIterator.GetNext(failedAtLeastOnce)
+		if command == nil {
+			break
 		}
 
 		log.Printf("Executing %s...", command.Name)
@@ -199,6 +200,11 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("%s finished!", command.Name)
 
+		var nextCommandName string
+		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
+			nextCommandName = nextCommand.Name
+		}
+
 		_ = retry.Do(
 			func() error {
 				_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
@@ -208,6 +214,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 					DurationInSeconds:  int64(stepResult.Duration.Seconds()),
 					SignaledToExit:     stepResult.SignaledToExit,
 					LocalTimestamp:     time.Now().Unix(),
+					NextCommand:        nextCommandName,
 				})
 				return err
 			}, retry.OnRetry(func(n uint, err error) {
