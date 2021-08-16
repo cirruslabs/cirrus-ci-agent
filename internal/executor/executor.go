@@ -181,6 +181,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	commandsIterator := commanditerator.New(BoundedCommands(commands, executor.commandFrom, executor.commandTo))
 
+	var unsentUpdates []*api.CommandResult
+
 	for {
 		command := commandsIterator.GetNext(failedAtLeastOnce)
 		if command == nil {
@@ -200,31 +202,41 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("%s finished!", command.Name)
 
-		var nextCommandName string
+		currentUpdates := unsentUpdates
+
+		var currentCommandStatus api.Status
+		if stepResult.Success {
+			currentCommandStatus = api.Status_COMPLETED
+		} else {
+			currentCommandStatus = api.Status_FAILED
+		}
+		currentCommandUpdate := &api.CommandResult{
+			Name:            command.Name,
+			Status:          currentCommandStatus,
+			DurationInNanos: stepResult.Duration.Nanoseconds(),
+			SignaledToExit:  stepResult.SignaledToExit,
+		}
+		currentUpdates = append(currentUpdates, currentCommandUpdate)
+
 		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
-			nextCommandName = nextCommand.Name
+			currentUpdates = append(currentUpdates, &api.CommandResult{
+				Name: nextCommand.Name,
+				Status: api.Status_EXECUTING,
+			})
 		}
 
-		_ = retry.Do(
-			func() error {
-				_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
-					TaskIdentification: executor.taskIdentification,
-					CommandName:        command.Name,
-					Succeded:           stepResult.Success,
-					DurationInSeconds:  int64(stepResult.Duration.Seconds()),
-					SignaledToExit:     stepResult.SignaledToExit,
-					LocalTimestamp:     time.Now().Unix(),
-					NextCommand:        nextCommandName,
-				})
-				return err
-			}, retry.OnRetry(func(n uint, err error) {
-				log.Printf("Failed to report command %v: %v\nRetrying...\n", command.Name, err)
-			}),
-			retry.Delay(10*time.Second),
-			retry.Attempts(2),
-			retry.Context(ctx),
-		)
+		_, err = client.CirrusClient.ReportCommandUpdates(ctx, &api.ReportCommandUpdatesRequest{
+			TaskIdentification: executor.taskIdentification,
+			Updates:            currentUpdates,
+		})
+		if err != nil {
+			log.Printf("Failed to report command %q result: %v\n", command.Name, err)
+			unsentUpdates = append(unsentUpdates, currentCommandUpdate)
+		} else {
+			unsentUpdates = unsentUpdates[:0]
+		}
 	}
+
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
 		backgroundCommand := executor.backgroundCommands[i]

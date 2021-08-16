@@ -6,13 +6,13 @@ import (
 
 type CommandIterator struct {
 	commands []*api.Command
-	idx int
+	idx      int
 }
 
 func New(commands []*api.Command) *CommandIterator {
 	return &CommandIterator{
 		commands: commands,
-		idx: 0,
+		idx:      0,
 	}
 }
 

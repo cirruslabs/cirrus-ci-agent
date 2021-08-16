@@ -511,6 +511,7 @@ var CirrusWorkersService_ServiceDesc = grpc.ServiceDesc{
 type CirrusCIServiceClient interface {
 	InitialCommands(ctx context.Context, in *InitialCommandsRequest, opts ...grpc.CallOption) (*CommandsResponse, error)
 	ReportSingleCommand(ctx context.Context, in *ReportSingleCommandRequest, opts ...grpc.CallOption) (*ReportSingleCommandResponse, error)
+	ReportCommandUpdates(ctx context.Context, in *ReportCommandUpdatesRequest, opts ...grpc.CallOption) (*ReportCommandUpdatesResponse, error)
 	ReportAnnotations(ctx context.Context, in *ReportAnnotationsCommandRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	StreamLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_StreamLogsClient, error)
 	SaveLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_SaveLogsClient, error)
@@ -551,6 +552,15 @@ func (c *cirrusCIServiceClient) InitialCommands(ctx context.Context, in *Initial
 func (c *cirrusCIServiceClient) ReportSingleCommand(ctx context.Context, in *ReportSingleCommandRequest, opts ...grpc.CallOption) (*ReportSingleCommandResponse, error) {
 	out := new(ReportSingleCommandResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportSingleCommand", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusCIServiceClient) ReportCommandUpdates(ctx context.Context, in *ReportCommandUpdatesRequest, opts ...grpc.CallOption) (*ReportCommandUpdatesResponse, error) {
+	out := new(ReportCommandUpdatesResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportCommandUpdates", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -848,6 +858,7 @@ func (c *cirrusCIServiceClient) GenerateCacheDownloadURL(ctx context.Context, in
 type CirrusCIServiceServer interface {
 	InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
 	ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
+	ReportCommandUpdates(context.Context, *ReportCommandUpdatesRequest) (*ReportCommandUpdatesResponse, error)
 	ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error)
 	StreamLogs(CirrusCIService_StreamLogsServer) error
 	SaveLogs(CirrusCIService_SaveLogsServer) error
@@ -878,6 +889,9 @@ func (UnimplementedCirrusCIServiceServer) InitialCommands(context.Context, *Init
 }
 func (UnimplementedCirrusCIServiceServer) ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportSingleCommand not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) ReportCommandUpdates(context.Context, *ReportCommandUpdatesRequest) (*ReportCommandUpdatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReportCommandUpdates not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportAnnotations not implemented")
@@ -978,6 +992,24 @@ func _CirrusCIService_ReportSingleCommand_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CirrusCIServiceServer).ReportSingleCommand(ctx, req.(*ReportSingleCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusCIService_ReportCommandUpdates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportCommandUpdatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).ReportCommandUpdates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportCommandUpdates",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).ReportCommandUpdates(ctx, req.(*ReportCommandUpdatesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1355,6 +1387,10 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportSingleCommand",
 			Handler:    _CirrusCIService_ReportSingleCommand_Handler,
+		},
+		{
+			MethodName: "ReportCommandUpdates",
+			Handler:    _CirrusCIService_ReportCommandUpdates_Handler,
 		},
 		{
 			MethodName: "ReportAnnotations",
