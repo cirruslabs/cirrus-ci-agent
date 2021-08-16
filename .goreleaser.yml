@@ -12,7 +12,8 @@ archives:
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
 
 builds:
-  - main: cmd/agent/main.go
+  - id: "cgo"
+    main: cmd/agent/main.go
     env:
       - CGO_ENABLED=1
     goos:
@@ -20,7 +21,8 @@ builds:
     goarch:
       - amd64
       - arm64
-  - main: cmd/agent/main.go
+  - id: "nocgo"
+    main: cmd/agent/main.go
     env:
       - CGO_ENABLED=0
     goos:
