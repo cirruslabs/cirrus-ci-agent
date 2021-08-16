@@ -16,7 +16,11 @@ func New(commands []*api.Command) *CommandIterator {
 	}
 }
 
-func (ci *CommandIterator) getOrPeek(failedAtLeastOnce bool, peek bool) *api.Command {
+func (ci *CommandIterator) getOrPeek(
+	failedAtLeastOnce bool,
+	peek bool,
+	includeSkipped bool,
+) (command *api.Command, skipped bool) {
 	shadowIdx := ci.idx
 	defer func() {
 		if peek {
@@ -28,7 +32,7 @@ func (ci *CommandIterator) getOrPeek(failedAtLeastOnce bool, peek bool) *api.Com
 
 	for {
 		if shadowIdx >= len(ci.commands) {
-			return nil
+			return nil, false
 		}
 
 		nextCommand := ci.commands[shadowIdx]
@@ -36,17 +40,29 @@ func (ci *CommandIterator) getOrPeek(failedAtLeastOnce bool, peek bool) *api.Com
 		shadowIdx++
 
 		if shouldRun(nextCommand, failedAtLeastOnce) {
-			return nextCommand
+			return nextCommand, false
+		} else if includeSkipped {
+			return nextCommand, true
 		}
 	}
 }
 
 func (ci *CommandIterator) GetNext(failedAtLeastOnce bool) *api.Command {
-	return ci.getOrPeek(failedAtLeastOnce, false)
+	command, _ := ci.getOrPeek(failedAtLeastOnce, false, false)
+	return command
+}
+
+func (ci *CommandIterator) GetNextWithSkipped(failedAtLeastOnce bool) (*api.Command, bool) {
+	return ci.getOrPeek(failedAtLeastOnce, false, true)
 }
 
 func (ci *CommandIterator) PeekNext(failedAtLeastOnce bool) *api.Command {
-	return ci.getOrPeek(failedAtLeastOnce, true)
+	command, _ := ci.getOrPeek(failedAtLeastOnce, true, false)
+	return command
+}
+
+func (ci *CommandIterator) PeekNextWithSkipped(failedAtLeastOnce bool) (*api.Command, bool) {
+	return ci.getOrPeek(failedAtLeastOnce, true, true)
 }
 
 func shouldRun(command *api.Command, failedAtLeastOnce bool) bool {

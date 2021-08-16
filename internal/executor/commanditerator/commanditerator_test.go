@@ -43,11 +43,20 @@ func TestPeekIsPure(t *testing.T) {
 }
 
 func TestExecutionBehaviorIsRespected(t *testing.T) {
-	ci := commanditerator.New([]*api.Command{
+	var commands = []*api.Command{
 		{Name: "should be skipped"},
 		{Name: "should be returned", ExecutionBehaviour: api.Command_ALWAYS},
-	})
+	}
 
+	ci := commanditerator.New(commands)
+	next, skipped := ci.PeekNextWithSkipped(true)
+	assert.Equal(t, "should be skipped", next.Name)
+	assert.True(t, skipped)
+	next, skipped = ci.GetNextWithSkipped(true)
+	assert.Equal(t, "should be skipped", next.Name)
+	assert.True(t, skipped)
+
+	ci = commanditerator.New(commands)
 	assert.Equal(t, "should be returned", ci.PeekNext(true).Name)
 	assert.Equal(t, "should be returned", ci.GetNext(true).Name)
 }

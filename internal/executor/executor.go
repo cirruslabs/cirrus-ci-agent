@@ -185,9 +185,17 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	var unsentUpdates []*api.CommandResult
 
 	for {
-		command := commandsIterator.GetNext(failedAtLeastOnce)
+		command, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
 		if command == nil {
 			break
+		}
+		if skipped {
+			skippedCommandUpdate := &api.CommandResult{
+				Name:   command.Name,
+				Status: api.Status_SKIPPED,
+			}
+			allUpdates = append(allUpdates, skippedCommandUpdate)
+			unsentUpdates = append(unsentUpdates, skippedCommandUpdate)
 		}
 
 		log.Printf("Executing %s...", command.Name)
@@ -222,7 +230,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
 			currentUpdates = append(currentUpdates, &api.CommandResult{
-				Name: nextCommand.Name,
+				Name:   nextCommand.Name,
 				Status: api.Status_EXECUTING,
 			})
 		}
