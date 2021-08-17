@@ -9,9 +9,9 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
-	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/commanditerator"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -179,22 +179,25 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
 
-	commandsIterator := commanditerator.New(BoundedCommands(commands, executor.commandFrom, executor.commandTo))
+	ub := updatebatcher.New()
 
-	var allUpdates []*api.CommandResult
-
-	for {
-		command, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
-		if command == nil {
-			break
-		}
-		if skipped {
-			skippedCommandUpdate := &api.CommandResult{
+	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
+		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
+			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
+			command.ExecutionBehaviour == api.Command_ALWAYS
+		if !shouldRun {
+			ub.Queue(&api.CommandResult{
 				Name:   command.Name,
 				Status: api.Status_SKIPPED,
-			}
-			allUpdates = append(allUpdates, skippedCommandUpdate)
+			})
+			continue
 		}
+
+		ub.Queue(&api.CommandResult{
+			Name:   command.Name,
+			Status: api.Status_EXECUTING,
+		})
+		ub.Flush(ctx, executor.taskIdentification)
 
 		log.Printf("Executing %s...", command.Name)
 
@@ -215,30 +218,15 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		} else {
 			currentCommandStatus = api.Status_FAILED
 		}
-		currentCommandUpdate := &api.CommandResult{
+		ub.Queue(&api.CommandResult{
 			Name:            command.Name,
 			Status:          currentCommandStatus,
 			DurationInNanos: stepResult.Duration.Nanoseconds(),
 			SignaledToExit:  stepResult.SignaledToExit,
-		}
-		allUpdates = append(allUpdates, currentCommandUpdate)
-		currentUpdates := []*api.CommandResult{currentCommandUpdate}
-
-		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
-			currentUpdates = append(currentUpdates, &api.CommandResult{
-				Name:   nextCommand.Name,
-				Status: api.Status_EXECUTING,
-			})
-		}
-
-		_, err = client.CirrusClient.ReportCommandUpdates(ctx, &api.ReportCommandUpdatesRequest{
-			TaskIdentification: executor.taskIdentification,
-			Updates:            currentUpdates,
 		})
-		if err != nil {
-			log.Printf("Failed to report command %q result: %v\n", command.Name, err)
-		}
 	}
+
+	ub.Flush(ctx, executor.taskIdentification)
 
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
@@ -285,7 +273,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
 				ResourceUtilization:    resourceUtilization,
-				CommandResults:         allUpdates,
+				CommandResults:         ub.History(),
 			})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
