@@ -182,22 +182,10 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	commandsIterator := commanditerator.New(BoundedCommands(commands, executor.commandFrom, executor.commandTo))
 
 	var allUpdates []*api.CommandResult
-	var unsentUpdates []*api.CommandResult
+	// ignore edge case when the first few commands are always skipped as a weird unsopported edge case
+	command := commandsIterator.GetNext(failedAtLeastOnce)
 
-	for {
-		command, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
-		if command == nil {
-			break
-		}
-		if skipped {
-			skippedCommandUpdate := &api.CommandResult{
-				Name:   command.Name,
-				Status: api.Status_SKIPPED,
-			}
-			allUpdates = append(allUpdates, skippedCommandUpdate)
-			unsentUpdates = append(unsentUpdates, skippedCommandUpdate)
-		}
-
+	for command != nil {
 		log.Printf("Executing %s...", command.Name)
 
 		stepResult, err := executor.performStep(subCtx, command)
@@ -211,8 +199,6 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("%s finished!", command.Name)
 
-		currentUpdates := unsentUpdates
-
 		var currentCommandStatus api.Status
 		if stepResult.Success {
 			currentCommandStatus = api.Status_COMPLETED
@@ -225,10 +211,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			DurationInNanos: stepResult.Duration.Nanoseconds(),
 			SignaledToExit:  stepResult.SignaledToExit,
 		}
-		allUpdates = append(allUpdates, currentCommandUpdate)
-		currentUpdates = append(currentUpdates, currentCommandUpdate)
 
-		if nextCommand := commandsIterator.PeekNext(failedAtLeastOnce); nextCommand != nil {
+		var currentUpdates = []*api.CommandResult{currentCommandUpdate}
+
+		nextCommand, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
+		for skipped {
+			skippedCommandUpdate := &api.CommandResult{
+				Name:   command.Name,
+				Status: api.Status_SKIPPED,
+			}
+			currentUpdates = append(currentUpdates, skippedCommandUpdate)
+			nextCommand, skipped = commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
+		}
+		allUpdates = append(allUpdates, currentUpdates...)
+		if nextCommand != nil {
 			currentUpdates = append(currentUpdates, &api.CommandResult{
 				Name:   nextCommand.Name,
 				Status: api.Status_EXECUTING,
@@ -241,9 +237,6 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		})
 		if err != nil {
 			log.Printf("Failed to report command %q result: %v\n", command.Name, err)
-			unsentUpdates = append(unsentUpdates, currentCommandUpdate)
-		} else {
-			unsentUpdates = unsentUpdates[:0]
 		}
 	}
 

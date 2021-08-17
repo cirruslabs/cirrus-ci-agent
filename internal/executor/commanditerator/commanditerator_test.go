@@ -10,7 +10,6 @@ import (
 func TestEmptyCommandList(t *testing.T) {
 	ci := commanditerator.New([]*api.Command{})
 
-	assert.Nil(t, ci.PeekNext(false))
 	assert.Nil(t, ci.GetNext(false))
 }
 
@@ -21,25 +20,10 @@ func TestPeek(t *testing.T) {
 		{Name: "third"},
 	})
 
-	assert.Equal(t, "first", ci.PeekNext(false).Name)
 	assert.Equal(t, "first", ci.GetNext(false).Name)
-	assert.Equal(t, "second", ci.PeekNext(false).Name)
 	assert.Equal(t, "second", ci.GetNext(false).Name)
-	assert.Equal(t, "third", ci.PeekNext(false).Name)
 	assert.Equal(t, "third", ci.GetNext(false).Name)
-	assert.Nil(t, ci.PeekNext(false))
 	assert.Nil(t, ci.GetNext(false))
-}
-
-func TestPeekIsPure(t *testing.T) {
-	ci := commanditerator.New([]*api.Command{
-		{Name: "first"},
-		{Name: "second"},
-		{Name: "third"},
-	})
-
-	assert.Equal(t, "first", ci.PeekNext(false).Name)
-	assert.Equal(t, "first", ci.PeekNext(false).Name)
 }
 
 func TestExecutionBehaviorIsRespected(t *testing.T) {
@@ -49,14 +33,10 @@ func TestExecutionBehaviorIsRespected(t *testing.T) {
 	}
 
 	ci := commanditerator.New(commands)
-	next, skipped := ci.PeekNextWithSkipped(true)
-	assert.Equal(t, "should be skipped", next.Name)
-	assert.True(t, skipped)
-	next, skipped = ci.GetNextWithSkipped(true)
+	next, skipped := ci.GetNextWithSkipped(true)
 	assert.Equal(t, "should be skipped", next.Name)
 	assert.True(t, skipped)
 
 	ci = commanditerator.New(commands)
-	assert.Equal(t, "should be returned", ci.PeekNext(true).Name)
 	assert.Equal(t, "should be returned", ci.GetNext(true).Name)
 }
