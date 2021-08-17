@@ -25,6 +25,10 @@ func (ub *UpdateBatcher) Queue(update *api.CommandResult) {
 }
 
 func (ub *UpdateBatcher) Flush(ctx context.Context, taskIdentification *api.TaskIdentification) {
+	if len(ub.currentUpdates) == 0 {
+		return
+	}
+
 	_, err := client.CirrusClient.ReportCommandUpdates(ctx, &api.ReportCommandUpdatesRequest{
 		TaskIdentification: taskIdentification,
 		Updates:            ub.currentUpdates,
