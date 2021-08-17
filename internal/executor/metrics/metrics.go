@@ -64,7 +64,7 @@ func Run(ctx context.Context) (chan *api.ResourceUtilization, chan error) {
 			})
 			result.MemoryChart = append(result.MemoryChart, &api.ChartPoint{
 				SecondsFromStart: uint32(timeSinceStart.Seconds()),
-				Value:            float64(virtualMemoryStat.Used),
+				Value:            float64(virtualMemoryStat.Used / 1024 / 1024), // convert bytes to Mb
 			})
 
 			// Gradually increase the poll interval to avoid missing data for
