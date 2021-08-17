@@ -215,7 +215,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		var currentUpdates = []*api.CommandResult{currentCommandUpdate}
 
 		// let's find the next command
-		command, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
+		var skipped bool
+		command, skipped = commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
 		for skipped {
 			skippedCommandUpdate := &api.CommandResult{
 				Name:   command.Name,
