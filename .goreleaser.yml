@@ -12,12 +12,12 @@ archives:
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
 
 builds:
-  - main: cmd/agent/main.go
+  - id: "agent"
+    main: cmd/agent/main.go
     env:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
       - windows
       - freebsd
       - solaris
@@ -27,6 +27,15 @@ builds:
       - arm64
       - s390x
       - ppc64le
+  - id: "agent_cgo"
+    main: cmd/agent/main.go
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
 
 release:
   prerelease: auto
