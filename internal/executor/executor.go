@@ -214,19 +214,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		var currentUpdates = []*api.CommandResult{currentCommandUpdate}
 
-		nextCommand, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
+		// let's find the next command
+		command, skipped := commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
 		for skipped {
 			skippedCommandUpdate := &api.CommandResult{
 				Name:   command.Name,
 				Status: api.Status_SKIPPED,
 			}
 			currentUpdates = append(currentUpdates, skippedCommandUpdate)
-			nextCommand, skipped = commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
+			command, skipped = commandsIterator.GetNextWithSkipped(failedAtLeastOnce)
 		}
 		allUpdates = append(allUpdates, currentUpdates...)
-		if nextCommand != nil {
+		if command != nil {
 			currentUpdates = append(currentUpdates, &api.CommandResult{
-				Name:   nextCommand.Name,
+				Name:   command.Name,
 				Status: api.Status_EXECUTING,
 			})
 		}
