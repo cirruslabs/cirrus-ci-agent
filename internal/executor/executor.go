@@ -11,6 +11,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -178,13 +179,25 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
 
+	ub := updatebatcher.New()
+
 	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
 		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
 			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
 			command.ExecutionBehaviour == api.Command_ALWAYS
 		if !shouldRun {
+			ub.Queue(&api.CommandResult{
+				Name:   command.Name,
+				Status: api.Status_SKIPPED,
+			})
 			continue
 		}
+
+		ub.Queue(&api.CommandResult{
+			Name:   command.Name,
+			Status: api.Status_EXECUTING,
+		})
+		ub.Flush(ctx, executor.taskIdentification)
 
 		log.Printf("Executing %s...", command.Name)
 
@@ -199,25 +212,22 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("%s finished!", command.Name)
 
-		_ = retry.Do(
-			func() error {
-				_, err := client.CirrusClient.ReportSingleCommand(ctx, &api.ReportSingleCommandRequest{
-					TaskIdentification: executor.taskIdentification,
-					CommandName:        command.Name,
-					Succeded:           stepResult.Success,
-					DurationInSeconds:  int64(stepResult.Duration.Seconds()),
-					SignaledToExit:     stepResult.SignaledToExit,
-					LocalTimestamp:     time.Now().Unix(),
-				})
-				return err
-			}, retry.OnRetry(func(n uint, err error) {
-				log.Printf("Failed to report command %v: %v\nRetrying...\n", command.Name, err)
-			}),
-			retry.Delay(10*time.Second),
-			retry.Attempts(2),
-			retry.Context(ctx),
-		)
+		var currentCommandStatus api.Status
+		if stepResult.Success {
+			currentCommandStatus = api.Status_COMPLETED
+		} else {
+			currentCommandStatus = api.Status_FAILED
+		}
+		ub.Queue(&api.CommandResult{
+			Name:            command.Name,
+			Status:          currentCommandStatus,
+			DurationInNanos: stepResult.Duration.Nanoseconds(),
+			SignaledToExit:  stepResult.SignaledToExit,
+		})
 	}
+
+	ub.Flush(ctx, executor.taskIdentification)
+
 	log.Printf("Background commands to clean up after: %d!\n", len(executor.backgroundCommands))
 	for i := 0; i < len(executor.backgroundCommands); i++ {
 		backgroundCommand := executor.backgroundCommands[i]
@@ -263,6 +273,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
 				ResourceUtilization:    resourceUtilization,
+				CommandResults:         ub.History(),
 			})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
