@@ -240,7 +240,7 @@ func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn,
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
 				grpc_retry.WithCodes(retryCodes...),
-				grpc_retry.WithPerRetryTimeout(10*time.Second),
+				grpc_retry.WithPerRetryTimeout(60*time.Second),
 			),
 		),
 	)
