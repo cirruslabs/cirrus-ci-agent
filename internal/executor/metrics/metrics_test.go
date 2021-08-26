@@ -12,7 +12,7 @@ func TestMetrics(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	resultChan, errChan := metrics.Run(ctx)
+	resultChan, errChan := metrics.Run(ctx, nil)
 
 	select {
 	case result := <-resultChan:

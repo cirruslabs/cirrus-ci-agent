@@ -17,7 +17,9 @@ require (
 	github.com/klauspost/pgzip v1.2.5
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/procfs v0.7.3
 	github.com/shirou/gopsutil v3.21.7+incompatible
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tklauser/go-sysconf v0.3.7 // indirect
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
