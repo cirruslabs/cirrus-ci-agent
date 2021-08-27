@@ -1,4 +1,4 @@
-// +build !windows !arm
+// +build !windows !arm,!arm64
 
 package metrics
 
