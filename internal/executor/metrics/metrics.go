@@ -44,13 +44,17 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 	} else {
 		cpuSrc, err := cpu.NewCPU(resolver)
 		if err == nil {
-			logger.Infof("CPU metrics are now cgroup-aware")
+			if logger != nil {
+				logger.Infof("CPU metrics are now cgroup-aware")
+			}
 			cpuSource = cpuSrc
 		}
 
 		memorySrc, err := memory.NewMemory(resolver)
 		if err == nil {
-			logger.Infof("memory metrics are now cgroup-aware")
+			if logger != nil {
+				logger.Infof("memory metrics are now cgroup-aware")
+			}
 			memorySource = memorySrc
 		}
 	}
