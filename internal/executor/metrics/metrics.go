@@ -14,6 +14,8 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/system"
 	"github.com/dustin/go-humanize"
 	"github.com/sirupsen/logrus"
+	"log"
+	"runtime"
 	"time"
 )
 
@@ -34,7 +36,12 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 	memorySource = systemSource
 
 	resolver, err := resolver.New()
-	if err == nil {
+	if err != nil {
+		if runtime.GOOS == "linux" {
+			log.Printf("cgroup resolver initialization failed (%v), falling back to system-wide metrics collection",
+				err)
+		}
+	} else {
 		cpuSrc, err := cpu.NewCPU(resolver)
 		if err == nil {
 			logger.Infof("CPU metrics are now cgroup-aware")
