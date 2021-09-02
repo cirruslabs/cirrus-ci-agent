@@ -93,7 +93,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	// Start collecting metrics
 	metricsCtx, metricsCancel := context.WithCancel(ctx)
 	defer metricsCancel()
-	metricsResultChan, metricsErrChan := metrics.Run(metricsCtx)
+	metricsResultChan, metricsErrChan := metrics.Run(metricsCtx, nil)
 
 	log.Println("Getting initial commands...")
 
