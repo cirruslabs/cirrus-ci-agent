@@ -99,6 +99,57 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 
 	workingDir := customEnv["CIRRUS_WORKING_DIR"]
 
+	readBufferSize := int(1024 * 1024)
+	readBuffer := make([]byte, readBufferSize)
+
+	uploadSingleArtifactFile := func(artifactPath string) error {
+		artifactFile, err := os.Open(artifactPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
+		}
+		defer artifactFile.Close()
+
+		relativeArtifactPath, err := filepath.Rel(workingDir, artifactPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get artifact relative path for %s", artifactPath)
+		}
+
+		bytesUploaded := 0
+		bufferedFileReader := bufio.NewReaderSize(artifactFile, readBufferSize)
+
+		for {
+			n, err := bufferedFileReader.Read(readBuffer)
+
+			if n > 0 {
+				chunk := api.ArtifactEntry_ArtifactChunk{ArtifactPath: filepath.ToSlash(relativeArtifactPath), Data: readBuffer[:n]}
+				chunkMsg := api.ArtifactEntry_Chunk{Chunk: &chunk}
+				err := uploadArtifactsClient.Send(&api.ArtifactEntry{Value: &chunkMsg})
+				if err != nil {
+					return errors.Wrapf(err, "failed to upload artifact file %s", artifactPath)
+				}
+				bytesUploaded += n
+			}
+
+			if err == io.EOF || n == 0 {
+				break
+			}
+			if err != nil {
+				return errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
+			}
+		}
+		logUploader.Write([]byte(fmt.Sprintf("\nUploaded %s", artifactPath)))
+
+		if artifactsInstruction.Format != "" {
+			logUploader.Write([]byte(fmt.Sprintf("\nTrying to parse annotations for %s format", artifactsInstruction.Format)))
+		}
+		err, artifactAnnotations := annotations.ParseAnnotations(artifactsInstruction.Format, artifactPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create annotations from %s", artifactPath)
+		}
+		allAnnotations = append(allAnnotations, artifactAnnotations...)
+		return nil
+	}
+
 	for index, path := range artifactsInstruction.Paths {
 		artifactsPattern := ExpandText(path, customEnv)
 		artifactsPattern = filepath.Join(workingDir, artifactsPattern)
@@ -126,9 +177,6 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 			return allAnnotations, errors.Wrap(err, "failed to initialize artifacts upload")
 		}
 
-		readBufferSize := int(1024 * 1024)
-		readBuffer := make([]byte, readBufferSize)
-
 		for _, artifactPath := range artifactPaths {
 			info, err := os.Stat(artifactPath)
 
@@ -143,51 +191,11 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 					artifactPath, humanFriendlySize)))
 			}
 
-			artifactFile, err := os.Open(artifactPath)
+			err = uploadSingleArtifactFile(artifactPath)
+
 			if err != nil {
-				return allAnnotations, errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
+				return allAnnotations, err
 			}
-			//noinspection GoDeferInLoop
-			defer artifactFile.Close()
-
-			relativeArtifactPath, err := filepath.Rel(workingDir, artifactPath)
-			if err != nil {
-				return allAnnotations, errors.Wrapf(err, "failed to get artifact relative path for %s", artifactPath)
-			}
-
-			bytesUploaded := 0
-			bufferedFileReader := bufio.NewReaderSize(artifactFile, readBufferSize)
-
-			for {
-				n, err := bufferedFileReader.Read(readBuffer)
-
-				if n > 0 {
-					chunk := api.ArtifactEntry_ArtifactChunk{ArtifactPath: filepath.ToSlash(relativeArtifactPath), Data: readBuffer[:n]}
-					chunkMsg := api.ArtifactEntry_Chunk{Chunk: &chunk}
-					err := uploadArtifactsClient.Send(&api.ArtifactEntry{Value: &chunkMsg})
-					if err != nil {
-						return allAnnotations, errors.Wrapf(err, "failed to upload artifact file %s", artifactPath)
-					}
-					bytesUploaded += n
-				}
-
-				if err == io.EOF || n == 0 {
-					break
-				}
-				if err != nil {
-					return allAnnotations, errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
-				}
-			}
-			logUploader.Write([]byte(fmt.Sprintf("\nUploaded %s", artifactPath)))
-
-			if artifactsInstruction.Format != "" {
-				logUploader.Write([]byte(fmt.Sprintf("\nTrying to parse annotations for %s format", artifactsInstruction.Format)))
-			}
-			err, artifactAnnotations := annotations.ParseAnnotations(artifactsInstruction.Format, artifactPath)
-			if err != nil {
-				return allAnnotations, errors.Wrapf(err, "failed to create annotations from %s", artifactPath)
-			}
-			allAnnotations = append(allAnnotations, artifactAnnotations...)
 		}
 	}
 	return allAnnotations, nil
