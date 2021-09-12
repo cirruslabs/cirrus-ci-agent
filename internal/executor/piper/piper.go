@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -37,14 +38,20 @@ func (piper *Piper) Input() *os.File {
 }
 
 func (piper *Piper) Close() (result error) {
-	result = piper.r.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+	if runtime.GOOS == "windows" {
+		result = piper.r.Close()
+	} else {
+		result = piper.r.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+	}
 
-	if err := <-piper.errChan; err != nil && result == nil {
+	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
 		result = err
 	}
 
-	if err := piper.r.Close(); err != nil && result == nil {
-		result = err
+	if runtime.GOOS != "windows" {
+		if err := piper.r.Close(); err != nil && result == nil {
+			result = err
+		}
 	}
 
 	if err := piper.w.Close(); err != nil && result == nil && !errors.Is(err, os.ErrClosed) {
