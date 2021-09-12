@@ -8,7 +8,7 @@ import (
 )
 
 type Piper struct {
-	r, w *os.File
+	r, w    *os.File
 	errChan chan error
 }
 
@@ -19,8 +19,8 @@ func New(output io.Writer) (*Piper, error) {
 	}
 
 	piper := &Piper{
-		r: r,
-		w: w,
+		r:       r,
+		w:       w,
 		errChan: make(chan error),
 	}
 
