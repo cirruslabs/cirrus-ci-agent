@@ -1,12 +1,14 @@
 package executor
 
 import (
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
 	"golang.org/x/sys/windows"
 	"os/exec"
 )
 
 type ShellCommands struct {
 	cmd       *exec.Cmd
+	piper     *piper.Piper
 	jobHandle windows.Handle
 }
 
