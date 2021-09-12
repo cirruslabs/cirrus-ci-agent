@@ -38,13 +38,18 @@ func (piper *Piper) Input() *os.File {
 }
 
 func (piper *Piper) Close() (result error) {
+	// Cancel the Goroutine started in New(): ungracefully Windows and gracefully for other platforms
 	if runtime.GOOS == "windows" {
 		result = piper.r.Close()
 	} else {
 		result = piper.r.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
 	}
 
-	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
+	isUngracefulWindowsTermination := func(err error) bool {
+		return runtime.GOOS == "windows" && errors.Is(err, os.ErrClosed)
+	}
+
+	if err := <-piper.errChan; err != nil && !isUngracefulWindowsTermination(err) && result == nil {
 		result = err
 	}
 
