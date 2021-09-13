@@ -20,7 +20,7 @@ func TestProcessGroupTermination(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 86400& echo target PID is $!; sleep 60"}, nil)
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 86400 & echo target PID is $! ; sleep 60"}, nil)
 
 	assert.False(t, success, "the command should fail due to time out error")
 	assert.Contains(t, output, "Timed out!", "the command should time out")
@@ -135,4 +135,14 @@ func Test_ShellCommands_Timeout_Unix(t *testing.T) {
 	} else {
 		t.Errorf("Wrong output: '%s'", output)
 	}
+}
+
+func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 1"}, nil)
+
+	assert.True(t, success)
+	assert.NotContains(t, output, "Timed out!")
 }

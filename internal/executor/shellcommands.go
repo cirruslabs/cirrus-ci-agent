@@ -3,12 +3,14 @@
 package executor
 
 import (
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
 	"os/exec"
 	"syscall"
 )
 
 type ShellCommands struct {
-	cmd *exec.Cmd
+	cmd   *exec.Cmd
+	piper *piper.Piper
 }
 
 func (sc *ShellCommands) afterStart() {

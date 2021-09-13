@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
 	"io"
 	"log"
 	"os"
@@ -64,10 +65,20 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 		handler([]byte("\nTimed out!"))
 		err = sc.kill()
 		if err != nil {
-			handler([]byte(fmt.Sprintf("\nFailed to gracefully kill: %s", err)))
+			handler([]byte(fmt.Sprintf("\nFailed to kill a timed out shell session: %s", err)))
 		}
 		return cmd, TimeOutError
 	case <-done:
+		if err := sc.piper.Close(); err != nil {
+			if errors.Is(err, os.ErrDeadlineExceeded) {
+				if err := sc.kill(); err != nil {
+					handler([]byte(fmt.Sprintf("\nFailed to kill a partially completed shell session: %s", err)))
+				}
+			} else {
+				handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
+			}
+		}
+
 		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
 			if ws.Signaled() {
 				message := fmt.Sprintf("\nSignaled to exit (%v)!", ws.Signal())
@@ -134,17 +145,35 @@ func NewShellCommands(scripts []string, custom_env *map[string]string, handler S
 		handler: handler,
 	}
 
-	cmd.Stderr = &writer
-	cmd.Stdout = &writer
+	// Work around https://github.com/golang/go/issues/23019 by creating a pipe
+	// and passing *os.File to exec.Cmd's Stderr and Stdout fields, which results
+	// in skipping of exec.Cmd.Start()'s internal io.Copy() logic that might block
+	// when the Shell started by us shares it's stderr/stdout file descriptor with
+	// other processes that run in the background
+	sc.piper, err = piper.New(writer)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd.Stderr = sc.piper.Input()
+	cmd.Stdout = sc.piper.Input()
 
 	err = cmd.Start()
 	if err != nil {
+		if err := sc.piper.Close(); err != nil {
+			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
+		}
+
 		message := fmt.Sprintf("Error starting command: %s", err)
 		handler([]byte(message))
 		return nil, errors.New(message)
 	}
 
 	sc.afterStart()
+
+	if err := sc.piper.Input().Close(); err != nil {
+		_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
+	}
 
 	return sc, nil
 }
