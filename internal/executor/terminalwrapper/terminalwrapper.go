@@ -80,6 +80,8 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 }
 
 func (wrapper *Wrapper) Wait() chan Operation {
+	waitStarted := time.Now()
+
 	go func() {
 		const minIdleDuration = 10 * time.Minute
 
@@ -98,14 +100,8 @@ func (wrapper *Wrapper) Wait() chan Operation {
 		wrapper.operationChan <- &LogOperation{Message: message}
 
 		for {
-			lastActivity := wrapper.terminalHost.LastActivity()
-
-			// Take into account the last registration time too,
-			// since for us this is also a substantial activity
-			lastRegistration := wrapper.terminalHost.LastRegistration()
-			if lastRegistration.After(lastActivity) {
-				lastActivity = lastRegistration
-			}
+			lastActivity := max(waitStarted, wrapper.terminalHost.LastRegistration(),
+				wrapper.terminalHost.LastActivity())
 
 			durationSinceLastActivity := time.Since(lastActivity)
 
@@ -181,4 +177,16 @@ func generateTrustedSecret() (string, error) {
 	}
 
 	return hex.EncodeToString(buf), nil
+}
+
+func max(times ...time.Time) time.Time {
+	var result time.Time
+
+	for _, time := range times {
+		if time.After(result) {
+			result = time
+		}
+	}
+
+	return result
 }
