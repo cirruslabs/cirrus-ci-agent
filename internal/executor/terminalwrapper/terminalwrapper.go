@@ -23,7 +23,7 @@ type Wrapper struct {
 func New(ctx context.Context, taskIdentification *api.TaskIdentification, serverAddress string) *Wrapper {
 	wrapper := &Wrapper{
 		ctx:           ctx,
-		operationChan: make(chan Operation),
+		operationChan: make(chan Operation, 4096),
 	}
 
 	// A trusted secret that grants ability to spawn shells on the terminal host we start below
