@@ -29,7 +29,7 @@ func (executor *Executor) UploadArtifacts(
 
 	if len(artifactsInstruction.Paths) == 0 {
 		logUploader.Write([]byte("\nSkipping artifacts upload because there are no path specified..."))
-		return false
+		return true
 	}
 
 	err = retry.Do(
