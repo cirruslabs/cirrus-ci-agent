@@ -27,6 +27,11 @@ func (executor *Executor) UploadArtifacts(
 	var err error
 	var allAnnotations []model.Annotation
 
+	if len(artifactsInstruction.Paths) == 0 {
+		logUploader.Write([]byte("\nSkipping artifacts upload because there are no path specified..."))
+		return false
+	}
+
 	err = retry.Do(
 		func() error {
 			allAnnotations, err = executor.uploadArtifactsAndParseAnnotations(ctx, name, artifactsInstruction, customEnv, logUploader)
