@@ -14,6 +14,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/hashicorp/go-version v1.3.0
 	github.com/klauspost/pgzip v1.2.5
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/pkg/errors v0.9.1
