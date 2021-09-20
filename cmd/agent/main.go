@@ -12,6 +12,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/signalfilter"
 	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	goversion "github.com/hashicorp/go-version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -29,12 +30,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	goversion "github.com/hashicorp/go-version"
 )
 
 var (
-	version     = "unknown"
-	commit      = "unknown"
+	version = "unknown"
+	commit  = "unknown"
 )
 
 func fullVersion() string {
@@ -85,8 +85,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Printf("Running agent version %s", fullVersion())
-
 	var conn *grpc.ClientConn
 
 	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
@@ -110,6 +108,8 @@ func main() {
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(multiWriter)
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
+
+	log.Printf("Running agent version %s", fullVersion())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
