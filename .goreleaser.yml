@@ -14,6 +14,7 @@ archives:
 builds:
   - id: "agent"
     main: cmd/agent/main.go
+    ldflags: -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
     goos:
@@ -29,6 +30,7 @@ builds:
       - ppc64le
   - id: "agent_cgo"
     main: cmd/agent/main.go
+    ldflags: -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
     env:
       - CGO_ENABLED=1
     goos:
