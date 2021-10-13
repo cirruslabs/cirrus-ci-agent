@@ -186,13 +186,13 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 			info, err := os.Stat(artifactPath)
 
 			if err == nil && info.IsDir() {
-				logUploader.Write([]byte(fmt.Sprintf("Skipping uploading of '%s' because it's a folder", artifactPath)))
+				logUploader.Write([]byte(fmt.Sprintf("\nSkipping uploading of '%s' because it's a folder", artifactPath)))
 				continue
 			}
 
 			if err == nil && info.Size() > 100*humanize.MByte {
 				humanFriendlySize := humanize.Bytes(uint64(info.Size()))
-				logUploader.Write([]byte(fmt.Sprintf("Uploading a quite hefty artifact '%s' of size %s",
+				logUploader.Write([]byte(fmt.Sprintf("\nUploading a quite hefty artifact '%s' of size %s",
 					artifactPath, humanFriendlySize)))
 			}
 
