@@ -66,14 +66,12 @@ func ConvertAnnotations(annotations []model.Annotation) []*api.Annotation {
 			Message:    annotation.Message,
 			RawDetails: annotation.RawDetails,
 		}
-		if annotation.Location != nil {
-			protoAnnotation.FileLocation = &api.Annotation_FileLocation{
-				Path:        annotation.Location.Path,
-				StartLine:   annotation.Location.StartLine,
-				EndLine:     annotation.Location.EndLine,
-				StartColumn: annotation.Location.StartColumn,
-				EndColumn:   annotation.Location.EndColumn,
-			}
+		protoAnnotation.FileLocation = &api.Annotation_FileLocation{
+			Path:        annotation.Path,
+			StartLine:   annotation.StartLine,
+			EndLine:     annotation.EndLine,
+			StartColumn: annotation.StartColumn,
+			EndColumn:   annotation.EndColumn,
 		}
 		result = append(result, &protoAnnotation)
 	}
