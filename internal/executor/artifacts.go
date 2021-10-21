@@ -25,7 +25,7 @@ func (executor *Executor) UploadArtifacts(
 	customEnv map[string]string,
 ) bool {
 	var err error
-	var allAnnotations []model.Annotation
+	var allAnnotations []*model.Annotation
 
 	if len(artifactsInstruction.Paths) == 0 {
 		logUploader.Write([]byte("\nSkipping artifacts upload because there are no path specified..."))
@@ -87,8 +87,8 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	artifactsInstruction *api.ArtifactsInstruction,
 	customEnv map[string]string,
 	logUploader *LogUploader,
-) ([]model.Annotation, error) {
-	allAnnotations := make([]model.Annotation, 0)
+) ([]*model.Annotation, error) {
+	var allAnnotations []*model.Annotation
 
 	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(ctx)
 	if err != nil {

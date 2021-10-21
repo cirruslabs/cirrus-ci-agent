@@ -7,7 +7,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.4
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d
-	github.com/cirruslabs/cirrus-ci-annotations v0.4.0
+	github.com/cirruslabs/cirrus-ci-annotations v0.4.1-0.20211021072451-dde6d9363492
 	github.com/cirruslabs/terminal v0.8.2
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-git/go-git/v5 v5.4.2
