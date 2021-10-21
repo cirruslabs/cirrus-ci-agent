@@ -50,7 +50,7 @@ func (executor *Executor) UploadArtifacts(
 
 	workingDir := customEnv["CIRRUS_WORKING_DIR"]
 	if len(allAnnotations) > 0 {
-		err := annotations.ValidateAnnotations(workingDir, allAnnotations)
+		allAnnotations, err = annotations.NormalizeAnnotations(workingDir, allAnnotations)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to validate annotations: %s", err)))
 		}
