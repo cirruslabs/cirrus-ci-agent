@@ -57,7 +57,7 @@ func isDirEmpty(path string) bool {
 	return len(files) == 0
 }
 
-func ConvertAnnotations(annotations []*model.Annotation) []*api.Annotation {
+func ConvertAnnotations(annotations []model.Annotation) []*api.Annotation {
 	result := make([]*api.Annotation, 0)
 	for _, annotation := range annotations {
 		protoAnnotation := api.Annotation{
