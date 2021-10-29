@@ -20,7 +20,12 @@ type Wrapper struct {
 	terminalHost  *host.TerminalHost
 }
 
-func New(ctx context.Context, taskIdentification *api.TaskIdentification, serverAddress string) *Wrapper {
+func New(
+	ctx context.Context,
+	taskIdentification *api.TaskIdentification,
+	serverAddress string,
+	shellEnv []string,
+) *Wrapper {
 	wrapper := &Wrapper{
 		ctx:           ctx,
 		operationChan: make(chan Operation, 4096),
@@ -47,6 +52,7 @@ func New(ctx context.Context, taskIdentification *api.TaskIdentification, server
 	terminalHostOpts := []host.Option{
 		host.WithTrustedSecret(trustedSecret),
 		host.WithLocatorCallback(locatorCallback),
+		host.WithShellEnv(shellEnv),
 	}
 
 	if serverAddress != "" {

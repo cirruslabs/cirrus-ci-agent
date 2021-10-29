@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
@@ -65,4 +66,8 @@ func Test_Recursive(t *testing.T) {
 	} else {
 		t.Errorf("Wrong output: '%s'", result)
 	}
+}
+
+func TestEnvMapAsSlice(t *testing.T) {
+	assert.Equal(t, EnvMapAsSlice(map[string]string{"A": "B"}), []string{"A=B"})
 }
