@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -75,5 +76,15 @@ func expandEnvironmentRecursively(environment map[string]string) map[string]stri
 			break
 		}
 	}
+	return result
+}
+
+func EnvMapAsSlice(env map[string]string) []string {
+	var result []string
+
+	for key, value := range env {
+		result = append(result, fmt.Sprintf("%s=%s", key, value))
+	}
+
 	return result
 }
