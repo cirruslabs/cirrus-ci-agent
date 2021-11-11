@@ -19,6 +19,9 @@ type Wrapper struct {
 	operationChan chan Operation
 	terminalHost  *host.TerminalHost
 	expireIn      time.Duration
+
+	startedWarningSent bool
+	expireWarningSent  bool
 }
 
 func New(
@@ -74,7 +77,21 @@ func New(
 				subCtx, cancel := context.WithCancel(ctx)
 				defer cancel()
 
-				return wrapper.terminalHost.Run(subCtx)
+				err := wrapper.terminalHost.Run(subCtx)
+				if err != nil {
+					return err
+				}
+
+				if !wrapper.startedWarningSent {
+					_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+						Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+							Started: &api.ReportTerminalLifecycleRequest_Started{},
+						},
+					})
+					wrapper.startedWarningSent = true
+				}
+
+				return nil
 			},
 			retry.OnRetry(func(n uint, err error) {
 				wrapper.operationChan <- &LogOperation{Message: fmt.Sprintf("Terminal host failed: %v", err)}
@@ -104,12 +121,6 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			return
 		}
 
-		_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
-			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
-				Started: &api.ReportTerminalLifecycleRequest_Started{},
-			},
-		})
-
 		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %.1f seconds...",
 			minIdleDuration.Seconds())
 		wrapper.operationChan <- &LogOperation{Message: message}
@@ -126,12 +137,13 @@ func (wrapper *Wrapper) Wait() chan Operation {
 				return
 			}
 
-			if durationSinceLastActivity >= 10 * time.Minute {
+			if !wrapper.expireWarningSent {
 				_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
 					Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
 						Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
 					},
 				})
+				wrapper.expireWarningSent = true
 			}
 
 			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
