@@ -89,7 +89,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	waitStarted := time.Now()
 
 	go func() {
-		const minIdleDuration = 10 * time.Minute
+		const minIdleDuration = 15 * time.Minute
 
 		if wrapper.terminalHost == nil {
 			wrapper.operationChan <- &ExitOperation{Success: false}
