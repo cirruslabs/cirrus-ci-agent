@@ -18,17 +18,20 @@ type Wrapper struct {
 	ctx           context.Context
 	operationChan chan Operation
 	terminalHost  *host.TerminalHost
+	expireIn      time.Duration
 }
 
 func New(
 	ctx context.Context,
 	taskIdentification *api.TaskIdentification,
 	serverAddress string,
+	expireIn time.Duration,
 	shellEnv []string,
 ) *Wrapper {
 	wrapper := &Wrapper{
 		ctx:           ctx,
 		operationChan: make(chan Operation, 4096),
+		expireIn: expireIn,
 	}
 
 	// A trusted secret that grants ability to spawn shells on the terminal host we start below
@@ -89,7 +92,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	waitStarted := time.Now()
 
 	go func() {
-		const minIdleDuration = 15 * time.Minute
+		minIdleDuration := wrapper.expireIn
 
 		if wrapper.terminalHost == nil {
 			wrapper.operationChan <- &ExitOperation{Success: false}
