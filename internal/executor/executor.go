@@ -178,6 +178,12 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress,
 			shellEnv)
+
+		_, _ = client.CirrusClient.ReportTerminalLifecycle(ctx, &api.ReportTerminalLifecycleRequest{
+			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+				Started: &api.ReportTerminalLifecycleRequest_Started{},
+			},
+		})
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
@@ -434,6 +440,12 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 			case *terminalwrapper.LogOperation:
 				log.Println(operation.Message)
 				_, _ = fmt.Fprintln(logUploader, operation.Message)
+			case *terminalwrapper.ExpiringOperation:
+				_, _ = client.CirrusClient.ReportTerminalLifecycle(ctx, &api.ReportTerminalLifecycleRequest{
+					Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
+						Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
+					},
+				})
 			case *terminalwrapper.ExitOperation:
 				success = operation.Success
 				break WaitForTerminalInstructionFor
