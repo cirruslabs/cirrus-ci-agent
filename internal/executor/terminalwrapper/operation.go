@@ -10,12 +10,6 @@ type LogOperation struct {
 
 func (*LogOperation) isOperation() {}
 
-type ExpiringOperation struct {
-	// empty for now
-}
-
-func (*ExpiringOperation) isOperation() {}
-
 type ExitOperation struct {
 	Success bool
 }

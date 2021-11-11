@@ -123,6 +123,14 @@ func (wrapper *Wrapper) Wait() chan Operation {
 				return
 			}
 
+			if durationSinceLastActivity >= 10 * time.Minute {
+				_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+					Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
+						Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
+					},
+				})
+			}
+
 			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
 			// so we account for the former to sleep the minimal reasonable duration possible
 			timeToWait := minIdleDuration - durationSinceLastActivity
