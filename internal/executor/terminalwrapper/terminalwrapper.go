@@ -101,6 +101,12 @@ func (wrapper *Wrapper) Wait() chan Operation {
 			return
 		}
 
+		_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+				Started: &api.ReportTerminalLifecycleRequest_Started{},
+			},
+		})
+
 		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %.1f seconds...",
 			minIdleDuration.Seconds())
 		wrapper.operationChan <- &LogOperation{Message: message}

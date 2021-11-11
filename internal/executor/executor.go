@@ -178,12 +178,6 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress,
 			shellEnv)
-
-		_, _ = client.CirrusClient.ReportTerminalLifecycle(ctx, &api.ReportTerminalLifecycleRequest{
-			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
-				Started: &api.ReportTerminalLifecycleRequest_Started{},
-			},
-		})
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce
