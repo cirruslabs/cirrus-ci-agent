@@ -176,7 +176,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	if hasWaitForTerminalInstruction {
 		expireIn := 15 * time.Minute
 
-		expireInString, ok := executor.env["CIRRUS_TERMINAL_INACTIVITY_WAIT_PERIOD"]
+		expireInString, ok := executor.env["CIRRUS_TERMINAL_EXPIRATION_WINDOW"]
 		if ok {
 			expireInInt, err := strconv.Atoi(expireInString)
 			if err == nil {
