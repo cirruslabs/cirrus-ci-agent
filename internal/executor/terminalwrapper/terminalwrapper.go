@@ -52,6 +52,25 @@ func New(
 			Locator:            locator,
 			TrustedSecret:      trustedSecret,
 		})
+		if err != nil {
+			return err
+		}
+
+		if !wrapper.lifecycleStartedSent {
+			_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+				Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+					Started: &api.ReportTerminalLifecycleRequest_Started{},
+				},
+			})
+			if err != nil {
+				wrapper.operationChan <- &LogOperation{
+					Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
+				}
+			}
+
+			wrapper.lifecycleStartedSent = true
+		}
+
 		return err
 	}
 
@@ -77,27 +96,7 @@ func New(
 				subCtx, cancel := context.WithCancel(ctx)
 				defer cancel()
 
-				err := wrapper.terminalHost.Run(subCtx)
-				if err != nil {
-					return err
-				}
-
-				if !wrapper.lifecycleStartedSent {
-					_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
-						Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
-							Started: &api.ReportTerminalLifecycleRequest_Started{},
-						},
-					})
-					if err != nil {
-						wrapper.operationChan <- &LogOperation{
-							Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
-						}
-					}
-
-					wrapper.lifecycleStartedSent = true
-				}
-
-				return nil
+				return wrapper.terminalHost.Run(subCtx)
 			},
 			retry.OnRetry(func(n uint, err error) {
 				wrapper.operationChan <- &LogOperation{Message: fmt.Sprintf("Terminal host failed: %v", err)}
