@@ -19,8 +19,6 @@ type Wrapper struct {
 	operationChan    chan Operation
 	terminalHost     *host.TerminalHost
 	expirationWindow time.Duration
-
-	lifecycleStartedSent  bool
 }
 
 func New(
@@ -55,19 +53,15 @@ func New(
 			return err
 		}
 
-		if !wrapper.lifecycleStartedSent {
-			_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
-				Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
-					Started: &api.ReportTerminalLifecycleRequest_Started{},
-				},
-			})
-			if err != nil {
-				wrapper.operationChan <- &LogOperation{
-					Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
-				}
+		_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+				Started: &api.ReportTerminalLifecycleRequest_Started{},
+			},
+		})
+		if err != nil {
+			wrapper.operationChan <- &LogOperation{
+				Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
 			}
-
-			wrapper.lifecycleStartedSent = true
 		}
 
 		return err
