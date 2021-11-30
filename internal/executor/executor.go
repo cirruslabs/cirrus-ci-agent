@@ -174,10 +174,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	if hasWaitForTerminalInstruction {
+		expireIn := 15 * time.Minute
+
+		expireInString, ok := executor.env["CIRRUS_TERMINAL_EXPIRATION_WINDOW"]
+		if ok {
+			expireInInt, err := strconv.Atoi(expireInString)
+			if err == nil {
+				expireIn = time.Duration(expireInInt) * time.Second
+			}
+		}
+
 		shellEnv := append(os.Environ(), EnvMapAsSlice(executor.env)...)
 
 		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress,
-			shellEnv)
+			expireIn, shellEnv)
 	}
 
 	failedAtLeastOnce := response.FailedAtLeastOnce

@@ -528,6 +528,7 @@ type CirrusCIServiceClient interface {
 	ReportAgentFinished(ctx context.Context, in *ReportAgentFinishedRequest, opts ...grpc.CallOption) (*ReportAgentFinishedResponse, error)
 	ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error)
 	ReportTerminalAttached(ctx context.Context, in *ReportTerminalAttachedRequest, opts ...grpc.CallOption) (*ReportTerminalAttachedResponse, error)
+	ReportTerminalLifecycle(ctx context.Context, in *ReportTerminalLifecycleRequest, opts ...grpc.CallOption) (*ReportTerminalLifecycleResponse, error)
 	GenerateCacheUploadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
 	GenerateCacheDownloadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
 }
@@ -834,6 +835,15 @@ func (c *cirrusCIServiceClient) ReportTerminalAttached(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *cirrusCIServiceClient) ReportTerminalLifecycle(ctx context.Context, in *ReportTerminalLifecycleRequest, opts ...grpc.CallOption) (*ReportTerminalLifecycleResponse, error) {
+	out := new(ReportTerminalLifecycleResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportTerminalLifecycle", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cirrusCIServiceClient) GenerateCacheUploadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error) {
 	out := new(GenerateURLResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheUploadURL", in, out, opts...)
@@ -875,6 +885,7 @@ type CirrusCIServiceServer interface {
 	ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error)
 	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 	ReportTerminalAttached(context.Context, *ReportTerminalAttachedRequest) (*ReportTerminalAttachedResponse, error)
+	ReportTerminalLifecycle(context.Context, *ReportTerminalLifecycleRequest) (*ReportTerminalLifecycleResponse, error)
 	GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
 	GenerateCacheDownloadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
 	mustEmbedUnimplementedCirrusCIServiceServer()
@@ -940,6 +951,9 @@ func (UnimplementedCirrusCIServiceServer) ParseConfig(context.Context, *ParseCon
 }
 func (UnimplementedCirrusCIServiceServer) ReportTerminalAttached(context.Context, *ReportTerminalAttachedRequest) (*ReportTerminalAttachedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportTerminalAttached not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) ReportTerminalLifecycle(context.Context, *ReportTerminalLifecycleRequest) (*ReportTerminalLifecycleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReportTerminalLifecycle not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheUploadURL not implemented")
@@ -1337,6 +1351,24 @@ func _CirrusCIService_ReportTerminalAttached_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusCIService_ReportTerminalLifecycle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportTerminalLifecycleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).ReportTerminalLifecycle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportTerminalLifecycle",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).ReportTerminalLifecycle(ctx, req.(*ReportTerminalLifecycleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CirrusCIService_GenerateCacheUploadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CacheKey)
 	if err := dec(in); err != nil {
@@ -1435,6 +1467,10 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportTerminalAttached",
 			Handler:    _CirrusCIService_ReportTerminalAttached_Handler,
+		},
+		{
+			MethodName: "ReportTerminalLifecycle",
+			Handler:    _CirrusCIService_ReportTerminalLifecycle_Handler,
 		},
 		{
 			MethodName: "GenerateCacheUploadURL",

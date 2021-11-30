@@ -15,20 +15,23 @@ import (
 )
 
 type Wrapper struct {
-	ctx           context.Context
-	operationChan chan Operation
-	terminalHost  *host.TerminalHost
+	ctx              context.Context
+	operationChan    chan Operation
+	terminalHost     *host.TerminalHost
+	expirationWindow time.Duration
 }
 
 func New(
 	ctx context.Context,
 	taskIdentification *api.TaskIdentification,
 	serverAddress string,
+	expirationWindow time.Duration,
 	shellEnv []string,
 ) *Wrapper {
 	wrapper := &Wrapper{
-		ctx:           ctx,
-		operationChan: make(chan Operation, 4096),
+		ctx:              ctx,
+		operationChan:    make(chan Operation, 4096),
+		expirationWindow: expirationWindow,
 	}
 
 	// A trusted secret that grants ability to spawn shells on the terminal host we start below
@@ -46,6 +49,21 @@ func New(
 			Locator:            locator,
 			TrustedSecret:      trustedSecret,
 		})
+		if err != nil {
+			return err
+		}
+
+		_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
+				Started: &api.ReportTerminalLifecycleRequest_Started{},
+			},
+		})
+		if err != nil {
+			wrapper.operationChan <- &LogOperation{
+				Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
+			}
+		}
+
 		return err
 	}
 
@@ -86,66 +104,62 @@ func New(
 }
 
 func (wrapper *Wrapper) Wait() chan Operation {
-	waitStarted := time.Now()
-
 	go func() {
-		const minIdleDuration = 10 * time.Minute
-
+		// Might happen when we fail to initialize the terminal host
 		if wrapper.terminalHost == nil {
 			wrapper.operationChan <- &ExitOperation{Success: false}
 
 			return
 		}
 
+		// Wait for the terminal to connect, exit on ctx cancellation/deadline
 		if !wrapper.waitForSession() {
 			return
 		}
 
-		message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %.1f seconds...",
-			minIdleDuration.Seconds())
-		wrapper.operationChan <- &LogOperation{Message: message}
-
+		// Wait for the terminal to be inactive for a period of wrapper.expirationWindow.Seconds() seconds
 		for {
-			lastActivity := max(waitStarted, wrapper.terminalHost.LastRegistration(),
+			lastActivityBeforeWait := max(wrapper.terminalHost.LastRegistration(),
 				wrapper.terminalHost.LastActivity())
 
-			durationSinceLastActivity := time.Since(lastActivity)
+			// Notify the user that the countdown has started
+			message := fmt.Sprintf("Waiting for the terminal session to be inactive for at least %.1f seconds...",
+				wrapper.expirationWindow.Seconds())
+			wrapper.operationChan <- &LogOperation{Message: message}
 
-			if durationSinceLastActivity >= minIdleDuration {
-				wrapper.operationChan <- &ExitOperation{Success: true}
-
-				return
+			// Notify the server that the countdown has started
+			_, err := client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+				Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
+					Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
+				},
+			})
+			if err != nil {
+				wrapper.operationChan <- &LogOperation{
+					Message: fmt.Sprintf("Failed to send lifecycle notification (expiring): %v", err),
+				}
 			}
 
-			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
-			// so we account for the former to sleep the minimal reasonable duration possible
-			timeToWait := minIdleDuration - durationSinceLastActivity
-
 			select {
-			case <-time.After(timeToWait):
-				now := time.Now()
-
+			case <-time.After(wrapper.expirationWindow):
 				numActiveSessions := wrapper.terminalHost.NumSessionsFunc(func(session *session.Session) bool {
-					sessionLastActivity := session.LastActivity()
-
-					// Unlikely, but let's check this anyway, since there's no utility method
-					// for safely diffing time in the time package
-					if sessionLastActivity.After(now) {
-						return true
-					}
-
-					return now.Sub(session.LastActivity()) < minIdleDuration
+					return session.LastActivity().After(lastActivityBeforeWait)
 				})
 
-				message := fmt.Sprintf("Waited %.1f seconds, but there are still %d terminal sessions open, "+
-					"and %d of them generated input in the last %.1f seconds.",
-					timeToWait.Seconds(), wrapper.terminalHost.NumSessions(), numActiveSessions, minIdleDuration.Seconds())
+				if numActiveSessions == 0 {
+					break
+				}
+
+				message := fmt.Sprintf("Waited %.1f seconds, but there are still %d terminal sessions open "+
+					"and %d of them are active.", wrapper.expirationWindow.Seconds(), wrapper.terminalHost.NumSessions(),
+					numActiveSessions)
 				wrapper.operationChan <- &LogOperation{Message: message}
 
 				continue
 			case <-wrapper.ctx.Done():
-				wrapper.operationChan <- &ExitOperation{Success: true}
+				break
 			}
+
+			wrapper.operationChan <- &ExitOperation{Success: true}
 		}
 	}()
 
