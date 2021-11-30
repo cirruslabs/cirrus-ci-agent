@@ -20,8 +20,8 @@ type Wrapper struct {
 	terminalHost  *host.TerminalHost
 	expireIn      time.Duration
 
-	startedWarningSent bool
-	expireWarningSent  bool
+	lifecycleStartedSent  bool
+	lifecycleExpiringSent bool
 }
 
 func New(
@@ -34,7 +34,7 @@ func New(
 	wrapper := &Wrapper{
 		ctx:           ctx,
 		operationChan: make(chan Operation, 4096),
-		expireIn: expireIn,
+		expireIn:      expireIn,
 	}
 
 	// A trusted secret that grants ability to spawn shells on the terminal host we start below
@@ -82,13 +82,19 @@ func New(
 					return err
 				}
 
-				if !wrapper.startedWarningSent {
-					_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+				if !wrapper.lifecycleStartedSent {
+					_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
 						Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
 							Started: &api.ReportTerminalLifecycleRequest_Started{},
 						},
 					})
-					wrapper.startedWarningSent = true
+					if err != nil {
+						wrapper.operationChan <- &LogOperation{
+							Message: fmt.Sprintf("Failed to send lifecycle notification (started): %v", err),
+						}
+					}
+
+					wrapper.lifecycleStartedSent = true
 				}
 
 				return nil
@@ -137,13 +143,19 @@ func (wrapper *Wrapper) Wait() chan Operation {
 				return
 			}
 
-			if !wrapper.expireWarningSent {
-				_, _ = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+			if !wrapper.lifecycleExpiringSent {
+				_, err := client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
 					Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
 						Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
 					},
 				})
-				wrapper.expireWarningSent = true
+				if err != nil {
+					wrapper.operationChan <- &LogOperation{
+						Message: fmt.Sprintf("Failed to send lifecycle notification (expiring): %v", err),
+					}
+				}
+
+				wrapper.lifecycleExpiringSent = true
 			}
 
 			// Here the durationSinceLastActivity is less than minIdleDuration (see the check above),
