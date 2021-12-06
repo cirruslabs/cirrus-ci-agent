@@ -113,7 +113,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 		}
 
 		// Wait for the terminal to connect, exit on ctx cancellation/deadline
-		if !wrapper.waitForSession() {
+		if !wrapper.waitForConnection() {
 			return
 		}
 
@@ -166,9 +166,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 	return wrapper.operationChan
 }
 
-func (wrapper *Wrapper) waitForSession() bool {
+func (wrapper *Wrapper) waitForConnection() bool {
 	wrapper.operationChan <- &LogOperation{
-		Message: "Waiting for the terminal session to be established...",
+		Message: "Waiting for the terminal server connection to be established...",
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -178,7 +178,7 @@ func (wrapper *Wrapper) waitForSession() bool {
 		select {
 		case <-ticker.C:
 			defaultTime := time.Time{}
-			if wrapper.terminalHost.LastRegistration() != defaultTime {
+			if wrapper.terminalHost.LastConnection() != defaultTime {
 				return true
 			}
 		case <-wrapper.ctx.Done():
