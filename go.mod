@@ -7,7 +7,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.4
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d
 	github.com/cirruslabs/cirrus-ci-annotations v0.7.0
-	github.com/cirruslabs/terminal v0.10.2-0.20211206135224-c0fa8c76b850
+	github.com/cirruslabs/terminal v0.10.2-0.20211206144640-9f749e4b65d7
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/golang/protobuf v1.5.2
