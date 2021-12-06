@@ -15,10 +15,11 @@ import (
 )
 
 type Wrapper struct {
-	ctx              context.Context
-	operationChan    chan Operation
-	terminalHost     *host.TerminalHost
-	expirationWindow time.Duration
+	ctx                context.Context
+	taskIdentification *api.TaskIdentification
+	operationChan      chan Operation
+	terminalHost       *host.TerminalHost
+	expirationWindow   time.Duration
 }
 
 func New(
@@ -29,9 +30,10 @@ func New(
 	shellEnv []string,
 ) *Wrapper {
 	wrapper := &Wrapper{
-		ctx:              ctx,
-		operationChan:    make(chan Operation, 4096),
-		expirationWindow: expirationWindow,
+		ctx:                ctx,
+		taskIdentification: taskIdentification,
+		operationChan:      make(chan Operation, 4096),
+		expirationWindow:   expirationWindow,
 	}
 
 	// A trusted secret that grants ability to spawn shells on the terminal host we start below
@@ -54,6 +56,7 @@ func New(
 		}
 
 		_, err = client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+			TaskIdentification: wrapper.taskIdentification,
 			Lifecycle: &api.ReportTerminalLifecycleRequest_Started_{
 				Started: &api.ReportTerminalLifecycleRequest_Started{},
 			},
@@ -129,6 +132,7 @@ func (wrapper *Wrapper) Wait() chan Operation {
 
 			// Notify the server that the countdown has started
 			_, err := client.CirrusClient.ReportTerminalLifecycle(wrapper.ctx, &api.ReportTerminalLifecycleRequest{
+				TaskIdentification: wrapper.taskIdentification,
 				Lifecycle: &api.ReportTerminalLifecycleRequest_Expiring_{
 					Expiring: &api.ReportTerminalLifecycleRequest_Expiring{},
 				},
