@@ -150,7 +150,9 @@ func (wrapper *Wrapper) Wait() chan Operation {
 				})
 
 				if numActiveSessions == 0 {
-					break
+					wrapper.operationChan <- &ExitOperation{Success: true}
+
+					return
 				}
 
 				message := fmt.Sprintf("Waited %.1f seconds, but there are still %d terminal sessions open "+
@@ -160,10 +162,10 @@ func (wrapper *Wrapper) Wait() chan Operation {
 
 				continue
 			case <-wrapper.ctx.Done():
-				break
-			}
+				wrapper.operationChan <- &ExitOperation{Success: false}
 
-			wrapper.operationChan <- &ExitOperation{Success: true}
+				return
+			}
 		}
 	}()
 
