@@ -17,6 +17,11 @@ import (
 	"path/filepath"
 )
 
+type ProcessedArtifactPath struct {
+	EnvExpandedPath string
+	FinalPaths      []string
+}
+
 func (executor *Executor) UploadArtifacts(
 	ctx context.Context,
 	logUploader *LogUploader,
@@ -26,6 +31,7 @@ func (executor *Executor) UploadArtifacts(
 ) bool {
 	var err error
 	var allAnnotations []model.Annotation
+	var scopedToWorkingDir bool
 
 	if len(artifactsInstruction.Paths) == 0 {
 		logUploader.Write([]byte("\nSkipping artifacts upload because there are no path specified..."))
@@ -34,7 +40,8 @@ func (executor *Executor) UploadArtifacts(
 
 	err = retry.Do(
 		func() error {
-			allAnnotations, err = executor.uploadArtifactsAndParseAnnotations(ctx, name, artifactsInstruction, customEnv, logUploader)
+			allAnnotations, scopedToWorkingDir, err = executor.uploadArtifactsAndParseAnnotations(ctx, name,
+				artifactsInstruction, customEnv, logUploader)
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts: %s", err)))
@@ -48,9 +55,8 @@ func (executor *Executor) UploadArtifacts(
 		return false
 	}
 
-	workingDir := customEnv["CIRRUS_WORKING_DIR"]
-	if len(allAnnotations) > 0 {
-		allAnnotations, err = annotations.NormalizeAnnotations(workingDir, allAnnotations)
+	if len(allAnnotations) > 0 && scopedToWorkingDir {
+		allAnnotations, err = annotations.NormalizeAnnotations(customEnv["CIRRUS_WORKING_DIR"], allAnnotations)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to validate annotations: %s", err)))
 		}
@@ -87,12 +93,12 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	artifactsInstruction *api.ArtifactsInstruction,
 	customEnv map[string]string,
 	logUploader *LogUploader,
-) ([]model.Annotation, error) {
+) ([]model.Annotation, bool, error) {
 	allAnnotations := make([]model.Annotation, 0)
 
 	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(ctx)
 	if err != nil {
-		return allAnnotations, errors.Wrapf(err, "failed to initialize artifacts upload client")
+		return allAnnotations, false, errors.Wrapf(err, "failed to initialize artifacts upload client")
 	}
 
 	defer func() {
@@ -107,14 +113,21 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	readBufferSize := int(1024 * 1024)
 	readBuffer := make([]byte, readBufferSize)
 
-	uploadSingleArtifactFile := func(artifactPath string) error {
+	uploadSingleArtifactFile := func(scopedToWorkingDir bool, artifactPath string) error {
 		artifactFile, err := os.Open(artifactPath)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
 		}
 		defer artifactFile.Close()
 
-		relativeArtifactPath, err := filepath.Rel(workingDir, artifactPath)
+		var relativeTo string
+		if scopedToWorkingDir {
+			relativeTo = workingDir
+		} else {
+			relativeTo = string(filepath.Separator)
+		}
+
+		relativeArtifactPath, err := filepath.Rel(relativeTo, artifactPath)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get artifact relative path for %s", artifactPath)
 		}
@@ -155,19 +168,43 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 		return nil
 	}
 
-	for index, path := range artifactsInstruction.Paths {
-		artifactsPattern := ExpandText(path, customEnv)
-		artifactsPattern = filepath.Join(workingDir, artifactsPattern)
-		artifactPaths, err := doublestar.Glob(artifactsPattern)
+	// Process the paths specified by the user for this artifacts instruction
+	var processedPaths []ProcessedArtifactPath
 
-		if err != nil {
-			return allAnnotations, errors.Wrap(err, "Failed to list artifacts")
+	for _, path := range artifactsInstruction.Paths {
+		envExpandedPath := ExpandText(path, customEnv)
+
+		var absoluteEnvExpandedPath string
+
+		if filepath.IsAbs(envExpandedPath) {
+			absoluteEnvExpandedPath = envExpandedPath
+		} else {
+			absoluteEnvExpandedPath = filepath.Join(workingDir, envExpandedPath)
 		}
 
+		finalPaths, err := doublestar.Glob(absoluteEnvExpandedPath)
+		if err != nil {
+			return allAnnotations, false, errors.Wrap(err, "Failed to list artifacts")
+		}
+
+		processedPaths = append(processedPaths, ProcessedArtifactPath{
+			EnvExpandedPath: envExpandedPath,
+			FinalPaths:      finalPaths,
+		})
+	}
+
+	// Analyze processed paths for common denominator
+	scopedToWorkingDir, err := isScopedToWorkingDir(workingDir, processedPaths)
+	if err != nil {
+		return allAnnotations, false, err
+	}
+
+	for index, processedPath := range processedPaths {
 		if index > 0 {
 			logUploader.Write([]byte("\n"))
 		}
-		logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s", len(artifactPaths), artifactsPattern)))
+		logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s",
+			len(processedPath.FinalPaths), processedPath.EnvExpandedPath)))
 
 		chunkMsg := api.ArtifactEntry_ArtifactsUpload_{
 			ArtifactsUpload: &api.ArtifactEntry_ArtifactsUpload{
@@ -179,10 +216,10 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 		}
 		err = uploadArtifactsClient.Send(&api.ArtifactEntry{Value: &chunkMsg})
 		if err != nil {
-			return allAnnotations, errors.Wrap(err, "failed to initialize artifacts upload")
+			return allAnnotations, scopedToWorkingDir, errors.Wrap(err, "failed to initialize artifacts upload")
 		}
 
-		for _, artifactPath := range artifactPaths {
+		for _, artifactPath := range processedPath.FinalPaths {
 			info, err := os.Stat(artifactPath)
 
 			if err == nil && info.IsDir() {
@@ -196,12 +233,32 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 					artifactPath, humanFriendlySize)))
 			}
 
-			err = uploadSingleArtifactFile(artifactPath)
+			err = uploadSingleArtifactFile(scopedToWorkingDir, artifactPath)
 
 			if err != nil {
-				return allAnnotations, err
+				return allAnnotations, scopedToWorkingDir, err
 			}
 		}
 	}
-	return allAnnotations, nil
+
+	return allAnnotations, scopedToWorkingDir, nil
+}
+
+func isScopedToWorkingDir(workingDir string, processedPaths []ProcessedArtifactPath) (bool, error) {
+	workingDirMatcher := filepath.Join(workingDir, "**")
+
+	for _, processedPath := range processedPaths {
+		for _, finalPath := range processedPath.FinalPaths {
+			matched, err := doublestar.PathMatch(workingDirMatcher, finalPath)
+			if err != nil {
+				return false, errors.Wrapf(err, "Failed to match artifact paths against working directory matcher %v",
+					workingDirMatcher)
+			}
+			if !matched {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
 }
