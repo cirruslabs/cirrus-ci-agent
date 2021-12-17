@@ -17,6 +17,13 @@ import (
 	"path/filepath"
 )
 
+type ProcessedPath struct {
+	Pattern string
+	Paths   []string
+}
+
+var ErrArtifactsPathOutsideWorkingDir = errors.New("path is outside of CIRRUS_WORKING_DIR")
+
 func (executor *Executor) UploadArtifacts(
 	ctx context.Context,
 	logUploader *LogUploader,
@@ -42,8 +49,17 @@ func (executor *Executor) UploadArtifacts(
 		}),
 		retry.Attempts(2),
 		retry.Context(ctx),
+		retry.RetryIf(func(err error) bool {
+			return !errors.Is(err, ErrArtifactsPathOutsideWorkingDir)
+		}),
+		retry.LastErrorOnly(true),
 	)
 	if err != nil {
+		if errors.Is(err, ErrArtifactsPathOutsideWorkingDir) {
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts: %s", err)))
+			return false
+		}
+
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload artifacts after multiple tries: %s", err)))
 		return false
 	}
@@ -90,6 +106,40 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 ) ([]model.Annotation, error) {
 	allAnnotations := make([]model.Annotation, 0)
 
+	workingDir := customEnv["CIRRUS_WORKING_DIR"]
+
+	var processedPaths []ProcessedPath
+
+	for _, path := range artifactsInstruction.Paths {
+		pattern := ExpandText(path, customEnv)
+		if !filepath.IsAbs(pattern) {
+			pattern = filepath.Join(workingDir, pattern)
+		}
+
+		paths, err := doublestar.Glob(pattern)
+		if err != nil {
+			return allAnnotations, errors.Wrap(err, "Failed to list artifacts")
+		}
+
+		// Ensure that the all resulting paths are scoped to the CIRRUS_WORKING_DIR
+		for _, artifactPath := range paths {
+			matcher := filepath.Join(workingDir, "**")
+			matched, err := doublestar.PathMatch(matcher, artifactPath)
+			if err != nil {
+				return allAnnotations, errors.Wrapf(err, "failed to match the path: %v", err)
+			}
+			if !matched {
+				return allAnnotations, fmt.Errorf("%w: path %s should be relative to %s",
+					ErrArtifactsPathOutsideWorkingDir, artifactPath, workingDir)
+			}
+		}
+
+		processedPaths = append(processedPaths, ProcessedPath{Pattern: pattern, Paths: paths})
+	}
+
+	readBufferSize := int(1024 * 1024)
+	readBuffer := make([]byte, readBufferSize)
+
 	uploadArtifactsClient, err := client.CirrusClient.UploadArtifacts(ctx)
 	if err != nil {
 		return allAnnotations, errors.Wrapf(err, "failed to initialize artifacts upload client")
@@ -101,11 +151,6 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 			logUploader.Write([]byte(fmt.Sprintf("\nError from upload stream: %s", err)))
 		}
 	}()
-
-	workingDir := customEnv["CIRRUS_WORKING_DIR"]
-
-	readBufferSize := int(1024 * 1024)
-	readBuffer := make([]byte, readBufferSize)
 
 	uploadSingleArtifactFile := func(artifactPath string) error {
 		artifactFile, err := os.Open(artifactPath)
@@ -155,19 +200,12 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 		return nil
 	}
 
-	for index, path := range artifactsInstruction.Paths {
-		artifactsPattern := ExpandText(path, customEnv)
-		artifactsPattern = filepath.Join(workingDir, artifactsPattern)
-		artifactPaths, err := doublestar.Glob(artifactsPattern)
-
-		if err != nil {
-			return allAnnotations, errors.Wrap(err, "Failed to list artifacts")
-		}
-
+	for index, processedPath := range processedPaths {
 		if index > 0 {
 			logUploader.Write([]byte("\n"))
 		}
-		logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s", len(artifactPaths), artifactsPattern)))
+		logUploader.Write([]byte(fmt.Sprintf("Uploading %d artifacts for %s",
+			len(processedPath.Paths), processedPath.Pattern)))
 
 		chunkMsg := api.ArtifactEntry_ArtifactsUpload_{
 			ArtifactsUpload: &api.ArtifactEntry_ArtifactsUpload{
@@ -182,7 +220,7 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 			return allAnnotations, errors.Wrap(err, "failed to initialize artifacts upload")
 		}
 
-		for _, artifactPath := range artifactPaths {
+		for _, artifactPath := range processedPath.Paths {
 			info, err := os.Stat(artifactPath)
 
 			if err == nil && info.IsDir() {
