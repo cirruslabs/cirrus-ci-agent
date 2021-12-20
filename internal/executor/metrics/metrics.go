@@ -73,7 +73,7 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
 				} else {
-					errChan <- fmt.Errorf("%w: %v", ErrFailedToQueryCPU, err)
+					errChan <- fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err)
 				}
 				return
 			}
@@ -84,7 +84,7 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
 				} else {
-					errChan <- fmt.Errorf("%w: %v", ErrFailedToQueryMemory, err)
+					errChan <- fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err)
 				}
 				return
 			}

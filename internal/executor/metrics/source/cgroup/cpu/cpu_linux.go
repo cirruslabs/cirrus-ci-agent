@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/subsystem"
 	gopsutilcpu "github.com/shirou/gopsutil/cpu"
 	"math"
+	"runtime"
 	"time"
 )
 
@@ -91,6 +92,10 @@ func (cpu *VersionlessCPU) NumCpusUsed(ctx context.Context, pollInterval time.Du
 	numCpus := len(times)
 
 	return math.Min(100, math.Max(0, cgroupDelta/systemDelta)) * float64(numCpus), nil
+}
+
+func (cpu *VersionlessCPU) Name() string {
+	return fmt.Sprintf("cgroup CPU resolver on %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
 func contextAwareSleep(ctx context.Context, duration time.Duration) error {
