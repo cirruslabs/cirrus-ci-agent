@@ -93,7 +93,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	// Start collecting metrics
 	metricsCtx, metricsCancel := context.WithCancel(ctx)
 	defer metricsCancel()
-	metricsResultChan, metricsErrChan := metrics.Run(metricsCtx, nil)
+	metricsResultChan := metrics.Run(metricsCtx, nil)
 
 	log.Println("Getting initial commands...")
 
@@ -255,18 +255,14 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	// Retrieve resource utilization metrics
 	metricsCancel()
 
-	var resourceUtilization *api.ResourceUtilization
+	var metricsResult *metrics.Result
 
 	select {
-	case result := <-metricsResultChan:
-		resourceUtilization = result
-	case err := <-metricsErrChan:
-		message := fmt.Sprintf("Failed to retrieve resource utilization metrics: %v", err)
-		log.Print(message)
-		_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
-			TaskIdentification: executor.taskIdentification,
-			Message:            message,
-		})
+	case metricsResult = <-metricsResultChan:
+		for _, err := range metricsResult.Errors {
+			message := fmt.Sprintf("Failed to retrieve resource utilization metrics: %v", err)
+			log.Print(message)
+		}
 	case <-time.After(3 * time.Second):
 		// Yes, we already use context.Context, but it seems that gopsutil is somewhat lacking it's support[1],
 		// so we err on the side of caution here.
@@ -285,7 +281,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
-				ResourceUtilization:    resourceUtilization,
+				ResourceUtilization:    &metricsResult.ResourceUtilization,
 				CommandResults:         ub.History(),
 			})
 			return err

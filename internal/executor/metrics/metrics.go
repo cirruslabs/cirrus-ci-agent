@@ -25,9 +25,13 @@ var (
 	ErrFailedToQueryMemory = errors.New("failed to query memory usage")
 )
 
-func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtilization, chan error) {
-	resultChan := make(chan *api.ResourceUtilization, 1)
-	errChan := make(chan error, 1)
+type Result struct {
+	Errors              []error
+	ResourceUtilization api.ResourceUtilization
+}
+
+func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
+	resultChan := make(chan *Result, 1)
 
 	var cpuSource source.CPU
 	var memorySource source.Memory
@@ -61,7 +65,7 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 	}
 
 	go func() {
-		result := &api.ResourceUtilization{}
+		result := &Result{}
 
 		pollInterval := 1 * time.Second
 		startTime := time.Now()
@@ -72,10 +76,12 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
+					return
 				} else {
-					errChan <- fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err)
+					numCpusUsed = -1.0
+					result.Errors = append(result.Errors,
+						fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
 				}
-				return
 			}
 
 			// Memory usage
@@ -84,9 +90,10 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
 				} else {
-					errChan <- fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err)
+					amountMemoryUsed = -1.0
+					result.Errors = append(result.Errors,
+						fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
 				}
-				return
 			}
 
 			if logger != nil {
@@ -96,11 +103,11 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 
 			timeSinceStart := time.Since(startTime)
 
-			result.CpuChart = append(result.CpuChart, &api.ChartPoint{
+			result.ResourceUtilization.CpuChart = append(result.ResourceUtilization.CpuChart, &api.ChartPoint{
 				SecondsFromStart: uint32(timeSinceStart.Seconds()),
 				Value:            numCpusUsed,
 			})
-			result.MemoryChart = append(result.MemoryChart, &api.ChartPoint{
+			result.ResourceUtilization.MemoryChart = append(result.ResourceUtilization.MemoryChart, &api.ChartPoint{
 				SecondsFromStart: uint32(timeSinceStart.Seconds()),
 				Value:            amountMemoryUsed,
 			})
@@ -113,5 +120,5 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 		}
 	}()
 
-	return resultChan, errChan
+	return resultChan
 }

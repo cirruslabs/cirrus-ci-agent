@@ -9,9 +9,13 @@ import (
 func main() {
 	logger := logrus.New()
 
-	_, errChan := metrics.Run(context.Background(), logger)
+	resultChan := metrics.Run(context.Background(), logger)
 
-	if err := <-errChan; err != nil {
-		logrus.Fatalf("metrics failed: %v", err)
+	result := <-resultChan
+
+	if len(result.Errors) != 0 {
+		for _, err := range result.Errors {
+			logrus.Fatalf("metrics failed: %v", err)
+		}
 	}
 }
