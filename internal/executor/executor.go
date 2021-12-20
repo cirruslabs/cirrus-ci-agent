@@ -281,7 +281,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
 				TaskIdentification:     executor.taskIdentification,
 				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
-				ResourceUtilization:    &metricsResult.ResourceUtilization,
+				ResourceUtilization:    metricsResult.ResourceUtilization,
 				CommandResults:         ub.History(),
 			})
 			return err

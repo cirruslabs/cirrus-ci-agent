@@ -27,7 +27,7 @@ var (
 
 type Result struct {
 	Errors              []error
-	ResourceUtilization api.ResourceUtilization
+	ResourceUtilization *api.ResourceUtilization
 }
 
 func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
@@ -65,7 +65,10 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 	}
 
 	go func() {
-		result := &Result{}
+		result := &Result{
+			ResourceUtilization: &api.ResourceUtilization{},
+		}
+		var hasValidMetrics bool
 
 		pollInterval := 1 * time.Second
 		startTime := time.Now()
@@ -75,6 +78,10 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 			numCpusUsed, err := cpuSource.NumCpusUsed(ctx, pollInterval)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					if !hasValidMetrics {
+						result.ResourceUtilization = nil
+					}
+
 					resultChan <- result
 					return
 				}
@@ -82,18 +89,27 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 				numCpusUsed = -1.0
 				result.Errors = append(result.Errors,
 					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
+			} else {
+				hasValidMetrics = true
 			}
 
 			// Memory usage
 			amountMemoryUsed, err := memorySource.AmountMemoryUsed(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					if !hasValidMetrics {
+						result.ResourceUtilization = nil
+					}
+
 					resultChan <- result
+					return
 				}
 
 				amountMemoryUsed = -1.0
 				result.Errors = append(result.Errors,
 					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
+			} else {
+				hasValidMetrics = true
 			}
 
 			if logger != nil {

@@ -11,7 +11,7 @@ import (
 
 type Result struct {
 	Errors              []error
-	ResourceUtilization api.ResourceUtilization
+	ResourceUtilization *api.ResourceUtilization
 }
 
 func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
