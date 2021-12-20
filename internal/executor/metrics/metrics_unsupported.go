@@ -1,3 +1,4 @@
+//go:build (windows && arm) || (windows && arm64)
 // +build windows,arm windows,arm64
 
 package metrics
