@@ -77,11 +77,11 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
 					return
-				} else {
-					numCpusUsed = -1.0
-					result.Errors = append(result.Errors,
-						fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
 				}
+
+				numCpusUsed = -1.0
+				result.Errors = append(result.Errors,
+					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
 			}
 
 			// Memory usage
@@ -89,11 +89,11 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					resultChan <- result
-				} else {
-					amountMemoryUsed = -1.0
-					result.Errors = append(result.Errors,
-						fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
 				}
+
+				amountMemoryUsed = -1.0
+				result.Errors = append(result.Errors,
+					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
 			}
 
 			if logger != nil {
