@@ -260,7 +260,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	select {
 	case metricsResult := <-metricsResultChan:
 		for _, err := range metricsResult.Errors {
-			message := fmt.Sprintf("Failed to retrieve resource utilization metrics: %v", err)
+			message := fmt.Sprintf("Encountered an error while gathering resource utilization metrics: %v", err)
 			log.Print(message)
 			_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
 				TaskIdentification: executor.taskIdentification,
