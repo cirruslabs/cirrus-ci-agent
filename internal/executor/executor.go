@@ -262,6 +262,10 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		for _, err := range metricsResult.Errors {
 			message := fmt.Sprintf("Failed to retrieve resource utilization metrics: %v", err)
 			log.Print(message)
+			_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
+				TaskIdentification: executor.taskIdentification,
+				Message:            message,
+			})
 		}
 	case <-time.After(3 * time.Second):
 		// Yes, we already use context.Context, but it seems that gopsutil is somewhat lacking it's support[1],

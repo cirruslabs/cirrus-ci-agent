@@ -68,48 +68,35 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 		result := &Result{
 			ResourceUtilization: &api.ResourceUtilization{},
 		}
-		var hasValidMetrics bool
 
 		pollInterval := 1 * time.Second
 		startTime := time.Now()
 
 		for {
 			// CPU usage
-			numCpusUsed, err := cpuSource.NumCpusUsed(ctx, pollInterval)
+			numCpusUsed, cpuErr := cpuSource.NumCpusUsed(ctx, pollInterval)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					if !hasValidMetrics {
-						result.ResourceUtilization = nil
-					}
-
 					resultChan <- result
+
 					return
 				}
 
-				numCpusUsed = -1.0
 				result.Errors = append(result.Errors,
 					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
-			} else {
-				hasValidMetrics = true
 			}
 
 			// Memory usage
-			amountMemoryUsed, err := memorySource.AmountMemoryUsed(ctx)
+			amountMemoryUsed, memoryErr := memorySource.AmountMemoryUsed(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					if !hasValidMetrics {
-						result.ResourceUtilization = nil
-					}
-
 					resultChan <- result
+
 					return
 				}
 
-				amountMemoryUsed = -1.0
 				result.Errors = append(result.Errors,
 					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
-			} else {
-				hasValidMetrics = true
 			}
 
 			if logger != nil {
@@ -119,14 +106,18 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 
 			timeSinceStart := time.Since(startTime)
 
-			result.ResourceUtilization.CpuChart = append(result.ResourceUtilization.CpuChart, &api.ChartPoint{
-				SecondsFromStart: uint32(timeSinceStart.Seconds()),
-				Value:            numCpusUsed,
-			})
-			result.ResourceUtilization.MemoryChart = append(result.ResourceUtilization.MemoryChart, &api.ChartPoint{
-				SecondsFromStart: uint32(timeSinceStart.Seconds()),
-				Value:            amountMemoryUsed,
-			})
+			if cpuErr == nil {
+				result.ResourceUtilization.CpuChart = append(result.ResourceUtilization.CpuChart, &api.ChartPoint{
+					SecondsFromStart: uint32(timeSinceStart.Seconds()),
+					Value:            numCpusUsed,
+				})
+			}
+			if memoryErr == nil {
+				result.ResourceUtilization.MemoryChart = append(result.ResourceUtilization.MemoryChart, &api.ChartPoint{
+					SecondsFromStart: uint32(timeSinceStart.Seconds()),
+					Value:            amountMemoryUsed,
+				})
+			}
 
 			// Gradually increase the poll interval to avoid missing data for
 			// short-running tasks, but to preserve memory for long-running tasks
