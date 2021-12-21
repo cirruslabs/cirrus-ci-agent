@@ -2,6 +2,8 @@ module github.com/cirruslabs/cirrus-ci-agent
 
 go 1.17
 
+replace github.com/go-git/go-git/v5 => github.com/cirruslabs/go-git/v5 v5.4.2-reference-delta-fix
+
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.4
