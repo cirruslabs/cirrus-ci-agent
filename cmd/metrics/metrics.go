@@ -13,8 +13,8 @@ func main() {
 
 	result := <-resultChan
 
-	if len(result.Errors) != 0 {
-		for _, err := range result.Errors {
+	if len(result.Errors()) != 0 {
+		for _, err := range result.Errors() {
 			logrus.Fatalf("metrics failed: %v", err)
 		}
 	}

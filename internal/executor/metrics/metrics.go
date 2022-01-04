@@ -26,8 +26,18 @@ var (
 )
 
 type Result struct {
-	Errors              []error
+	errors              map[string]error
 	ResourceUtilization *api.ResourceUtilization
+}
+
+func (result Result) Errors() []error {
+	var deduplicatedErrors []error
+
+	for _, err := range result.errors {
+		deduplicatedErrors = append(deduplicatedErrors, err)
+	}
+
+	return deduplicatedErrors
 }
 
 func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
@@ -66,6 +76,7 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 
 	go func() {
 		result := &Result{
+			errors:              map[string]error{},
 			ResourceUtilization: &api.ResourceUtilization{},
 		}
 
@@ -84,8 +95,8 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 					return
 				}
 
-				result.Errors = append(result.Errors,
-					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), cpuErr))
+				err := fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), cpuErr)
+				result.errors[err.Error()] = err
 			}
 
 			// Memory usage
@@ -97,8 +108,8 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 					return
 				}
 
-				result.Errors = append(result.Errors,
-					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), memoryErr))
+				err := fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), memoryErr)
+				result.errors[err.Error()] = err
 			}
 
 			if logger != nil {

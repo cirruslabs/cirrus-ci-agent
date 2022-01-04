@@ -17,10 +17,10 @@ func TestMetrics(t *testing.T) {
 
 	result := <-resultChan
 
-	for i, err := range result.Errors {
+	for i, err := range result.Errors() {
 		fmt.Printf("Error #%d: %v\n", i, err)
 	}
-	require.Empty(t, result.Errors, "we should never get errors here, but got %d", len(result.Errors))
+	require.Empty(t, result.Errors(), "we should never get errors here, but got %d", len(result.Errors()))
 	require.Len(t, result.ResourceUtilization.CpuChart, 4)
 	require.Len(t, result.ResourceUtilization.MemoryChart, 4)
 }
