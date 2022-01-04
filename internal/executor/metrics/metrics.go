@@ -73,6 +73,8 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 		startTime := time.Now()
 
 		for {
+			cycleStartTime := time.Now()
+
 			// CPU usage
 			numCpusUsed, cpuErr := cpuSource.NumCpusUsed(ctx, pollInterval)
 			if cpuErr != nil {
@@ -117,6 +119,17 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 					SecondsFromStart: uint32(timeSinceStart.Seconds()),
 					Value:            amountMemoryUsed,
 				})
+			}
+
+			// Make sure we wait the whole pollInterval
+			timeLeftToWait := pollInterval - time.Since(cycleStartTime)
+			select {
+			case <-ctx.Done():
+				resultChan <- result
+
+				return
+			case <-time.After(timeLeftToWait):
+				// continue
 			}
 
 			// Gradually increase the poll interval to avoid missing data for
