@@ -10,8 +10,11 @@ import (
 )
 
 type Result struct {
-	Errors              []error
 	ResourceUtilization *api.ResourceUtilization
+}
+
+func (Result) Errors() []error {
+	return []error{}
 }
 
 func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
