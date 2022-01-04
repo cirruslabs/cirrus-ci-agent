@@ -75,28 +75,28 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 		for {
 			// CPU usage
 			numCpusUsed, cpuErr := cpuSource.NumCpusUsed(ctx, pollInterval)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			if cpuErr != nil {
+				if errors.Is(cpuErr, context.Canceled) || errors.Is(cpuErr, context.DeadlineExceeded) {
 					resultChan <- result
 
 					return
 				}
 
 				result.Errors = append(result.Errors,
-					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), err))
+					fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), cpuErr))
 			}
 
 			// Memory usage
 			amountMemoryUsed, memoryErr := memorySource.AmountMemoryUsed(ctx)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			if memoryErr != nil {
+				if errors.Is(memoryErr, context.Canceled) || errors.Is(memoryErr, context.DeadlineExceeded) {
 					resultChan <- result
 
 					return
 				}
 
 				result.Errors = append(result.Errors,
-					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), err))
+					fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), memoryErr))
 			}
 
 			if logger != nil {
