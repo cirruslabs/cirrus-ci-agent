@@ -2,8 +2,6 @@ module github.com/cirruslabs/cirrus-ci-agent
 
 go 1.17
 
-replace github.com/go-git/go-git/v5 => github.com/cirruslabs/go-git/v5 v5.4.2-reference-delta-fix
-
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.4
@@ -11,7 +9,7 @@ require (
 	github.com/cirruslabs/cirrus-ci-annotations v0.7.0
 	github.com/cirruslabs/terminal v0.11.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/go-git/go-git/v5 v5.4.2
+	github.com/go-git/go-git/v5 v5.4.3-0.20220108132248-a5bbcd278ab1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -23,16 +21,16 @@ require (
 	github.com/shirou/gopsutil v3.21.10-0.20211023024924-fb65e185a90c+incompatible
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20211020060615-d418f374d309
+	golang.org/x/net v0.0.0-20220107192237-5cfca573fb4d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 )
 
 require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
-	github.com/ProtonMail/go-crypto v0.0.0-20210920160938-87db9fbc61c7 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20211221144345-a4f6767435ab // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/creack/pty v1.1.17 // indirect
@@ -55,7 +53,7 @@ require (
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20211021150943-2b146023228c // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
