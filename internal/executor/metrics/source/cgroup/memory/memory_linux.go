@@ -7,6 +7,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/resolver"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/subsystem"
+	"runtime"
 )
 
 type VersionlessMemory struct {
@@ -36,6 +37,10 @@ func NewMemory(resolver resolver.Resolver) (source.Memory, error) {
 	}
 
 	return versionlessMemory, nil
+}
+
+func (cpu *VersionlessMemory) Name() string {
+	return fmt.Sprintf("cgroup memory resolver on %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
 func (memory *VersionlessMemory) AmountMemoryUsed(ctx context.Context) (float64, error) {

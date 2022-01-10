@@ -1,3 +1,4 @@
+//go:build !windows || (!arm && !arm64)
 // +build !windows !arm,!arm64
 
 package metrics
@@ -24,9 +25,23 @@ var (
 	ErrFailedToQueryMemory = errors.New("failed to query memory usage")
 )
 
-func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtilization, chan error) {
-	resultChan := make(chan *api.ResourceUtilization, 1)
-	errChan := make(chan error, 1)
+type Result struct {
+	errors              map[string]error
+	ResourceUtilization *api.ResourceUtilization
+}
+
+func (result Result) Errors() []error {
+	var deduplicatedErrors []error
+
+	for _, err := range result.errors {
+		deduplicatedErrors = append(deduplicatedErrors, err)
+	}
+
+	return deduplicatedErrors
+}
+
+func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
+	resultChan := make(chan *Result, 1)
 
 	var cpuSource source.CPU
 	var memorySource source.Memory
@@ -60,32 +75,41 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 	}
 
 	go func() {
-		result := &api.ResourceUtilization{}
+		result := &Result{
+			errors:              map[string]error{},
+			ResourceUtilization: &api.ResourceUtilization{},
+		}
 
 		pollInterval := 1 * time.Second
 		startTime := time.Now()
 
 		for {
+			cycleStartTime := time.Now()
+
 			// CPU usage
-			numCpusUsed, err := cpuSource.NumCpusUsed(ctx, pollInterval)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			numCpusUsed, cpuErr := cpuSource.NumCpusUsed(ctx, pollInterval)
+			if cpuErr != nil {
+				if errors.Is(cpuErr, context.Canceled) || errors.Is(cpuErr, context.DeadlineExceeded) {
 					resultChan <- result
-				} else {
-					errChan <- fmt.Errorf("%w: %v", ErrFailedToQueryCPU, err)
+
+					return
 				}
-				return
+
+				err := fmt.Errorf("%w using %s: %v", ErrFailedToQueryCPU, cpuSource.Name(), cpuErr)
+				result.errors[err.Error()] = err
 			}
 
 			// Memory usage
-			amountMemoryUsed, err := memorySource.AmountMemoryUsed(ctx)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			amountMemoryUsed, memoryErr := memorySource.AmountMemoryUsed(ctx)
+			if memoryErr != nil {
+				if errors.Is(memoryErr, context.Canceled) || errors.Is(memoryErr, context.DeadlineExceeded) {
 					resultChan <- result
-				} else {
-					errChan <- fmt.Errorf("%w: %v", ErrFailedToQueryMemory, err)
+
+					return
 				}
-				return
+
+				err := fmt.Errorf("%w using %s: %v", ErrFailedToQueryMemory, memorySource.Name(), memoryErr)
+				result.errors[err.Error()] = err
 			}
 
 			if logger != nil {
@@ -95,14 +119,29 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 
 			timeSinceStart := time.Since(startTime)
 
-			result.CpuChart = append(result.CpuChart, &api.ChartPoint{
-				SecondsFromStart: uint32(timeSinceStart.Seconds()),
-				Value:            numCpusUsed,
-			})
-			result.MemoryChart = append(result.MemoryChart, &api.ChartPoint{
-				SecondsFromStart: uint32(timeSinceStart.Seconds()),
-				Value:            amountMemoryUsed,
-			})
+			if cpuErr == nil {
+				result.ResourceUtilization.CpuChart = append(result.ResourceUtilization.CpuChart, &api.ChartPoint{
+					SecondsFromStart: uint32(timeSinceStart.Seconds()),
+					Value:            numCpusUsed,
+				})
+			}
+			if memoryErr == nil {
+				result.ResourceUtilization.MemoryChart = append(result.ResourceUtilization.MemoryChart, &api.ChartPoint{
+					SecondsFromStart: uint32(timeSinceStart.Seconds()),
+					Value:            amountMemoryUsed,
+				})
+			}
+
+			// Make sure we wait the whole pollInterval
+			timeLeftToWait := pollInterval - time.Since(cycleStartTime)
+			select {
+			case <-ctx.Done():
+				resultChan <- result
+
+				return
+			case <-time.After(timeLeftToWait):
+				// continue
+			}
 
 			// Gradually increase the poll interval to avoid missing data for
 			// short-running tasks, but to preserve memory for long-running tasks
@@ -112,5 +151,5 @@ func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtil
 		}
 	}()
 
-	return resultChan, errChan
+	return resultChan
 }

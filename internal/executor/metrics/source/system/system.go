@@ -2,8 +2,10 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
+	"runtime"
 	"time"
 )
 
@@ -35,4 +37,8 @@ func (system *System) AmountMemoryUsed(ctx context.Context) (float64, error) {
 	}
 
 	return float64(virtualMemoryStat.Used), nil
+}
+
+func (system *System) Name() string {
+	return fmt.Sprintf("gopsutil on %s/%s", runtime.GOOS, runtime.GOARCH)
 }

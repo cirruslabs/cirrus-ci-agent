@@ -1,3 +1,4 @@
+//go:build (windows && arm) || (windows && arm64)
 // +build windows,arm windows,arm64
 
 package metrics
@@ -8,11 +9,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Run(ctx context.Context, logger logrus.FieldLogger) (chan *api.ResourceUtilization, chan error) {
-	resultChan := make(chan *api.ResourceUtilization, 1)
-	errChan := make(chan error, 1)
+type Result struct {
+	ResourceUtilization *api.ResourceUtilization
+}
+
+func (Result) Errors() []error {
+	return []error{}
+}
+
+func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
+	resultChan := make(chan *Result, 1)
 
 	resultChan <- nil
 
-	return resultChan, errChan
+	return resultChan
 }
