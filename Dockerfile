@@ -3,8 +3,10 @@ FROM golang:latest as builder
 WORKDIR /tmp/cirrus-ci-agent
 ADD . /tmp/cirrus-ci-agent/
 
-RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
-RUN ./bin/goreleaser build --single-target --snapshot
+RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | tee /etc/apt/sources.list.d/goreleaser.list
+RUN apt-get update
+RUN apt-get -y install goreleaser
+RUN goreleaser build --single-target --snapshot
 
 FROM alpine:latest
 
