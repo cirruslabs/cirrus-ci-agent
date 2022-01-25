@@ -2,43 +2,50 @@ package cirrusenv
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/google/uuid"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 type CirrusEnv struct {
-	file *os.File
+	filepath string
 }
 
 func New(taskID int64) (*CirrusEnv, error) {
 	filename := fmt.Sprintf("cirrus-env-task-%d-%s", taskID, uuid.New().String())
+	filepath := filepath.Join(os.TempDir(), filename)
 
-	cirrusEnvFile, err := os.Create(filepath.Join(os.TempDir(), filename))
+	cirrusEnvFile, err := os.Create(filepath)
 	if err != nil {
 		return nil, err
 	}
 
+	if err := cirrusEnvFile.Close(); err != nil {
+		return nil, err
+	}
+
 	return &CirrusEnv{
-		file: cirrusEnvFile,
+		filepath: filepath,
 	}, nil
 }
 
 func (ce *CirrusEnv) Path() string {
-	return ce.file.Name()
+	return ce.filepath
 }
 
 func (ce *CirrusEnv) Consume() (map[string]string, error) {
 	result := map[string]string{}
 
-	if _, err := ce.file.Seek(0, io.SeekStart); err != nil {
+	fileBytes, err := os.ReadFile(ce.filepath)
+	if err != nil {
 		return nil, err
 	}
 
-	scanner := bufio.NewScanner(ce.file)
+	buf := bytes.NewBuffer(fileBytes)
+	scanner := bufio.NewScanner(buf)
 
 	for scanner.Scan() {
 		splits := strings.SplitN(scanner.Text(), "=", 2)
@@ -53,10 +60,6 @@ func (ce *CirrusEnv) Consume() (map[string]string, error) {
 }
 
 func (ce *CirrusEnv) Close() error {
-	if err := ce.file.Close(); err != nil {
-		return err
-	}
-
 	return os.Remove(ce.Path())
 }
 

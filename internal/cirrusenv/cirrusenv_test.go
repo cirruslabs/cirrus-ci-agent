@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCirrusEnv(t *testing.T) {
+func TestCirrusEnvNormal(t *testing.T) {
 	ce, err := cirrusenv.New(42)
 	if err != nil {
 		t.Fatal(err)
