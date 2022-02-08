@@ -11,6 +11,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -294,6 +295,7 @@ func FetchCache(
 ) (*os.File, time.Duration, error) {
 	cacheFile, err := ioutil.TempFile(os.TempDir(), commandName)
 	if err != nil {
+		log.Printf("Failed to create a temp file %s: %v\n", commandName, err)
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s!", commandName)))
 		return nil, 0, err
 	}
@@ -302,25 +304,30 @@ func FetchCache(
 	downloadStartTime := time.Now()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", cacheHost, cacheKey), nil)
 	if err != nil {
+		log.Printf("Failed to create a cache request for %s: %v\n", commandName, err)
 		return nil, 0, err
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		log.Printf("HTTP cache request for %s failed: %v\n", commandName, err)
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("HTTP cache request for %s status: %s\n", commandName, resp.Status)
 		return nil, 0, nil
 	}
 
 	bufferedFileWriter := bufio.NewWriter(cacheFile)
 	bytesDownloaded, err := bufferedFileWriter.ReadFrom(bufio.NewReader(resp.Body))
 	if err != nil {
+		log.Printf("Failed to finish downloading %s cache: %v\n", commandName, err)
 		return nil, 0, err
 	}
 	err = bufferedFileWriter.Flush()
 	if err != nil {
+		log.Printf("Failed to flush %s cache: %v\n", commandName, err)
 		return nil, 0, err
 	}
 	downloadDuration := time.Since(downloadStartTime)

@@ -111,6 +111,7 @@ func checkCacheExists(w http.ResponseWriter, cacheKey string) {
 	}
 	response, err := client.CirrusClient.CacheInfo(context.Background(), &cacheInfoRequest)
 	if err != nil {
+		log.Printf("%s cache info failed: %v\n", cacheKey, err)
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		if response.Info.CreatedByTaskId > 0 {
@@ -128,7 +129,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	}
 	response, err := client.CirrusClient.GenerateCacheDownloadURL(context.Background(), &key)
 	if err != nil {
-		log.Println("Not found!")
+		log.Printf("%s cache download failed: %v\n", cacheKey, err)
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		log.Printf("Redirecting cache download of %s\n", cacheKey)
@@ -172,6 +173,7 @@ func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	}
 	req, err := http.NewRequest("PUT", generateResp.Url, bufio.NewReader(r.Body))
 	if err != nil {
+		log.Printf("%s cache upload failed: %v\n", cacheKey, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
