@@ -460,10 +460,6 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		message := fmt.Sprintf("Failed collect CIRRUS_ENV subsystem results: %v", err)
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
-		return &StepResult{
-			Success:  false,
-			Duration: time.Since(start),
-		}, nil
 	}
 	if len(cirrusEnvVariables) != 0 {
 		// Accommodate new environment variables
