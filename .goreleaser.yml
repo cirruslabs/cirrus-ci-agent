@@ -21,6 +21,8 @@ builds:
       - linux
       - windows
       - freebsd
+      - openbsd
+      - netbsd
       - solaris
     goarch:
       - amd64
