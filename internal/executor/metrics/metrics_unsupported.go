@@ -1,5 +1,4 @@
-//go:build (windows && arm) || (windows && arm64)
-// +build windows,arm windows,arm64
+//go:build openbsd
 
 package metrics
 

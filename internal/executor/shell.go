@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
-	"github.com/mitchellh/go-ps"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/processdumper"
 	"io"
 	"log"
 	"os"
@@ -65,15 +65,7 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 	case <-ctx.Done():
 		handler([]byte("\nTimed out!"))
 
-		processes, err := ps.Processes()
-		if err != nil {
-			log.Printf("Failed to retrieve processes to diagnose the time out")
-		} else {
-			log.Printf("Process list:")
-			for _, process := range processes {
-				log.Printf("%d %d %s", process.Pid(), process.PPid(), process.Executable())
-			}
-		}
+		processdumper.Dump()
 
 		if err = sc.kill(); err != nil {
 			handler([]byte(fmt.Sprintf("\nFailed to kill a timed out shell session: %s", err)))
