@@ -1,3 +1,5 @@
+//go:build !(openbsd || netbsd)
+
 package metrics_test
 
 import (
