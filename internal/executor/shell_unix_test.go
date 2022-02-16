@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"os/exec"
 	"runtime"
 	"testing"
 	"time"
@@ -14,6 +15,10 @@ import (
 func TestZshDoesNotHang(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	if _, err := exec.LookPath("zsh"); err != nil {
+		t.Skip("no Zsh found")
+	}
 
 	success, _ := ShellCommandsAndGetOutput(ctx, []string{"zsh -c 'echo \"a:b\" | read -d \":\" piece'"}, nil)
 	assert.True(t, success)
