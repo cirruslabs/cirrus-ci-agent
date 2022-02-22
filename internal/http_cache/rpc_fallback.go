@@ -77,7 +77,7 @@ func uploadCacheEntryViaRPC(w http.ResponseWriter, r *http.Request, cacheKey str
 		return
 	}
 
-	buf := make([]byte, 10*1024*1024)
+	buf := make([]byte, 1024*1024)
 
 	for {
 		n, err := r.Body.Read(buf)
