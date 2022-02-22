@@ -25,7 +25,6 @@ func downloadCacheViaRPC(w http.ResponseWriter, r *http.Request, cacheKey string
 		if err != nil {
 			if err == io.EOF {
 				log.Printf("%s cache download (RPC fallback) finished...\n", cacheKey)
-				w.WriteHeader(http.StatusOK)
 			} else {
 				log.Printf("%s cache download (RPC fallback) failed: %v\n", cacheKey, err)
 				w.WriteHeader(http.StatusInternalServerError)
