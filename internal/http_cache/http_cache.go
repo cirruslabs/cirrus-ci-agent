@@ -10,6 +10,8 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"golang.org/x/sync/semaphore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"net"
@@ -130,6 +132,15 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	response, err := client.CirrusClient.GenerateCacheDownloadURL(context.Background(), &key)
 	if err != nil {
 		log.Printf("%s cache download failed: %v\n", cacheKey, err)
+
+		// RPC fallback
+		if status.Code(err) == codes.Unimplemented {
+			log.Println("Falling back to downloading cache over RPC...")
+			downloadCacheViaRPC(w, r, cacheKey)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		log.Printf("Redirecting cache download of %s\n", cacheKey)
@@ -167,6 +178,15 @@ func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to initialized uploading of %s cache! %s", cacheKey, err)
 		log.Println(errorMsg)
+
+		// RPC fallback
+		if status.Code(err) == codes.Unimplemented {
+			log.Println("Falling back to uploading cache over RPC...")
+			uploadCacheEntryViaRPC(w, r, cacheKey)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(errorMsg))
 		return
