@@ -3,6 +3,8 @@ package http_cache
 import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"net/http"
@@ -15,7 +17,12 @@ func downloadCacheViaRPC(w http.ResponseWriter, r *http.Request, cacheKey string
 	})
 	if err != nil {
 		log.Printf("%s cache download initialization (RPC fallback) failed: %v\n", cacheKey, err)
-		w.WriteHeader(http.StatusNotFound)
+
+		if status.Code(err) == codes.NotFound {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 
 		return
 	}
@@ -27,7 +34,12 @@ func downloadCacheViaRPC(w http.ResponseWriter, r *http.Request, cacheKey string
 				log.Printf("%s cache download (RPC fallback) finished...\n", cacheKey)
 			} else {
 				log.Printf("%s cache download (RPC fallback) failed: %v\n", cacheKey, err)
-				w.WriteHeader(http.StatusInternalServerError)
+
+				if status.Code(err) == codes.NotFound {
+					w.WriteHeader(http.StatusNotFound)
+				} else {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
 			}
 
 			return
