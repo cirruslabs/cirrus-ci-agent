@@ -92,6 +92,23 @@ func uploadCacheEntryViaRPC(w http.ResponseWriter, r *http.Request, cacheKey str
 
 	for {
 		n, err := r.Body.Read(buf)
+		if n != 0 {
+			err = uploadCacheClient.Send(&api.CacheEntry{
+				Value: &api.CacheEntry_Chunk{
+					Chunk: &api.DataChunk{
+						Data: buf[:n],
+					},
+				},
+			})
+			if err != nil {
+				log.Printf("%s cache upload (RPC fallback) failed: %v\n", cacheKey, err)
+				w.WriteHeader(http.StatusInternalServerError)
+
+				_, _ = uploadCacheClient.CloseAndRecv()
+
+				return
+			}
+		}
 		if err == io.EOF {
 			log.Printf("%s cache upload (RPC fallback) finished...\n", cacheKey)
 
@@ -100,26 +117,6 @@ func uploadCacheEntryViaRPC(w http.ResponseWriter, r *http.Request, cacheKey str
 		if err != nil {
 			log.Printf("%s cache upload (RPC fallback) failed: %v\n", cacheKey, err)
 			w.WriteHeader(http.StatusBadRequest)
-
-			_, _ = uploadCacheClient.CloseAndRecv()
-
-			return
-		}
-
-		if n == 0 {
-			continue
-		}
-
-		err = uploadCacheClient.Send(&api.CacheEntry{
-			Value: &api.CacheEntry_Chunk{
-				Chunk: &api.DataChunk{
-					Data: buf[:n],
-				},
-			},
-		})
-		if err != nil {
-			log.Printf("%s cache upload (RPC fallback) failed: %v\n", cacheKey, err)
-			w.WriteHeader(http.StatusInternalServerError)
 
 			_, _ = uploadCacheClient.CloseAndRecv()
 
