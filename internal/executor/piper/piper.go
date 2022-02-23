@@ -36,14 +36,14 @@ func (piper *Piper) Input() *os.File {
 }
 
 func (piper *Piper) Close() (result error) {
+	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
+		result = err
+	}
+
 	// Cancel the Goroutine started in New()
 	result = piper.r.Close()
 
 	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
-		result = err
-	}
-
-	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
 		result = err
 	}
 
