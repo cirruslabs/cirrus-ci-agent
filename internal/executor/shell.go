@@ -73,7 +73,7 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 
 		return cmd, TimeOutError
 	case <-done:
-		if err := sc.piper.Close(); err != nil {
+		if err := sc.piper.Close(false); err != nil {
 			if errors.Is(err, os.ErrDeadlineExceeded) {
 				if err := sc.kill(); err != nil {
 					handler([]byte(fmt.Sprintf("\nFailed to kill a partially completed shell session: %s", err)))
@@ -164,7 +164,7 @@ func NewShellCommands(scripts []string, custom_env *map[string]string, handler S
 
 	err = cmd.Start()
 	if err != nil {
-		if err := sc.piper.Close(); err != nil {
+		if err := sc.piper.Close(true); err != nil {
 			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 		}
 

@@ -26,6 +26,7 @@ func New(output io.Writer) (*Piper, error) {
 	go func() {
 		_, err := io.Copy(output, r)
 		piper.errChan <- err
+		_ = r.Close()
 	}()
 
 	return piper, nil
@@ -35,15 +36,20 @@ func (piper *Piper) Input() *os.File {
 	return piper.w
 }
 
-func (piper *Piper) Close() (result error) {
-	// Cancel the Goroutine started in New()
-	result = piper.r.Close()
+func (piper *Piper) Close(force bool) (result error) {
+	// Terminate the Goroutine started in New()
+	if force {
+		_ = piper.r.Close()
+	}
 
-	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
+	// Close our writing end (if not closed yet)
+	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
 		result = err
 	}
 
-	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
+	// Wait for the Goroutine started in New(): it will reach EOF once
+	// all the copies of the writing end file descriptor are closed
+	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
 		result = err
 	}
 
