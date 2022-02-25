@@ -1,6 +1,7 @@
 package piper
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -26,7 +27,6 @@ func New(output io.Writer) (*Piper, error) {
 	go func() {
 		_, err := io.Copy(output, r)
 		piper.errChan <- err
-		_ = r.Close()
 	}()
 
 	return piper, nil
@@ -36,21 +36,29 @@ func (piper *Piper) Input() *os.File {
 	return piper.w
 }
 
-func (piper *Piper) Close(force bool) (result error) {
-	// Terminate the Goroutine started in New()
-	if force {
-		_ = piper.r.Close()
-	}
-
+func (piper *Piper) Close(ctx context.Context) (result error) {
 	// Close our writing end (if not closed yet)
 	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
+		result = err
+	}
+	// Terminate the Goroutine started in New()
+	err := piper.r.Close()
+	if err != nil && result == nil {
 		result = err
 	}
 
 	// Wait for the Goroutine started in New(): it will reach EOF once
 	// all the copies of the writing end file descriptor are closed
-	if err := <-piper.errChan; err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
-		result = err
+
+	select {
+	case <-ctx.Done():
+		if result == nil {
+			result = context.Canceled
+		}
+	case err := <-piper.errChan:
+		if err != nil && !errors.Is(err, os.ErrClosed) {
+			result = err
+		}
 	}
 
 	return result

@@ -111,8 +111,9 @@ func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 1"}, nil)
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 &", "exit 0"}, nil)
 
 	assert.True(t, success)
 	assert.NotContains(t, output, "Timed out!")
+	assert.NotContains(t, output, "error")
 }
