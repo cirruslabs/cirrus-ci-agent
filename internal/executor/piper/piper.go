@@ -33,7 +33,7 @@ func New(output io.Writer) (*Piper, error) {
 	return piper, nil
 }
 
-func (piper *Piper) Input() *os.File {
+func (piper *Piper) FileProxy() *os.File {
 	return piper.w
 }
 

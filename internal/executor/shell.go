@@ -160,8 +160,8 @@ func NewShellCommands(
 		return nil, err
 	}
 
-	cmd.Stderr = sc.piper.Input()
-	cmd.Stdout = sc.piper.Input()
+	cmd.Stderr = sc.piper.FileProxy()
+	cmd.Stdout = sc.piper.FileProxy()
 
 	err = cmd.Start()
 	if err != nil {
@@ -176,7 +176,7 @@ func NewShellCommands(
 
 	sc.afterStart()
 
-	if err := sc.piper.Input().Close(); err != nil {
+	if err := sc.piper.FileProxy().Close(); err != nil {
 		_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 	}
 
