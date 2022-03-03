@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os/exec"
 	"runtime"
 	"testing"
@@ -128,4 +129,18 @@ func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
 
 	assert.True(t, success)
 	assert.NotContains(t, output, "Timed out!")
+}
+
+func TestShellStartFailureDoesNotHang(t *testing.T) {
+	startTime := time.Now()
+
+	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"true"}, &map[string]string{
+		"CIRRUS_SHELL": "/bin/non-existent-shell",
+	})
+
+	if time.Since(startTime) > 1*time.Second {
+		t.Fatalf("took more than 1 second")
+	}
+
+	require.False(t, success)
 }
