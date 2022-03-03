@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os/exec"
 	"runtime"
 	"testing"
@@ -107,12 +108,39 @@ func Test_ShellCommands_Timeout_Unix(t *testing.T) {
 	}
 }
 
-func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
+func TestChildrenProcessesAreCancelled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 1"}, nil)
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 10"}, nil)
+
+	assert.False(t, success)
+	assert.Contains(t, output, "Timed out!")
+}
+
+func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
+	startTime := time.Now()
+
+	success, output := ShellCommandsAndGetOutput(context.Background(), []string{"sleep 60 & sleep 1"}, nil)
+
+	if time.Since(startTime) > 5*time.Second {
+		t.Fatalf("took more than 5 seconds")
+	}
 
 	assert.True(t, success)
 	assert.NotContains(t, output, "Timed out!")
+}
+
+func TestShellStartFailureDoesNotHang(t *testing.T) {
+	startTime := time.Now()
+
+	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"true"}, &map[string]string{
+		"CIRRUS_SHELL": "/bin/non-existent-shell",
+	})
+
+	if time.Since(startTime) > 1*time.Second {
+		t.Fatalf("took more than 1 second")
+	}
+
+	require.False(t, success)
 }

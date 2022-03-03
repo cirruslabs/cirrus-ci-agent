@@ -39,7 +39,7 @@ func ShellCommandsAndGetOutput(ctx context.Context, scripts []string, custom_env
 
 // return true if executed successful
 func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*exec.Cmd, error) {
-	sc, err := NewShellCommands(scripts, custom_env, handler)
+	sc, err := NewShellCommands(ctx, scripts, custom_env, handler)
 	if err != nil {
 		return nil, err
 	}
@@ -73,14 +73,10 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 
 		return cmd, TimeOutError
 	case <-done:
-		if err := sc.piper.Close(false); err != nil {
-			if errors.Is(err, os.ErrDeadlineExceeded) {
-				if err := sc.kill(); err != nil {
-					handler([]byte(fmt.Sprintf("\nFailed to kill a partially completed shell session: %s", err)))
-				}
-			} else {
-				handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
-			}
+		_ = sc.kill()
+
+		if err := sc.piper.Close(ctx); err != nil {
+			handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
 		}
 
 		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
@@ -99,7 +95,12 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 	}
 }
 
-func NewShellCommands(scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*ShellCommands, error) {
+func NewShellCommands(
+	ctx context.Context,
+	scripts []string,
+	custom_env *map[string]string,
+	handler ShellOutputHandler,
+) (*ShellCommands, error) {
 	var cmd *exec.Cmd
 	var scriptFile *os.File
 	var err error
@@ -159,12 +160,12 @@ func NewShellCommands(scripts []string, custom_env *map[string]string, handler S
 		return nil, err
 	}
 
-	cmd.Stderr = sc.piper.Input()
-	cmd.Stdout = sc.piper.Input()
+	cmd.Stderr = sc.piper.FileProxy()
+	cmd.Stdout = sc.piper.FileProxy()
 
 	err = cmd.Start()
 	if err != nil {
-		if err := sc.piper.Close(true); err != nil {
+		if err := sc.piper.Close(ctx); err != nil {
 			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 		}
 
@@ -175,7 +176,9 @@ func NewShellCommands(scripts []string, custom_env *map[string]string, handler S
 
 	sc.afterStart()
 
-	if err := sc.piper.Input().Close(); err != nil {
+	// At this point the shell has successfully started and inherited
+	// the proxy file descriptor. We can release our own descriptor now.
+	if err := sc.piper.FileProxy().Close(); err != nil {
 		_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 	}
 
