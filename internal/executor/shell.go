@@ -176,6 +176,8 @@ func NewShellCommands(
 
 	sc.afterStart()
 
+	// At this point the shell has successfully started and inherited
+	// the proxy file descriptor. We can release our own descriptor now.
 	if err := sc.piper.FileProxy().Close(); err != nil {
 		_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 	}
