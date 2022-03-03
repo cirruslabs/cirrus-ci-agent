@@ -75,7 +75,7 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 	case <-done:
 		_ = sc.kill()
 
-		if err := sc.piper.Close(ctx, false); err != nil {
+		if err := sc.piper.Close(ctx); err != nil {
 			handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
 		}
 
@@ -165,7 +165,7 @@ func NewShellCommands(
 
 	err = cmd.Start()
 	if err != nil {
-		if err := sc.piper.Close(ctx, true); err != nil {
+		if err := sc.piper.Close(ctx); err != nil {
 			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 		}
 
