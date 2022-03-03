@@ -107,6 +107,16 @@ func Test_ShellCommands_Timeout_Unix(t *testing.T) {
 	}
 }
 
+func TestChildrenProcessesAreCancelled(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 10"}, nil)
+
+	assert.False(t, success)
+	assert.Contains(t, output, "Timed out!")
+}
+
 func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
 	startTime := time.Now()
 

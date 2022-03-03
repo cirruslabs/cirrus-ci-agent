@@ -495,7 +495,7 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	scripts []string,
 	env map[string]string,
 ) (*exec.Cmd, error) {
-	sc, err := NewShellCommands(scripts, &env, func(bytes []byte) (int, error) {
+	sc, err := NewShellCommands(ctx, scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	})
 	var cmd *exec.Cmd

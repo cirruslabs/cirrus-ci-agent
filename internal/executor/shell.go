@@ -39,7 +39,7 @@ func ShellCommandsAndGetOutput(ctx context.Context, scripts []string, custom_env
 
 // return true if executed successful
 func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*exec.Cmd, error) {
-	sc, err := NewShellCommands(scripts, custom_env, handler)
+	sc, err := NewShellCommands(ctx, scripts, custom_env, handler)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 	case <-done:
 		_ = sc.kill()
 
-		if err := sc.piper.Close(false); err != nil {
+		if err := sc.piper.Close(ctx, false); err != nil {
 			handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
 		}
 
@@ -95,7 +95,12 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 	}
 }
 
-func NewShellCommands(scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*ShellCommands, error) {
+func NewShellCommands(
+	ctx context.Context,
+	scripts []string,
+	custom_env *map[string]string,
+	handler ShellOutputHandler,
+) (*ShellCommands, error) {
 	var cmd *exec.Cmd
 	var scriptFile *os.File
 	var err error
@@ -160,7 +165,7 @@ func NewShellCommands(scripts []string, custom_env *map[string]string, handler S
 
 	err = cmd.Start()
 	if err != nil {
-		if err := sc.piper.Close(true); err != nil {
+		if err := sc.piper.Close(ctx, true); err != nil {
 			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 		}
 
