@@ -19,7 +19,7 @@ func (Result) Errors() []error {
 func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 	resultChan := make(chan *Result, 1)
 
-	resultChan <- nil
+	resultChan <- &Result{}
 
 	return resultChan
 }
