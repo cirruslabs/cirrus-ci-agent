@@ -73,11 +73,25 @@ func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map
 
 		return cmd, TimeOutError
 	case <-done:
-		_ = sc.kill()
+		// Try to close the piper
+		subCtx, subCtxCancel := context.WithTimeout(ctx, time.Second)
 
-		if err := sc.piper.Close(ctx); err != nil {
-			handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
+		if err := sc.piper.Close(subCtx); err != nil {
+			// In case of timeout, kill the shell commands
+			// to release the piper's file proxy FDs and
+			// try again.
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				_ = sc.kill()
+
+				if err := sc.piper.Close(ctx); err != nil {
+					handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
+				}
+			} else {
+				handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
+			}
 		}
+
+		subCtxCancel()
 
 		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
 			if ws.Signaled() {
