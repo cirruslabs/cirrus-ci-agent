@@ -43,6 +43,9 @@ func (piper *Piper) Close(ctx context.Context, force bool) (result error) {
 		result = err
 	}
 
+	// In case there might be still processes holding the writing end of the pipe,
+	// forcefully terminate the Goroutine started in New() by closing the read end
+	// of the pipe
 	if force {
 		_ = piper.r.Close()
 	}
