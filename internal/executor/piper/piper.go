@@ -37,10 +37,14 @@ func (piper *Piper) FileProxy() *os.File {
 	return piper.w
 }
 
-func (piper *Piper) Close(ctx context.Context) (result error) {
+func (piper *Piper) Close(ctx context.Context, force bool) (result error) {
 	// Close our writing end (if not closed yet)
 	if err := piper.w.Close(); err != nil && !errors.Is(err, os.ErrClosed) && result == nil {
 		result = err
+	}
+
+	if force {
+		_ = piper.r.Close()
 	}
 
 	// Wait for the Goroutine started in New(): it will reach EOF once

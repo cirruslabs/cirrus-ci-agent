@@ -485,7 +485,7 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	env map[string]string) (*exec.Cmd, error) {
 	cmd, err := ShellCommandsAndWait(ctx, scripts, &env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
-	})
+	}, executor.shouldKillProcesses())
 	return cmd, err
 }
 
@@ -733,6 +733,12 @@ func (executor *Executor) CloneRepository(ctx context.Context, logUploader *LogU
 	logUploader.Write([]byte("\nSuccessfully cloned!"))
 
 	return true
+}
+
+func (executor *Executor) shouldKillProcesses() bool {
+	_, shouldNotKillProcesses := executor.env["CIRRUS_ESCAPING_PROCESSES"]
+
+	return !shouldNotKillProcesses
 }
 
 func retryableCloneError(err error) bool {
