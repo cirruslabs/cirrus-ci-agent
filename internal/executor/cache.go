@@ -45,7 +45,7 @@ func (executor *Executor) DownloadCache(
 	instruction *api.CacheInstruction,
 	custom_env map[string]string,
 ) bool {
-	cacheKey, ok := generateCacheKey(ctx, logUploader, commandName, instruction, custom_env)
+	cacheKey, ok := executor.generateCacheKey(ctx, logUploader, commandName, instruction, custom_env)
 	if !ok {
 		return false
 	}
@@ -129,7 +129,7 @@ func (executor *Executor) DownloadCache(
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s! Populating...\n", cacheKey)))
 		cmd, err := ShellCommandsAndWait(ctx, instruction.PopulateScripts, &custom_env, func(bytes []byte) (int, error) {
 			return logUploader.Write(bytes)
-		})
+		}, executor.shouldKillProcesses())
 		if err != nil || cmd == nil || cmd.ProcessState == nil || !cmd.ProcessState.Success() {
 			message := fmt.Sprintf("\nFailed to execute populate script for %s cache!", commandName)
 			executor.cacheAttempts.Failed(cacheKey, message)
@@ -156,7 +156,7 @@ func (executor *Executor) DownloadCache(
 	return true
 }
 
-func generateCacheKey(
+func (executor *Executor) generateCacheKey(
 	ctx context.Context,
 	logUploader *LogUploader,
 	commandName string,
@@ -173,7 +173,7 @@ func generateCacheKey(
 		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
 			cacheKeyHash.Write(bytes)
 			return logUploader.Write(bytes)
-		})
+		}, executor.shouldKillProcesses())
 		if err != nil || !cmd.ProcessState.Success() {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to execute fingerprint script for %s cache!", commandName)))
 			return "", false
