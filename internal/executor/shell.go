@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -28,14 +29,16 @@ func (writer ShellOutputWriter) Write(bytes []byte) (int, error) {
 	return writer.handler(bytes)
 }
 
+func ShellCommandsAndGetOutput(ctx context.Context, scripts []string, custom_env *map[string]string) (bool, string) {
+	var buffer bytes.Buffer
+	cmd, err := ShellCommandsAndWait(ctx, scripts, custom_env, func(bytes []byte) (int, error) {
+		return buffer.Write(bytes)
+	})
+	return err == nil && cmd.ProcessState.Success(), buffer.String()
+}
+
 // return true if executed successful
-func ShellCommandsAndWait(
-	ctx context.Context,
-	scripts []string,
-	custom_env *map[string]string,
-	handler ShellOutputHandler,
-	shouldKillProcesses bool,
-) (*exec.Cmd, error) {
+func ShellCommandsAndWait(ctx context.Context, scripts []string, custom_env *map[string]string, handler ShellOutputHandler) (*exec.Cmd, error) {
 	sc, err := NewShellCommands(ctx, scripts, custom_env, handler)
 	if err != nil {
 		return nil, err
@@ -70,15 +73,9 @@ func ShellCommandsAndWait(
 
 		return cmd, TimeOutError
 	case <-done:
-		var forcePiperClosure bool
+		_ = sc.kill()
 
-		if shouldKillProcesses {
-			_ = sc.kill()
-		} else {
-			forcePiperClosure = true
-		}
-
-		if err := sc.piper.Close(ctx, forcePiperClosure); err != nil {
+		if err := sc.piper.Close(ctx); err != nil {
 			handler([]byte(fmt.Sprintf("\nShell session I/O error: %s", err)))
 		}
 
@@ -168,7 +165,7 @@ func NewShellCommands(
 
 	err = cmd.Start()
 	if err != nil {
-		if err := sc.piper.Close(ctx, true); err != nil {
+		if err := sc.piper.Close(ctx); err != nil {
 			_, _ = fmt.Fprintf(writer, "Shell session I/O error: %s", err)
 		}
 
