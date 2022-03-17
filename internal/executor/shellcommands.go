@@ -14,8 +14,10 @@ type ShellCommands struct {
 	piper *piper.Piper
 }
 
-func (sc *ShellCommands) afterStart() {
+func (sc *ShellCommands) afterStart() error {
 	// only used on Windows
+
+	return nil
 }
 
 func (sc *ShellCommands) kill() error {

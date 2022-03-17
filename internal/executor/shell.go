@@ -174,7 +174,9 @@ func NewShellCommands(
 		return nil, errors.New(message)
 	}
 
-	sc.afterStart()
+	if err := sc.afterStart(); err != nil {
+		return nil, err
+	}
 
 	// At this point the shell has successfully started and inherited
 	// the proxy file descriptor. We can release our own descriptor now.
