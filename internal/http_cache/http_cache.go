@@ -153,8 +153,7 @@ func proxyDownloadFromURL(w http.ResponseWriter, urls []string) {
 		resp, err := httpProxyClient.Get(url)
 		if err != nil {
 			log.Printf("Proxying cache %s failed: %v\n", url, err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			continue
 		}
 		successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
 		if !successfulStatus {
@@ -167,6 +166,7 @@ func proxyDownloadFromURL(w http.ResponseWriter, urls []string) {
 		} else {
 			log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
 		}
+		return
 	}
 	w.WriteHeader(http.StatusNotFound)
 }
