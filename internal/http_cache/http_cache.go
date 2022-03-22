@@ -129,7 +129,7 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		TaskIdentification: cirrusTaskIdentification,
 		CacheKey:           cacheKey,
 	}
-	response, err := client.CirrusClient.GenerateCacheDownloadURL(context.Background(), &key)
+	response, err := client.CirrusClient.GenerateCacheDownloadURLs(context.Background(), &key)
 	if err != nil {
 		log.Printf("%s cache download failed: %v\n", cacheKey, err)
 
@@ -144,29 +144,31 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		log.Printf("Redirecting cache download of %s\n", cacheKey)
-		proxyDownloadFromURL(w, response.Url)
+		proxyDownloadFromURL(w, response.Urls)
 	}
 }
 
-func proxyDownloadFromURL(w http.ResponseWriter, url string) {
-	resp, err := httpProxyClient.Get(url)
-	if err != nil {
-		log.Printf("Proxying cache %s failed: %v\n", url, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+func proxyDownloadFromURL(w http.ResponseWriter, urls []string) {
+	for _, url := range urls {
+		resp, err := httpProxyClient.Get(url)
+		if err != nil {
+			log.Printf("Proxying cache %s failed: %v\n", url, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
+		if !successfulStatus {
+			log.Printf("Proxying cache %s failed with %d status\n", url, resp.StatusCode)
+			continue
+		}
+		bytesRead, err := io.Copy(w, resp.Body)
+		if err != nil {
+			log.Printf("Proxying cache download for %s failed with %v\n", url, err)
+		} else {
+			log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
+		}
 	}
-	successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
-	if !successfulStatus {
-		log.Printf("Proxying cache %s failed with %d status\n", url, resp.StatusCode)
-		w.WriteHeader(resp.StatusCode)
-		return
-	}
-	bytesRead, err := io.Copy(w, resp.Body)
-	if err != nil {
-		log.Printf("Proxying cache download for %s failed with %v\n", url, err)
-	} else {
-		log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
-	}
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
