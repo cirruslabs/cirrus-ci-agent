@@ -144,31 +144,39 @@ func downloadCache(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		w.WriteHeader(http.StatusNotFound)
 	} else {
 		log.Printf("Redirecting cache download of %s\n", cacheKey)
-		proxyDownloadFromURL(w, response.Urls)
+		proxyDownloadFromURLs(w, response.Urls)
 	}
 }
 
-func proxyDownloadFromURL(w http.ResponseWriter, urls []string) {
+func proxyDownloadFromURLs(w http.ResponseWriter, urls []string) {
 	for _, url := range urls {
-		resp, err := httpProxyClient.Get(url)
-		if err != nil {
-			log.Printf("Proxying cache %s failed: %v\n", url, err)
-			continue
+		if proxyDownloadFromURL(w, url) {
+			return
 		}
-		successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
-		if !successfulStatus {
-			log.Printf("Proxying cache %s failed with %d status\n", url, resp.StatusCode)
-			continue
-		}
-		bytesRead, err := io.Copy(w, resp.Body)
-		if err != nil {
-			log.Printf("Proxying cache download for %s failed with %v\n", url, err)
-		} else {
-			log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
-		}
-		return
 	}
 	w.WriteHeader(http.StatusNotFound)
+}
+
+func proxyDownloadFromURL(w http.ResponseWriter, url string) bool {
+	resp, err := httpProxyClient.Get(url)
+	if err != nil {
+		log.Printf("Proxying cache %s failed: %v\n", url, err)
+		return false
+	}
+	defer resp.Body.Close()
+	successfulStatus := 100 <= resp.StatusCode && resp.StatusCode < 300
+	if !successfulStatus {
+		log.Printf("Proxying cache %s failed with %d status\n", url, resp.StatusCode)
+		return false
+	}
+	w.WriteHeader(resp.StatusCode)
+	bytesRead, err := io.Copy(w, resp.Body)
+	if err != nil {
+		log.Printf("Proxying cache download for %s failed with %v\n", url, err)
+	} else {
+		log.Printf("Proxying cache %s succeded! Proxies %d bytes!\n", url, bytesRead)
+	}
+	return true
 }
 
 func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
