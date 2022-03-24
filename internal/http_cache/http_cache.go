@@ -38,9 +38,12 @@ func Start(taskIdentification *api.TaskIdentification) string {
 
 	certPool, err := gocertifi.CACerts()
 	if err == nil {
+		maxConcurrentConnections := runtime.NumCPU() * activeRequestsPerLogicalCPU
 		httpProxyClient = &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{RootCAs: certPool},
+				TLSClientConfig:     &tls.Config{RootCAs: certPool},
+				MaxIdleConns:        maxConcurrentConnections,
+				MaxIdleConnsPerHost: maxConcurrentConnections, // default is 2 which is too small
 			},
 			Timeout: time.Minute,
 		}
