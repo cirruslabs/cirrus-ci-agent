@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	ErrFailedToQueryTotals = errors.New("failed to query total CPU count/memory amount")
 	ErrFailedToQueryCPU    = errors.New("failed to query CPU usage")
 	ErrFailedToQueryMemory = errors.New("failed to query memory usage")
 )
@@ -77,6 +78,22 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 		result := &Result{
 			errors:              map[string]error{},
 			ResourceUtilization: &api.ResourceUtilization{},
+		}
+
+		// Totals
+		numCpusTotal, amountMemoryTotal, totalsErr := Totals(ctx)
+		if totalsErr != nil {
+			if errors.Is(totalsErr, context.Canceled) || errors.Is(totalsErr, context.DeadlineExceeded) {
+				resultChan <- result
+
+				return
+			}
+
+			err := fmt.Errorf("%w: %v", ErrFailedToQueryTotals, totalsErr)
+			result.errors[err.Error()] = err
+		} else {
+			result.ResourceUtilization.CpuTotal = float64(numCpusTotal)
+			result.ResourceUtilization.MemoryTotal = float64(amountMemoryTotal)
 		}
 
 		pollInterval := 1 * time.Second
