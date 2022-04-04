@@ -13,6 +13,8 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/resolver"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/system"
 	"github.com/dustin/go-humanize"
+	gopsutilcpu "github.com/shirou/gopsutil/cpu"
+	gopsutilmem "github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"log"
 	"runtime"
@@ -168,4 +170,18 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 	}()
 
 	return resultChan
+}
+
+func Totals(ctx context.Context) (uint64, uint64, error) {
+	perCpuStat, err := gopsutilcpu.TimesWithContext(ctx, true)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	virtualMemoryStat, err := gopsutilmem.VirtualMemoryWithContext(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint64(len(perCpuStat)), virtualMemoryStat.Total, nil
 }
