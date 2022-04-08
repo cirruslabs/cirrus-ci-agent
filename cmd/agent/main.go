@@ -13,6 +13,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	goversion "github.com/hashicorp/go-version"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -117,19 +118,20 @@ func main() {
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel)
 	go func() {
+		limiter := rate.NewLimiter(1, 1)
+
 		for {
 			sig := <-signalChannel
-
-			if signalfilter.IsNoisy(sig) {
-				// Too much noise both for the text logs and the RPC with little debugging value
-				continue
-			}
-
-			log.Printf("Captured %v...", sig)
 
 			if sig == os.Interrupt || sig == syscall.SIGTERM {
 				cancel()
 			}
+
+			if signalfilter.IsNoisy(sig) || !limiter.Allow() {
+				continue
+			}
+
+			log.Printf("Captured %v...", sig)
 
 			reportSignal(context.Background(), sig, *taskIdPtr, *clientTokenPtr)
 		}
