@@ -13,6 +13,8 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/resolver"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/system"
 	"github.com/dustin/go-humanize"
+	gopsutilcpu "github.com/shirou/gopsutil/cpu"
+	gopsutilmem "github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
 	"log"
 	"runtime"
@@ -20,6 +22,7 @@ import (
 )
 
 var (
+	ErrFailedToQueryTotals = errors.New("failed to query total CPU count/memory amount")
 	ErrFailedToQueryCPU    = errors.New("failed to query CPU usage")
 	ErrFailedToQueryMemory = errors.New("failed to query memory usage")
 )
@@ -77,6 +80,22 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 		result := &Result{
 			errors:              map[string]error{},
 			ResourceUtilization: &api.ResourceUtilization{},
+		}
+
+		// Totals
+		numCpusTotal, amountMemoryTotal, totalsErr := Totals(ctx)
+		if totalsErr != nil {
+			if errors.Is(totalsErr, context.Canceled) || errors.Is(totalsErr, context.DeadlineExceeded) {
+				resultChan <- result
+
+				return
+			}
+
+			err := fmt.Errorf("%w: %v", ErrFailedToQueryTotals, totalsErr)
+			result.errors[err.Error()] = err
+		} else {
+			result.ResourceUtilization.CpuTotal = float64(numCpusTotal)
+			result.ResourceUtilization.MemoryTotal = float64(amountMemoryTotal)
 		}
 
 		pollInterval := 1 * time.Second
@@ -151,4 +170,18 @@ func Run(ctx context.Context, logger logrus.FieldLogger) chan *Result {
 	}()
 
 	return resultChan
+}
+
+func Totals(ctx context.Context) (uint64, uint64, error) {
+	perCpuStat, err := gopsutilcpu.TimesWithContext(ctx, true)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	virtualMemoryStat, err := gopsutilmem.VirtualMemoryWithContext(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint64(len(perCpuStat)), virtualMemoryStat.Total, nil
 }
