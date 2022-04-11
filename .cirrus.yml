@@ -53,7 +53,7 @@ task:
   freebsd_instance:
     image_family: freebsd-12-2
   test_script:
-    - pkg install -y zsh go
+    - pkg install -y zsh go git
     - go test ./...
 
 docker_builder:
