@@ -283,6 +283,7 @@ type CirrusWorkersServiceClient interface {
 	TaskStarted(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
 	TaskFailed(ctx context.Context, in *TaskFailedRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	TaskStopped(ctx context.Context, in *TaskIdentification, opts ...grpc.CallOption) (*empty.Empty, error)
+	UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*UpdateStatusResponse, error)
 }
 
 type cirrusWorkersServiceClient struct {
@@ -338,6 +339,15 @@ func (c *cirrusWorkersServiceClient) TaskStopped(ctx context.Context, in *TaskId
 	return out, nil
 }
 
+func (c *cirrusWorkersServiceClient) UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*UpdateStatusResponse, error) {
+	out := new(UpdateStatusResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/UpdateStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CirrusWorkersServiceServer is the server API for CirrusWorkersService service.
 // All implementations must embed UnimplementedCirrusWorkersServiceServer
 // for forward compatibility
@@ -352,6 +362,7 @@ type CirrusWorkersServiceServer interface {
 	TaskStarted(context.Context, *TaskIdentification) (*empty.Empty, error)
 	TaskFailed(context.Context, *TaskFailedRequest) (*empty.Empty, error)
 	TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error)
+	UpdateStatus(context.Context, *UpdateStatusRequest) (*UpdateStatusResponse, error)
 	mustEmbedUnimplementedCirrusWorkersServiceServer()
 }
 
@@ -373,6 +384,9 @@ func (UnimplementedCirrusWorkersServiceServer) TaskFailed(context.Context, *Task
 }
 func (UnimplementedCirrusWorkersServiceServer) TaskStopped(context.Context, *TaskIdentification) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TaskStopped not implemented")
+}
+func (UnimplementedCirrusWorkersServiceServer) UpdateStatus(context.Context, *UpdateStatusRequest) (*UpdateStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateStatus not implemented")
 }
 func (UnimplementedCirrusWorkersServiceServer) mustEmbedUnimplementedCirrusWorkersServiceServer() {}
 
@@ -477,6 +491,24 @@ func _CirrusWorkersService_TaskStopped_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusWorkersService_UpdateStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusWorkersServiceServer).UpdateStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService/UpdateStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusWorkersServiceServer).UpdateStatus(ctx, req.(*UpdateStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CirrusWorkersService_ServiceDesc is the grpc.ServiceDesc for CirrusWorkersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -503,6 +535,10 @@ var CirrusWorkersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TaskStopped",
 			Handler:    _CirrusWorkersService_TaskStopped_Handler,
+		},
+		{
+			MethodName: "UpdateStatus",
+			Handler:    _CirrusWorkersService_UpdateStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
