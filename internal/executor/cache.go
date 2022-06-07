@@ -426,11 +426,6 @@ func (executor *Executor) UploadCache(
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %dMb.", instruction.CacheName, bytesToUpload/1024/1024)))
 	}
 
-	if bytesToUpload >= 2*1000*1000*1000 {
-		logUploader.Write([]byte(fmt.Sprintf("\nCache %s is too big! Skipping caching...", commandName)))
-		return true
-	}
-
 	if !cache.CacheAvailable {
 		// check if some other task has uploaded the cache already
 		url := fmt.Sprintf("http://%s/%s", cacheHost, cache.Key)
