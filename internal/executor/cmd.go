@@ -51,7 +51,7 @@ func createCmd(scripts []string, customEnv *map[string]string) (*exec.Cmd, *os.F
 	scriptFile.Close()
 	scriptFile.Chmod(os.FileMode(0777))
 	cmdArgs := shellwords.ToArgv(cmdShell)
-	cmdArgs := append(cmdArgs, scriptFile.Name())
+	cmdArgs = append(cmdArgs, scriptFile.Name())
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 
 	// Run CMD in it's own session
