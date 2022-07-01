@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -400,7 +401,11 @@ func (executor *Executor) UploadCache(
 		}
 	}
 
-	cacheFile, _ := ioutil.TempFile(os.TempDir(), cache.Key)
+	cacheFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("\nFailed to create temporary cache file: %v", err)))
+		return false
+	}
 	defer os.Remove(cacheFile.Name())
 
 	archiveStartTime := time.Now()
@@ -426,12 +431,13 @@ func (executor *Executor) UploadCache(
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %dMb.", instruction.CacheName, bytesToUpload/1024/1024)))
 	}
 
+	cacheURL := fmt.Sprintf("http://%s/%s", cacheHost, url.QueryEscape(cache.Key))
+
 	if !cache.CacheAvailable {
 		// check if some other task has uploaded the cache already
-		url := fmt.Sprintf("http://%s/%s", cacheHost, cache.Key)
-		req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, cacheURL, nil)
 		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to create cache check request to URL %s!", url)))
+			logUploader.Write([]byte(fmt.Sprintf("\nFailed to create cache check request to URL %s!", cacheURL)))
 			return false
 		}
 		response, _ := httpClient.Do(req)
@@ -448,7 +454,7 @@ func (executor *Executor) UploadCache(
 
 	logUploader.Write([]byte(fmt.Sprintf("\nUploading cache %s...", instruction.CacheName)))
 	uploadStartTime := time.Now()
-	err = UploadCacheFile(ctx, cacheHost, cache.Key, cacheFile)
+	err = UploadCacheFile(ctx, cacheURL, cacheFile)
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to upload cache '%s': %s!", commandName, err)))
 		logUploader.Write([]byte("\nIgnoring the error..."))
@@ -460,8 +466,8 @@ func (executor *Executor) UploadCache(
 	return true
 }
 
-func UploadCacheFile(ctx context.Context, cacheHost string, cacheKey string, cacheFile *os.File) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("http://%s/%s", cacheHost, cacheKey), cacheFile)
+func UploadCacheFile(ctx context.Context, cacheURL string, cacheFile *os.File) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cacheURL, cacheFile)
 	if err != nil {
 		return err
 	}
