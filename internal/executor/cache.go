@@ -431,7 +431,7 @@ func (executor *Executor) UploadCache(
 		logUploader.Write([]byte(fmt.Sprintf("\n%s cache size is %dMb.", instruction.CacheName, bytesToUpload/1024/1024)))
 	}
 
-	cacheURL := fmt.Sprintf("http://%s/%s", cacheHost, url.QueryEscape(cache.Key))
+	cacheURL := fmt.Sprintf("http://%s/%s", cacheHost, url.PathEscape(cache.Key))
 
 	if !cache.CacheAvailable {
 		// check if some other task has uploaded the cache already
