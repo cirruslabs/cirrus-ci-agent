@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func WaitForLocalPort(ctx context.Context, port int) {
+func WaitForLocalPort(ctx context.Context, port int) error {
 	dialer := net.Dialer{
 		Timeout: 10 * time.Second,
 	}
@@ -17,7 +17,7 @@ func WaitForLocalPort(ctx context.Context, port int) {
 	var conn net.Conn
 	var err error
 
-	_ = retry.Do(
+	return retry.Do(
 		func() error {
 			conn, err = dialer.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", port))
 			if err != nil {

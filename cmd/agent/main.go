@@ -204,7 +204,10 @@ func main() {
 			log.Printf("Waiting on port %v...\n", port)
 
 			subCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-			network.WaitForLocalPort(subCtx, portNumber)
+			portErr := network.WaitForLocalPort(subCtx, portNumber)'
+			if portErr != nil {
+				log.Printf("Failed to wait fo port %v: %v\n", port, portErr)
+			}
 			cancel()
 		}
 	}

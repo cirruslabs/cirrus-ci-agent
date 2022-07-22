@@ -29,7 +29,8 @@ func TestEarlyExit(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	network.WaitForLocalPort(ctx, port)
+	err = network.WaitForLocalPort(ctx, port)
+	assert.Nil(t, err)
 	stop := time.Now()
 
 	assert.WithinDuration(t, stop, start, maxExpectedWaitTime)
