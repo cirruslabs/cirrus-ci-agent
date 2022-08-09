@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -43,7 +42,7 @@ func NewLogUploader(ctx context.Context, executor *Executor, commandName string)
 		return nil, err
 	}
 	EnsureFolderExists(os.TempDir())
-	file, err := ioutil.TempFile(os.TempDir(), commandName)
+	file, err := os.CreateTemp(os.TempDir(), commandName)
 	if err != nil {
 		return nil, err
 	}

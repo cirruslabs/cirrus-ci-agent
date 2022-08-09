@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-annotations/model"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -47,7 +46,7 @@ func allDirsEmpty(paths []string) bool {
 }
 
 func isDirEmpty(path string) bool {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if os.IsNotExist(err) {
 		return true
 	}

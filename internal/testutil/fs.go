@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -9,7 +8,7 @@ import (
 // tempDir supplements an alternative to TB.TempDir()[1], which is only available in 1.15.
 // [1]: https://github.com/golang/go/issues/35998
 func TempDir(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

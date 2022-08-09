@@ -10,7 +10,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -294,7 +293,7 @@ func FetchCache(
 	cacheHost string,
 	cacheKey string,
 ) (*os.File, time.Duration, error) {
-	cacheFile, err := ioutil.TempFile(os.TempDir(), commandName)
+	cacheFile, err := os.CreateTemp(os.TempDir(), commandName)
 	if err != nil {
 		log.Printf("Failed to create a temp file %s: %v\n", commandName, err)
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s!", commandName)))
@@ -401,7 +400,7 @@ func (executor *Executor) UploadCache(
 		}
 	}
 
-	cacheFile, err := ioutil.TempFile("", "")
+	cacheFile, err := os.CreateTemp("", "")
 	if err != nil {
 		logUploader.Write([]byte(fmt.Sprintf("\nFailed to create temporary cache file: %v", err)))
 		return false

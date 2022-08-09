@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -221,7 +220,7 @@ func uploadAgentLogs(ctx context.Context, logFilePath string, taskId int64, clie
 		return
 	}
 
-	logContents, readErr := ioutil.ReadFile(logFilePath)
+	logContents, readErr := os.ReadFile(logFilePath)
 	if readErr != nil {
 		return
 	}

@@ -19,7 +19,6 @@ import (
 	gitclient "github.com/go-git/go-git/v5/plumbing/transport/client"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"golang.org/x/net/context"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -344,7 +343,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 			// Default folder exists and we continue execution. Therefore we need to use it.
 			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(defaultTempDirPath)
 		} else {
-			uniqueTempDirPath, _ := ioutil.TempDir(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
+			uniqueTempDirPath, _ := os.MkdirTemp(os.TempDir(), fmt.Sprintf("cirrus-task-%d", executor.taskIdentification.TaskId))
 			responseEnvironment["CIRRUS_WORKING_DIR"] = filepath.ToSlash(uniqueTempDirPath)
 		}
 	}
@@ -525,7 +524,7 @@ func (executor *Executor) CreateFile(
 		}
 		filePath := ExpandText(instruction.DestinationPath, env)
 		EnsureFolderExists(filepath.Dir(filePath))
-		err := ioutil.WriteFile(filePath, []byte(content), 0644)
+		err := os.WriteFile(filePath, []byte(content), 0644)
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("Failed to write file %s: %s!", filePath, err)))
 			return false
