@@ -35,7 +35,7 @@ type Cache struct {
 var caches = make([]Cache, 0)
 
 var httpClient = &http.Client{
-	Timeout: time.Minute * 5,
+	Timeout: 10 * time.Minute,
 }
 
 func (executor *Executor) DownloadCache(
