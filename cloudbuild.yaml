@@ -18,4 +18,4 @@ options:
   env:
     # to use buildx for multiarch build via buildx
     - 'DOCKER_CLI_EXPERIMENTAL=enabled'
-timeout: 1800s
+timeout: 3600s

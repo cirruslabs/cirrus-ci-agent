@@ -53,8 +53,8 @@ github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghf
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/cirruslabs/cirrus-ci-agent v1.51.0/go.mod h1:lEH1v2tn22T359W3fGjiAcYAY6jsqz75eHc4teh2nCY=
 github.com/cirruslabs/cirrus-ci-annotations v0.3.0/go.mod h1:xrmxzL58Pf4cSSQCmQEOPGQ3poeARxJdHneurUrqjZk=
-github.com/cirruslabs/cirrus-ci-annotations v0.8.0 h1:q2dRIaq/f68BQgaoRji0xNPdPxWO4HRrwrT8UrUPSaQ=
-github.com/cirruslabs/cirrus-ci-annotations v0.8.0/go.mod h1:xrmxzL58Pf4cSSQCmQEOPGQ3poeARxJdHneurUrqjZk=
+github.com/cirruslabs/cirrus-ci-annotations v0.8.1 h1:wwjFgPGT4Fi++MoRbskwfsEMsvp8dmVGYLBXRe5TChM=
+github.com/cirruslabs/cirrus-ci-annotations v0.8.1/go.mod h1:7gM9Z6+wnbcz6qLdBEVkSRL0pudxXGcNjVYWPwbEI2w=
 github.com/cirruslabs/terminal v0.2.5/go.mod h1:ubLe9fvd4FYeQV08ob5TNp9tsAfE0efkFtPrlKAwIKw=
 github.com/cirruslabs/terminal v0.11.0 h1:iWnyoogTA9BreM7kL0iGaZuQ6ASH0eC45Vz1QEm3FoE=
 github.com/cirruslabs/terminal v0.11.0/go.mod h1:5nVkiTg4y2ugDJjchuc9Lyz1cxu+KugFiJyuiESaYiY=
