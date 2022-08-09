@@ -7,7 +7,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,7 +46,7 @@ func TarGzContentsHelper(t *testing.T, path string) []PartialTarHeader {
 			t.Fatal(err)
 		}
 
-		contents, err := ioutil.ReadAll(tarReader)
+		contents, err := io.ReadAll(tarReader)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +74,7 @@ func TestArchive(t *testing.T) {
 			{tar.TypeDir, "", "", []byte{}},
 		}},
 		{"single file", func(dir string) {
-			ioutil.WriteFile(filepath.Join(dir, "file.txt"), []byte("contents"), 0600)
+			os.WriteFile(filepath.Join(dir, "file.txt"), []byte("contents"), 0600)
 		}, []PartialTarHeader{
 			{tar.TypeDir, "", "", []byte{}},
 			{tar.TypeReg, "/file.txt", "", []byte("contents")},
@@ -83,7 +82,7 @@ func TestArchive(t *testing.T) {
 		{"file inside of a directory", func(dir string) {
 			subDir := filepath.Join(dir, "sub-directory")
 			os.Mkdir(subDir, 0700)
-			ioutil.WriteFile(filepath.Join(subDir, "file.txt"), []byte("contents"), 0600)
+			os.WriteFile(filepath.Join(subDir, "file.txt"), []byte("contents"), 0600)
 		}, []PartialTarHeader{
 			{tar.TypeDir, "", "", []byte{}},
 			{tar.TypeDir, "/sub-directory", "", []byte{}},
@@ -142,7 +141,7 @@ func TestArchiveMultiple(t *testing.T) {
 	subFolder2 := filepath.Join(baseFolder, "right", "cold")
 	os.MkdirAll(subFolder2, 0700)
 
-	ioutil.WriteFile(filepath.Join(baseFolder, "should-not-be-included.txt"), []byte("doesn't matter"), 0600)
+	os.WriteFile(filepath.Join(baseFolder, "should-not-be-included.txt"), []byte("doesn't matter"), 0600)
 
 	// Make up a place where the archive will be stored
 	dest := filepath.Join(testutil.TempDir(t), "archive.tar.gz")

@@ -3,7 +3,7 @@ package cirrusenv_test
 import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -14,7 +14,7 @@ func TestCirrusEnvNormal(t *testing.T) {
 	}
 	defer ce.Close()
 
-	if err := ioutil.WriteFile(ce.Path(), []byte("A=B\nA==B"), 0600); err != nil {
+	if err := os.WriteFile(ce.Path(), []byte("A=B\nA==B"), 0600); err != nil {
 		t.Fatal(err)
 	}
 

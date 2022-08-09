@@ -4,7 +4,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/testutil"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -29,21 +29,21 @@ func TestDiffWithNewer(t *testing.T) {
 		{
 			Name: "no change",
 			OldFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "same.txt"), []byte("same contents"), 0600)
+				os.WriteFile(filepath.Join(dir, "same.txt"), []byte("same contents"), 0600)
 			},
 			NewFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "same.txt"), []byte("same contents"), 0600)
+				os.WriteFile(filepath.Join(dir, "same.txt"), []byte("same contents"), 0600)
 			},
 			Difference: []hasher.DiffEntry(nil),
 		},
 		{
 			Name: "file creation",
 			OldFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
 			},
 			NewFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
-				ioutil.WriteFile(filepath.Join(dir, "creation.txt"), []byte(""), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "creation.txt"), []byte(""), 0600)
 			},
 			Difference: []hasher.DiffEntry{
 				{hasher.Created, "creation.txt"},
@@ -52,12 +52,12 @@ func TestDiffWithNewer(t *testing.T) {
 		{
 			Name: "file modification",
 			OldFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
-				ioutil.WriteFile(filepath.Join(dir, "modification.txt"), []byte("old contents"), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "modification.txt"), []byte("old contents"), 0600)
 			},
 			NewFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
-				ioutil.WriteFile(filepath.Join(dir, "modification.txt"), []byte("new contents"), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "modification.txt"), []byte("new contents"), 0600)
 			},
 			Difference: []hasher.DiffEntry{
 				{hasher.Modified, "modification.txt"},
@@ -66,11 +66,11 @@ func TestDiffWithNewer(t *testing.T) {
 		{
 			Name: "file deletion",
 			OldFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
-				ioutil.WriteFile(filepath.Join(dir, "deletion.txt"), []byte("old contents"), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "deletion.txt"), []byte("old contents"), 0600)
 			},
 			NewFiller: func(dir string) {
-				ioutil.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
+				os.WriteFile(filepath.Join(dir, "control.txt"), []byte("control sample"), 0600)
 			},
 			Difference: []hasher.DiffEntry{
 				{hasher.Deleted, "deletion.txt"},

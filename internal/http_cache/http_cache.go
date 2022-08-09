@@ -45,7 +45,7 @@ func Start(taskIdentification *api.TaskIdentification) string {
 				MaxIdleConns:        maxConcurrentConnections,
 				MaxIdleConnsPerHost: maxConcurrentConnections, // default is 2 which is too small
 			},
-			Timeout: time.Minute,
+			Timeout: 10 * time.Minute,
 		}
 	}
 
