@@ -5,6 +5,7 @@ package executor
 
 import (
 	"fmt"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/shellwords"
 	"os"
 	"os/exec"
@@ -12,19 +13,19 @@ import (
 	"syscall"
 )
 
-func createCmd(scripts []string, customEnv *map[string]string) (*exec.Cmd, *os.File, error) {
+func createCmd(scripts []string, customEnv *environment.Environment) (*exec.Cmd, *os.File, error) {
 	cmdShell := "/bin/sh"
 	if bashPath, err := exec.LookPath("bash"); err == nil {
 		cmdShell = bashPath
 	}
 	if customEnv != nil {
-		if customShell, ok := (*customEnv)["CIRRUS_SHELL"]; ok {
+		if customShell, ok := customEnv.Lookup("CIRRUS_SHELL"); ok {
 			cmdShell = customShell
 		}
 	}
 
 	if cmdShell == "direct" {
-		cmdArgs := shellwords.ToArgv(ExpandText(scripts[0], *customEnv))
+		cmdArgs := shellwords.ToArgv(customEnv.ExpandText(scripts[0]))
 		if len(cmdArgs) > 1 {
 			cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 			return cmd, nil, nil

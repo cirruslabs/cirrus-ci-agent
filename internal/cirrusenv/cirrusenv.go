@@ -62,15 +62,3 @@ func (ce *CirrusEnv) Consume() (map[string]string, error) {
 func (ce *CirrusEnv) Close() error {
 	return os.Remove(ce.Path())
 }
-
-func Merge(sources ...map[string]string) map[string]string {
-	destination := make(map[string]string)
-
-	for _, source := range sources {
-		for key, value := range source {
-			destination[key] = value
-		}
-	}
-
-	return destination
-}

@@ -8,6 +8,7 @@ import (
 	"github.com/bmatcuk/doublestar"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-annotations"
 	"github.com/cirruslabs/cirrus-ci-annotations/model"
 	"github.com/dustin/go-humanize"
@@ -29,7 +30,7 @@ func (executor *Executor) UploadArtifacts(
 	logUploader *LogUploader,
 	name string,
 	artifactsInstruction *api.ArtifactsInstruction,
-	customEnv map[string]string,
+	customEnv *environment.Environment,
 ) bool {
 	var err error
 	var allAnnotations []model.Annotation
@@ -64,7 +65,7 @@ func (executor *Executor) UploadArtifacts(
 		return false
 	}
 
-	workingDir := customEnv["CIRRUS_WORKING_DIR"]
+	workingDir := customEnv.Get("CIRRUS_WORKING_DIR")
 	if len(allAnnotations) > 0 {
 		allAnnotations, err = annotations.NormalizeAnnotations(workingDir, allAnnotations)
 		if err != nil {
@@ -101,17 +102,17 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	ctx context.Context,
 	name string,
 	artifactsInstruction *api.ArtifactsInstruction,
-	customEnv map[string]string,
+	customEnv *environment.Environment,
 	logUploader *LogUploader,
 ) ([]model.Annotation, error) {
 	allAnnotations := make([]model.Annotation, 0)
 
-	workingDir := customEnv["CIRRUS_WORKING_DIR"]
+	workingDir := customEnv.Get("CIRRUS_WORKING_DIR")
 
 	var processedPaths []ProcessedPath
 
 	for _, path := range artifactsInstruction.Paths {
-		pattern := ExpandText(path, customEnv)
+		pattern := customEnv.ExpandText(path)
 		if !filepath.IsAbs(pattern) {
 			pattern = filepath.Join(workingDir, pattern)
 		}

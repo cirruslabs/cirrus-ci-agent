@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/bmatcuk/doublestar"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/hasher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/targz"
@@ -43,7 +44,7 @@ func (executor *Executor) DownloadCache(
 	commandName string,
 	cacheHost string,
 	instruction *api.CacheInstruction,
-	custom_env map[string]string,
+	custom_env *environment.Environment,
 ) bool {
 	cacheKey, ok := executor.generateCacheKey(ctx, logUploader, commandName, instruction, custom_env)
 	if !ok {
@@ -56,7 +57,7 @@ func (executor *Executor) DownloadCache(
 	var partiallyExpandedFolders []string
 
 	for _, folder := range instruction.Folders {
-		folder = ExpandText(folder, custom_env)
+		folder = custom_env.ExpandText(folder)
 
 		folder, err := filepath.Abs(folder)
 		if err != nil {
@@ -70,7 +71,7 @@ func (executor *Executor) DownloadCache(
 	}
 
 	// Determine the base folder
-	baseFolder := custom_env["CIRRUS_WORKING_DIR"]
+	baseFolder := custom_env.Get("CIRRUS_WORKING_DIR")
 	if len(partiallyExpandedFolders) == 1 && !pathLooksLikeGlob(partiallyExpandedFolders[0]) {
 		baseFolder = partiallyExpandedFolders[0]
 	}
@@ -127,7 +128,7 @@ func (executor *Executor) DownloadCache(
 	if !cachePopulated && len(instruction.PopulateScripts) > 0 {
 		populateStartTime := time.Now()
 		logUploader.Write([]byte(fmt.Sprintf("\nCache miss for %s! Populating...\n", cacheKey)))
-		cmd, err := ShellCommandsAndWait(ctx, instruction.PopulateScripts, &custom_env, func(bytes []byte) (int, error) {
+		cmd, err := ShellCommandsAndWait(ctx, instruction.PopulateScripts, custom_env, func(bytes []byte) (int, error) {
 			return logUploader.Write(bytes)
 		}, executor.shouldKillProcesses())
 		if err != nil || cmd == nil || cmd.ProcessState == nil || !cmd.ProcessState.Success() {
@@ -161,7 +162,7 @@ func (executor *Executor) generateCacheKey(
 	logUploader *LogUploader,
 	commandName string,
 	instruction *api.CacheInstruction,
-	custom_env map[string]string,
+	custom_env *environment.Environment,
 ) (string, bool) {
 	if instruction.FingerprintKey != "" {
 		return instruction.FingerprintKey, true
@@ -170,7 +171,7 @@ func (executor *Executor) generateCacheKey(
 	cacheKeyHash := sha256.New()
 
 	if len(instruction.FingerprintScripts) > 0 {
-		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, &custom_env, func(bytes []byte) (int, error) {
+		cmd, err := ShellCommandsAndWait(ctx, instruction.FingerprintScripts, custom_env, func(bytes []byte) (int, error) {
 			cacheKeyHash.Write(bytes)
 			return logUploader.Write(bytes)
 		}, executor.shouldKillProcesses())
@@ -179,8 +180,8 @@ func (executor *Executor) generateCacheKey(
 			return "", false
 		}
 	} else {
-		cacheKeyHash.Write([]byte(custom_env["CIRRUS_TASK_NAME"]))
-		cacheKeyHash.Write([]byte(custom_env["CI_NODE_INDEX"]))
+		cacheKeyHash.Write([]byte(custom_env.Get("CIRRUS_TASK_NAME")))
+		cacheKeyHash.Write([]byte(custom_env.Get("CI_NODE_INDEX")))
 	}
 
 	return fmt.Sprintf("%s-%x", commandName, cacheKeyHash.Sum(nil)), true
@@ -347,7 +348,6 @@ func (executor *Executor) UploadCache(
 	commandName string,
 	cacheHost string,
 	instruction *api.UploadCacheInstruction,
-	env map[string]string,
 ) bool {
 	var err error
 

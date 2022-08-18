@@ -8,6 +8,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 	"io"
@@ -25,7 +26,7 @@ type LogUploader struct {
 	erroredChunks      int
 	logsChannel        chan []byte
 	doneLogUpload      chan bool
-	valuesToMask       []string
+	env                *environment.Environment
 	closed             bool
 
 	// Fields related to the CIRRUS_LOG_TIMESTAMP behavioral environment variable
@@ -54,10 +55,10 @@ func NewLogUploader(ctx context.Context, executor *Executor, commandName string)
 		erroredChunks:      0,
 		logsChannel:        make(chan []byte, 128),
 		doneLogUpload:      make(chan bool),
-		valuesToMask:       executor.sensitiveValues,
+		env:                executor.env,
 		closed:             false,
 
-		LogTimestamps: executor.env["CIRRUS_LOG_TIMESTAMP"] == "true",
+		LogTimestamps: executor.env.Get("CIRRUS_LOG_TIMESTAMP") == "true",
 		GetTimestamp:  time.Now,
 		OweTimestamp:  true,
 	}
@@ -186,7 +187,7 @@ func (uploader *LogUploader) WriteChunk(bytesToWrite []byte) (int, error) {
 	if len(bytesToWrite) == 0 {
 		return 0, nil
 	}
-	for _, valueToMask := range uploader.valuesToMask {
+	for _, valueToMask := range uploader.env.SensitiveValues() {
 		bytesToWrite = bytes.Replace(bytesToWrite, []byte(valueToMask), []byte("HIDDEN-BY-CIRRUS-CI"), -1)
 	}
 

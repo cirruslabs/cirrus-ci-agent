@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/processdumper"
 	"io"
@@ -32,7 +33,7 @@ func (writer ShellOutputWriter) Write(bytes []byte) (int, error) {
 func ShellCommandsAndWait(
 	ctx context.Context,
 	scripts []string,
-	custom_env *map[string]string,
+	custom_env *environment.Environment,
 	handler ShellOutputHandler,
 	shouldKillProcesses bool,
 ) (*exec.Cmd, error) {
@@ -101,7 +102,7 @@ func ShellCommandsAndWait(
 func NewShellCommands(
 	ctx context.Context,
 	scripts []string,
-	custom_env *map[string]string,
+	custom_env *environment.Environment,
 	handler ShellOutputHandler,
 ) (*ShellCommands, error) {
 	var cmd *exec.Cmd
@@ -129,13 +130,13 @@ func NewShellCommands(
 
 	env := os.Environ()
 	if custom_env != nil {
-		for k, v := range *custom_env {
+		for k, v := range custom_env.Items() {
 			env = append(env, fmt.Sprintf("%s=%s", k, v))
 		}
 
 		if _, environmentAlreadyHasShell := os.LookupEnv("SHELL"); environmentAlreadyHasShell {
-			_, userSpecifiedShell := (*custom_env)["SHELL"]
-			if shellOverride, userSpecifiedCustomShell := (*custom_env)["CIRRUS_SHELL"]; userSpecifiedCustomShell && !userSpecifiedShell {
+			_, userSpecifiedShell := custom_env.Lookup("SHELL")
+			if shellOverride, userSpecifiedCustomShell := custom_env.Lookup("CIRRUS_SHELL"); userSpecifiedCustomShell && !userSpecifiedShell {
 				env = append(env, fmt.Sprintf("SHELL=%s", shellOverride))
 			}
 		}
@@ -143,7 +144,7 @@ func NewShellCommands(
 
 	cmd.Env = env
 	if custom_env != nil {
-		if workingDir, ok := (*custom_env)["CIRRUS_WORKING_DIR"]; ok {
+		if workingDir, ok := custom_env.Lookup("CIRRUS_WORKING_DIR"); ok {
 			EnsureFolderExists(workingDir)
 			cmd.Dir = workingDir
 		}

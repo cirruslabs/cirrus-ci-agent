@@ -5,6 +5,7 @@ package executor
 
 import (
 	"context"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os/exec"
@@ -61,12 +62,12 @@ func Test_ShellCommands_Fail_Fast_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_Environment_Unix(t *testing.T) {
-	testEnv := map[string]string{
+	testEnv := environment.New(map[string]string{
 		"FOO": "BAR",
-	}
+	})
 	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo $FOO",
-	}, &testEnv)
+	}, testEnv)
 
 	if output == "echo $FOO\nBAR\n" {
 		t.Log("Passed")
@@ -76,12 +77,12 @@ func Test_ShellCommands_Environment_Unix(t *testing.T) {
 }
 
 func Test_ShellCommands_CustomWorkingDir_Unix(t *testing.T) {
-	testEnv := map[string]string{
+	testEnv := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "/tmp/cirrus-go-agent",
-	}
+	})
 	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"pwd",
-	}, &testEnv)
+	}, testEnv)
 
 	expectedOutput := "pwd\n/tmp/cirrus-go-agent\n"
 
@@ -134,9 +135,9 @@ func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
 func TestShellStartFailureDoesNotHang(t *testing.T) {
 	startTime := time.Now()
 
-	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"true"}, &map[string]string{
+	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"true"}, environment.New(map[string]string{
 		"CIRRUS_SHELL": "/bin/non-existent-shell",
-	})
+	}))
 
 	if time.Since(startTime) > 1*time.Second {
 		t.Fatalf("took more than 1 second")
