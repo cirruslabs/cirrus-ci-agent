@@ -126,7 +126,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
-	executor.env.Merge(getScriptEnvironment(executor, response.Environment))
+	executor.env.Merge(getScriptEnvironment(executor, response.Environment), false)
 
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
@@ -457,7 +457,10 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
 	}
-	executor.env.Merge(cirrusEnvVariables)
+
+	// Pick up new CIRRUS_ENV variables
+	_, isSensitive := executor.env.Lookup("CIRRUS_ENV_SENSITIVE")
+	executor.env.Merge(cirrusEnvVariables, isSensitive)
 
 	return &StepResult{
 		Success:        success,
