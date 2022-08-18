@@ -9,6 +9,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
@@ -43,12 +44,11 @@ type Executor struct {
 	serverToken          string
 	backgroundCommands   []CommandAndLogs
 	httpCacheHost        string
-	sensitiveValues      []string
 	commandFrom          string
 	commandTo            string
 	preCreatedWorkingDir string
 	cacheAttempts        *CacheAttempts
-	env                  map[string]string
+	env                  *environment.Environment
 	terminalWrapper      *terminalwrapper.Wrapper
 }
 
@@ -79,12 +79,11 @@ func NewExecutor(
 		serverToken:          serverToken,
 		backgroundCommands:   make([]CommandAndLogs, 0),
 		httpCacheHost:        "",
-		sensitiveValues:      make([]string, 0),
 		commandFrom:          commandFrom,
 		commandTo:            commandTo,
 		preCreatedWorkingDir: preCreatedWorkingDir,
 		cacheAttempts:        NewCacheAttempts(),
-		env:                  make(map[string]string),
+		env:                  environment.NewEmpty(),
 	}
 }
 
@@ -127,9 +126,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
-	executor.env = getExpandedScriptEnvironment(executor, response.Environment)
+	executor.env.Merge(getScriptEnvironment(executor, response.Environment))
 
-	workingDir, ok := executor.env["CIRRUS_WORKING_DIR"]
+	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
 		EnsureFolderExists(workingDir)
 		if err := os.Chdir(workingDir); err != nil {
@@ -142,17 +141,17 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	commands := response.Commands
 
 	if cacheHost, ok := os.LookupEnv("CIRRUS_HTTP_CACHE_HOST"); ok {
-		executor.env["CIRRUS_HTTP_CACHE_HOST"] = cacheHost
+		executor.env.Set("CIRRUS_HTTP_CACHE_HOST", cacheHost)
 	}
 
-	if _, ok := executor.env["CIRRUS_HTTP_CACHE_HOST"]; !ok {
-		executor.env["CIRRUS_HTTP_CACHE_HOST"] = http_cache.Start(executor.taskIdentification)
+	if _, ok := executor.env.Lookup("CIRRUS_HTTP_CACHE_HOST"); !ok {
+		executor.env.Set("CIRRUS_HTTP_CACHE_HOST", http_cache.Start(executor.taskIdentification))
 	}
 
-	executor.httpCacheHost = executor.env["CIRRUS_HTTP_CACHE_HOST"]
+	executor.httpCacheHost = executor.env.Get("CIRRUS_HTTP_CACHE_HOST")
 	subCtx, cancel := context.WithTimeout(ctx, time.Duration(response.TimeoutInSeconds)*time.Second)
 	defer cancel()
-	executor.sensitiveValues = response.SecretsToMask
+	executor.env.AddSensitiveValues(response.SecretsToMask...)
 
 	if len(commands) == 0 {
 		return
@@ -175,7 +174,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	if hasWaitForTerminalInstruction {
 		expireIn := 15 * time.Minute
 
-		expireInString, ok := executor.env["CIRRUS_TERMINAL_EXPIRATION_WINDOW"]
+		expireInString, ok := executor.env.Lookup("CIRRUS_TERMINAL_EXPIRATION_WINDOW")
 		if ok {
 			expireInInt, err := strconv.Atoi(expireInString)
 			if err == nil {
@@ -183,7 +182,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			}
 		}
 
-		shellEnv := append(os.Environ(), EnvMapAsSlice(executor.env)...)
+		shellEnv := append(os.Environ(), EnvMapAsSlice(executor.env.Items())...)
 
 		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress,
 			expireIn, shellEnv)
@@ -315,7 +314,7 @@ func BoundedCommands(commands []*api.Command, fromName, toName string) []*api.Co
 	return commands[left:right]
 }
 
-func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[string]string) map[string]string {
+func getScriptEnvironment(executor *Executor, responseEnvironment map[string]string) map[string]string {
 	if responseEnvironment == nil {
 		responseEnvironment = make(map[string]string)
 	}
@@ -348,9 +347,7 @@ func getExpandedScriptEnvironment(executor *Executor, responseEnvironment map[st
 		}
 	}
 
-	result := expandEnvironmentRecursively(responseEnvironment)
-
-	return result
+	return responseEnvironment
 }
 
 func (executor *Executor) performStep(ctx context.Context, currentStep *api.Command) (*StepResult, error) {
@@ -388,7 +385,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		}, nil
 	}
 	defer cirrusEnv.Close()
-	executor.env["CIRRUS_ENV"] = cirrusEnv.Path()
+	executor.env.Set("CIRRUS_ENV", cirrusEnv.Path())
 
 	switch instruction := currentStep.Instruction.(type) {
 	case *api.Command_ExitInstruction:
@@ -431,7 +428,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 			instruction.CacheInstruction, executor.env)
 	case *api.Command_UploadCacheInstruction:
 		success = executor.UploadCache(ctx, logUploader, currentStep.Name, executor.httpCacheHost,
-			instruction.UploadCacheInstruction, executor.env)
+			instruction.UploadCacheInstruction)
 	case *api.Command_ArtifactsInstruction:
 		success = executor.UploadArtifacts(ctx, logUploader, currentStep.Name,
 			instruction.ArtifactsInstruction, executor.env)
@@ -460,14 +457,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 		log.Print(message)
 		fmt.Fprintln(logUploader, message)
 	}
-	if len(cirrusEnvVariables) != 0 {
-		// Accommodate new environment variables
-		executor.env = cirrusenv.Merge(executor.env, cirrusEnvVariables)
-
-		// Do one more expansion pass since we've introduced
-		// new and potentially unexpanded variables
-		executor.env = expandEnvironmentRecursively(executor.env)
-	}
+	executor.env.Merge(cirrusEnvVariables)
 
 	return &StepResult{
 		Success:        success,
@@ -481,8 +471,8 @@ func (executor *Executor) ExecuteScriptsStreamLogsAndWait(
 	logUploader *LogUploader,
 	commandName string,
 	scripts []string,
-	env map[string]string) (*exec.Cmd, error) {
-	cmd, err := ShellCommandsAndWait(ctx, scripts, &env, func(bytes []byte) (int, error) {
+	env *environment.Environment) (*exec.Cmd, error) {
+	cmd, err := ShellCommandsAndWait(ctx, scripts, env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	}, executor.shouldKillProcesses())
 	return cmd, err
@@ -492,9 +482,9 @@ func (executor *Executor) ExecuteScriptsAndStreamLogs(
 	ctx context.Context,
 	logUploader *LogUploader,
 	scripts []string,
-	env map[string]string,
+	env *environment.Environment,
 ) (*exec.Cmd, error) {
-	sc, err := NewShellCommands(ctx, scripts, &env, func(bytes []byte) (int, error) {
+	sc, err := NewShellCommands(ctx, scripts, env, func(bytes []byte) (int, error) {
 		return logUploader.Write(bytes)
 	})
 	var cmd *exec.Cmd
@@ -508,12 +498,12 @@ func (executor *Executor) CreateFile(
 	ctx context.Context,
 	logUploader *LogUploader,
 	instruction *api.FileInstruction,
-	env map[string]string,
+	env *environment.Environment,
 ) bool {
 	switch source := instruction.GetSource().(type) {
 	case *api.FileInstruction_FromEnvironmentVariable:
 		envName := source.FromEnvironmentVariable
-		content, is_provided := env[envName]
+		content, is_provided := env.Lookup(envName)
 		if !is_provided {
 			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s is not set! Skipping file creation...", envName)))
 			return true
@@ -522,7 +512,7 @@ func (executor *Executor) CreateFile(
 			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s wasn't decrypted! Skipping file creation...", envName)))
 			return true
 		}
-		filePath := ExpandText(instruction.DestinationPath, env)
+		filePath := env.ExpandText(instruction.DestinationPath)
 		EnsureFolderExists(filepath.Dir(filePath))
 		err := os.WriteFile(filePath, []byte(content), 0644)
 		if err != nil {
@@ -537,23 +527,27 @@ func (executor *Executor) CreateFile(
 	}
 }
 
-func (executor *Executor) CloneRepository(ctx context.Context, logUploader *LogUploader, env map[string]string) bool {
+func (executor *Executor) CloneRepository(
+	ctx context.Context,
+	logUploader *LogUploader,
+	env *environment.Environment,
+) bool {
 	logUploader.Write([]byte("Using built-in Git...\n"))
 
-	working_dir := env["CIRRUS_WORKING_DIR"]
-	change := env["CIRRUS_CHANGE_IN_REPO"]
-	branch := env["CIRRUS_BRANCH"]
-	pr_number, is_pr := env["CIRRUS_PR"]
-	tag, is_tag := env["CIRRUS_TAG"]
-	is_clone_modules := env["CIRRUS_CLONE_SUBMODULES"] == "true"
+	working_dir := env.Get("CIRRUS_WORKING_DIR")
+	change := env.Get("CIRRUS_CHANGE_IN_REPO")
+	branch := env.Get("CIRRUS_BRANCH")
+	pr_number, is_pr := env.Lookup("CIRRUS_PR")
+	tag, is_tag := env.Lookup("CIRRUS_TAG")
+	is_clone_modules := env.Get("CIRRUS_CLONE_SUBMODULES") == "true"
 
-	clone_url := env["CIRRUS_REPO_CLONE_URL"]
-	if _, has_clone_token := env["CIRRUS_REPO_CLONE_TOKEN"]; has_clone_token {
-		clone_url = ExpandText("https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@${CIRRUS_REPO_CLONE_HOST}/${CIRRUS_REPO_FULL_NAME}.git", env)
+	clone_url := env.Get("CIRRUS_REPO_CLONE_URL")
+	if _, has_clone_token := env.Lookup("CIRRUS_REPO_CLONE_TOKEN"); has_clone_token {
+		clone_url = env.ExpandText("https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@${CIRRUS_REPO_CLONE_HOST}/${CIRRUS_REPO_FULL_NAME}.git")
 	}
 
 	clone_depth := 0
-	if depth_str, ok := env["CIRRUS_CLONE_DEPTH"]; ok {
+	if depth_str, ok := env.Lookup("CIRRUS_CLONE_DEPTH"); ok {
 		clone_depth, _ = strconv.Atoi(depth_str)
 	}
 	if clone_depth > 0 {
@@ -735,7 +729,7 @@ func (executor *Executor) CloneRepository(ctx context.Context, logUploader *LogU
 }
 
 func (executor *Executor) shouldKillProcesses() bool {
-	_, shouldNotKillProcesses := executor.env["CIRRUS_ESCAPING_PROCESSES"]
+	_, shouldNotKillProcesses := executor.env.Lookup("CIRRUS_ESCAPING_PROCESSES")
 
 	return !shouldNotKillProcesses
 }

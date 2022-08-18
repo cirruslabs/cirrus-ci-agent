@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -57,7 +58,7 @@ func TestJobObjectTermination(t *testing.T) {
 	defer cancel()
 
 	success, output := ShellCommandsAndGetOutput(ctx, []string{os.Args[0]},
-		&map[string]string{"MODE": modeProcessTreeSpawner})
+		environment.New(map[string]string{"MODE": modeProcessTreeSpawner}))
 
 	assert.False(t, success, "the command should fail due to time out error")
 	assert.Contains(t, output, "Timed out!", "the command should time out")
@@ -82,10 +83,10 @@ func TestJobObjectTermination(t *testing.T) {
 }
 
 func Test_ShellCommands_Windows(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
-	}
-	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'"}, &test_env)
+	})
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'"}, test_env)
 	expected_output := "\r\nC:\\Windows\\TEMP>call echo 'Foo' \r\n'Foo'\r\n\r\nC:\\Windows\\TEMP>if 0 NEQ 0 exit /b 0 \r\n"
 	if output == expected_output {
 		t.Log("Passed")
@@ -95,10 +96,10 @@ func Test_ShellCommands_Windows(t *testing.T) {
 }
 
 func Test_ShellCommands_Multiline_Windows(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
-	}
-	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'", "echo 'Bar'"}, &test_env)
+	})
+	_, output := ShellCommandsAndGetOutput(context.Background(), []string{"echo 'Foo'", "echo 'Bar'"}, test_env)
 	expected_output := "\r\nC:\\Windows\\TEMP>call echo 'Foo' \r\n'Foo'\r\n\r\nC:\\Windows\\TEMP>if 0 NEQ 0 exit /b 0 \r\n\r\nC:\\Windows\\TEMP>call echo 'Bar' \r\n'Bar'\r\n\r\nC:\\Windows\\TEMP>if 0 NEQ 0 exit /b 0 \r\n"
 	if output == expected_output {
 		t.Log("Passed")
@@ -108,15 +109,15 @@ func Test_ShellCommands_Multiline_Windows(t *testing.T) {
 }
 
 func Test_ShellCommands_Fail_Fast_Windows(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
-	}
+	})
 	success, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo 'Hello!'",
 		"echo 'Friend!'",
 		"exit 1",
 		"echo 'Unreachable!'",
-	}, &test_env)
+	}, test_env)
 	if success {
 		t.Error("Should fail!")
 	}
@@ -130,13 +131,13 @@ func Test_ShellCommands_Fail_Fast_Windows(t *testing.T) {
 }
 
 func Test_ShellCommands_Environment_Windows(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
 		"FOO":                "BAR",
-	}
+	})
 	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo %FOO%",
-	}, &test_env)
+	}, test_env)
 
 	expected_output := "\r\nC:\\Windows\\TEMP>call echo BAR \r\nBAR\r\n\r\nC:\\Windows\\TEMP>if 0 NEQ 0 exit /b 0 \r\n"
 	if output == expected_output {
@@ -147,14 +148,14 @@ func Test_ShellCommands_Environment_Windows(t *testing.T) {
 }
 
 func Test_Exit_Code_Windows(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
-	}
+	})
 	success, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"export FOO=239",
 		"echo %ERRORLEVEL%",
 		"echo 'Unreachable!'",
-	}, &test_env)
+	}, test_env)
 
 	if success {
 		t.Errorf("Should've failed! '%+q'", output)
@@ -169,16 +170,16 @@ func Test_Exit_Code_Windows(t *testing.T) {
 }
 
 func Test_Powershell(t *testing.T) {
-	test_env := map[string]string{
+	test_env := environment.New(map[string]string{
 		"CIRRUS_WORKING_DIR": "C:\\Windows\\TEMP",
 		"CIRRUS_SHELL":       "powershell",
-	}
+	})
 	success, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"echo 'Foo!'",
 		"echo 'Bar!'",
 		"exit 1",
 		"echo 'Unreachable!'",
-	}, &test_env)
+	}, test_env)
 
 	if success {
 		t.Errorf("Should've fail! '%+q'", output)

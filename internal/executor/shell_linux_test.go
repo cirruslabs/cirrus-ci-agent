@@ -5,16 +5,17 @@ package executor
 
 import (
 	"context"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"testing"
 )
 
 func Test_DirectShell_Unix(t *testing.T) {
-	testEnv := map[string]string{
+	testEnv := environment.New(map[string]string{
 		"CIRRUS_SHELL": "direct",
-	}
+	})
 	_, output := ShellCommandsAndGetOutput(context.Background(), []string{
 		"bash -c 'echo $CIRRUS_SHELL'",
-	}, &testEnv)
+	}, testEnv)
 
 	if output == "direct\n" {
 		t.Log("Passed")

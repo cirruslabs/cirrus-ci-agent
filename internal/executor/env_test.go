@@ -1,13 +1,14 @@
 package executor
 
 import (
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
 
 func Test_DefaultValue(t *testing.T) {
-	result := ExpandText("${TAG:latest}", make(map[string]string))
+	result := environment.NewEmpty().ExpandText("${TAG:latest}")
 	if result == "latest" {
 		t.Log("Passed")
 	} else {
@@ -16,7 +17,7 @@ func Test_DefaultValue(t *testing.T) {
 }
 
 func Test_Simple(t *testing.T) {
-	result := ExpandText("${TAG:latest}", map[string]string{"TAG": "foo"})
+	result := environment.New(map[string]string{"TAG": "foo"}).ExpandText("${TAG:latest}")
 	if result == "foo" {
 		t.Log("Passed")
 	} else {
@@ -25,7 +26,7 @@ func Test_Simple(t *testing.T) {
 }
 
 func Test_Simple_Windows_Style(t *testing.T) {
-	result := ExpandText("%TAG%", map[string]string{"TAG": "foo"})
+	result := environment.New(map[string]string{"TAG": "foo"}).ExpandText("%TAG%")
 	if result == "foo" {
 		t.Log("Passed")
 	} else {
@@ -50,7 +51,7 @@ func Test_Environment(t *testing.T) {
 		"PACKER_BASE":        "/root/go/src/github.com/some/thing/contrib/cirrus/packer",
 	}
 
-	result := expandEnvironmentRecursively(original)
+	result := environment.ExpandEnvironmentRecursively(original)
 
 	if reflect.DeepEqual(result, expected) {
 		t.Log("Passed")
@@ -60,7 +61,7 @@ func Test_Environment(t *testing.T) {
 }
 
 func Test_Recursive(t *testing.T) {
-	result := expandEnvironmentRecursively(map[string]string{"FOO": "Contains $FOO"})
+	result := environment.ExpandEnvironmentRecursively(map[string]string{"FOO": "Contains $FOO"})
 	if result["FOO"] == "Contains $FOO" {
 		t.Log("Passed")
 	} else {

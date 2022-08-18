@@ -1,29 +1,30 @@
 package executor
 
 import (
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func createCmd(scripts []string, custom_env *map[string]string) (*exec.Cmd, *os.File, error) {
+func createCmd(scripts []string, custom_env *environment.Environment) (*exec.Cmd, *os.File, error) {
 	cmdShell := "cmd.exe"
 	if custom_env != nil {
-		if customShell, ok := (*custom_env)["CIRRUS_SHELL"]; ok {
+		if customShell, ok := custom_env.Lookup("CIRRUS_SHELL"); ok {
 			cmdShell = customShell
 		}
 	}
 
 	if strings.HasSuffix(cmdShell, "powershell.exe") || strings.HasSuffix(cmdShell, "powershell") {
-		return createWindowsPowershellCmd(cmdShell, scripts, custom_env)
+		return createWindowsPowershellCmd(cmdShell, scripts)
 	} else if strings.HasSuffix(cmdShell, "bash.exe") || strings.HasSuffix(cmdShell, "bash") {
-		return createWindowsBashCmd(cmdShell, scripts, custom_env)
+		return createWindowsBashCmd(cmdShell, scripts)
 	} else {
-		return createWindowsBatchCmd(cmdShell, scripts, custom_env)
+		return createWindowsBatchCmd(cmdShell, scripts)
 	}
 }
 
-func createWindowsBatchCmd(cmdShell string, scripts []string, custom_env *map[string]string) (*exec.Cmd, *os.File, error) {
+func createWindowsBatchCmd(cmdShell string, scripts []string) (*exec.Cmd, *os.File, error) {
 	scriptFile, err := TempFileName("scripts", ".bat")
 	if err != nil {
 		return nil, nil, err
@@ -40,7 +41,7 @@ func createWindowsBatchCmd(cmdShell string, scripts []string, custom_env *map[st
 	return cmd, scriptFile, nil
 }
 
-func createWindowsBashCmd(cmdShell string, scripts []string, custom_env *map[string]string) (*exec.Cmd, *os.File, error) {
+func createWindowsBashCmd(cmdShell string, scripts []string) (*exec.Cmd, *os.File, error) {
 	scriptFile, err := TempFileName("scripts", ".sh")
 	if err != nil {
 		return nil, nil, err
@@ -60,7 +61,7 @@ func createWindowsBashCmd(cmdShell string, scripts []string, custom_env *map[str
 	return cmd, scriptFile, nil
 }
 
-func createWindowsPowershellCmd(cmdShell string, scripts []string, custom_env *map[string]string) (*exec.Cmd, *os.File, error) {
+func createWindowsPowershellCmd(cmdShell string, scripts []string) (*exec.Cmd, *os.File, error) {
 	scriptFile, err := TempFileName("scripts", ".ps1")
 	if err != nil {
 		return nil, nil, err

@@ -3,12 +3,13 @@ package executor
 import (
 	"bytes"
 	"context"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 )
 
 func ShellCommandsAndGetOutput(
 	ctx context.Context,
 	scripts []string,
-	custom_env *map[string]string,
+	custom_env *environment.Environment,
 ) (bool, string) {
 	var buffer bytes.Buffer
 	cmd, err := ShellCommandsAndWait(ctx, scripts, custom_env, func(bytes []byte) (int, error) {
