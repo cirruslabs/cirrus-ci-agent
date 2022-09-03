@@ -168,7 +168,14 @@ func (uploader *LogUploader) StreamLogs() {
 }
 
 func (uploader *LogUploader) ReadAvailableChunks() ([]byte, bool) {
+	const maxBytesPerInvocation = 1 * 1024 * 1024
+
+	// Make sure we wait first to avoid busy loop in StreamLogs()
 	result := <-uploader.logsChannel
+
+	// Read log chunks from the channel, but no more than maxBytesPerInvocation bytes
+	//
+	// This assumes that log chunks are small by themselves (e.g. 32,000 bytes).
 	for {
 		select {
 		case nextChunk, more := <-uploader.logsChannel:
@@ -178,6 +185,10 @@ func (uploader *LogUploader) ReadAvailableChunks() ([]byte, bool) {
 				return result, true
 			}
 		default:
+			return result, false
+		}
+
+		if len(result) > maxBytesPerInvocation {
 			return result, false
 		}
 	}
