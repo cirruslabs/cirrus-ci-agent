@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/piper"
 	"os/exec"
 	"syscall"
@@ -12,6 +13,12 @@ import (
 type ShellCommands struct {
 	cmd   *exec.Cmd
 	piper *piper.Piper
+}
+
+func (sc *ShellCommands) beforeStart(env *environment.Environment) error {
+	// only used on Windows
+
+	return nil
 }
 
 func (sc *ShellCommands) afterStart() {

@@ -167,6 +167,10 @@ func NewShellCommands(
 	cmd.Stderr = sc.piper.FileProxy()
 	cmd.Stdout = sc.piper.FileProxy()
 
+	if err := sc.beforeStart(custom_env); err != nil {
+		return nil, err
+	}
+
 	err = cmd.Start()
 	if err != nil {
 		if err := sc.piper.Close(ctx, true); err != nil {
