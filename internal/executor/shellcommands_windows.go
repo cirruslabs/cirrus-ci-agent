@@ -15,7 +15,7 @@ type ShellCommands struct {
 	cmd            *exec.Cmd
 	piper          *piper.Piper
 	jobHandle      windows.Handle
-	savedErrorMode uint32
+	savedErrorMode *uint32
 }
 
 var ErrInvalidWindowsErrorMode = errors.New("invalid CIRRUS_WINDOWS_ERROR_MODE value")
@@ -39,14 +39,17 @@ func (sc *ShellCommands) beforeStart(env *environment.Environment) error {
 	// Set the error mode for the child process to use
 	// to work around Golang's disableWER() function[1]
 	// [1]: https://github.com/golang/go/issues/9121
-	sc.savedErrorMode = windows.SetErrorMode(uint32(errorMode))
+	savedErrorMode := windows.SetErrorMode(uint32(errorMode))
+	sc.savedErrorMode = &savedErrorMode
 
 	return nil
 }
 
 func (sc *ShellCommands) afterStart() {
 	// Restore the original error mode
-	windows.SetErrorMode(sc.savedErrorMode)
+	if sc.savedErrorMode != nil {
+		windows.SetErrorMode(*sc.savedErrorMode)
+	}
 
 	jobHandle, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
