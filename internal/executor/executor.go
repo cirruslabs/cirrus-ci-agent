@@ -591,7 +591,7 @@ func (executor *Executor) CloneRepository(
 			return false
 		}
 
-		refSpec := fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
+		refSpec := fmt.Sprintf("+refs/pull/%s/merge:refs/remotes/origin/pull/%[1]s", pr_number)
 		logUploader.Write([]byte(fmt.Sprintf("\nFetching %s...\n", refSpec)))
 		fetchOptions := &git.FetchOptions{
 			RemoteName: remoteConfig.Name,
