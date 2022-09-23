@@ -600,7 +600,8 @@ func (executor *Executor) CloneRepository(
 			Progress:   logUploader,
 		}
 		if clone_depth > 0 {
-			fetchOptions.Depth = clone_depth
+			// increase by one since we are cloning with an extra "merge" commit from GH
+			fetchOptions.Depth = clone_depth + 1
 		}
 		err = repo.FetchContext(ctx, fetchOptions)
 		if err != nil && retryableCloneError(err) {
