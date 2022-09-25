@@ -608,12 +608,12 @@ func (executor *Executor) CloneRepository(
 			logUploader.Write([]byte("\nFailed to fetch merge ref! PR might not be mergable. Falling back to head ref..."))
 			headRefSpec := fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
 			fetchOptions.RefSpecs = []config.RefSpec{config.RefSpec(headRefSpec)}
-			err = repo.Fetch(fetchOptions)
+			err = repo.FetchContext(ctx, fetchOptions)
 		}
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFetch failed: %s!", err)))
 			logUploader.Write([]byte("\nRe-trying to fetch..."))
-			err = repo.Fetch(fetchOptions)
+			err = repo.FetchContext(ctx, fetchOptions)
 		}
 		if err != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed fetch: %s!", err)))
