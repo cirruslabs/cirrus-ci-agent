@@ -104,8 +104,8 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	artifactsInstruction *api.ArtifactsInstruction,
 	customEnv *environment.Environment,
 	logUploader *LogUploader,
-) ([]model.Annotation, error) {
-	allAnnotations := make([]model.Annotation, 0)
+) (allAnnotations []model.Annotation, err error) {
+	allAnnotations = make([]model.Annotation, 0)
 
 	workingDir := customEnv.Get("CIRRUS_WORKING_DIR")
 
@@ -147,9 +147,13 @@ func (executor *Executor) uploadArtifactsAndParseAnnotations(
 	}
 
 	defer func() {
-		_, err := uploadArtifactsClient.CloseAndRecv()
-		if err != nil {
+		_, closeAndRecvErr := uploadArtifactsClient.CloseAndRecv()
+		if closeAndRecvErr != nil {
 			logUploader.Write([]byte(fmt.Sprintf("\nError from upload stream: %s", err)))
+
+			if err == nil {
+				err = closeAndRecvErr
+			}
 		}
 	}()
 
