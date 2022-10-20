@@ -591,23 +591,23 @@ func (executor *Executor) CloneRepository(
 			return false
 		}
 
-		mergeRefSpec := fmt.Sprintf("+refs/pull/%s/merge:refs/remotes/origin/pull/%[1]s", pr_number)
-		logUploader.Write([]byte(fmt.Sprintf("\nFetching %s...\n", mergeRefSpec)))
+		headRefSpec := fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
+		logUploader.Write([]byte(fmt.Sprintf("\nFetching %s...\n", headRefSpec)))
 		fetchOptions := &git.FetchOptions{
 			RemoteName: remoteConfig.Name,
-			RefSpecs:   []config.RefSpec{config.RefSpec(mergeRefSpec)},
+			RefSpecs:   []config.RefSpec{config.RefSpec(headRefSpec)},
 			Tags:       git.NoTags,
 			Progress:   logUploader,
 		}
-		if clone_depth > 0 {
-			// increase by one since we are cloning with an extra "merge" commit from GH
-			fetchOptions.Depth = clone_depth + 1
-		}
 		err = repo.FetchContext(ctx, fetchOptions)
 		if err != nil && strings.Contains(err.Error(), "couldn't find remote ref") {
-			logUploader.Write([]byte("\nFailed to fetch merge ref! PR might not be mergable. Falling back to head ref..."))
-			headRefSpec := fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
-			fetchOptions.RefSpecs = []config.RefSpec{config.RefSpec(headRefSpec)}
+			logUploader.Write([]byte("\nFailed to fetch head ref! Trying to fall back to merge ref..."))
+			mergeRefSpec := fmt.Sprintf("+refs/pull/%s/merge:refs/remotes/origin/pull/%[1]s", pr_number)
+			fetchOptions.RefSpecs = []config.RefSpec{config.RefSpec(mergeRefSpec)}
+			if clone_depth > 0 {
+				// increase by one since we are cloning with an extra "merge" commit from GH
+				fetchOptions.Depth = clone_depth + 1
+			}
 			err = repo.FetchContext(ctx, fetchOptions)
 		}
 		if err != nil && retryableCloneError(err) {
