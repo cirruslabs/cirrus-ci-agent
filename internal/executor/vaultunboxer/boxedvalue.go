@@ -36,9 +36,6 @@ func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
 	}
 
 	dataPath := strings.Split(parts[1], ".")
-	if len(dataPath) == 0 {
-		return nil, fmt.Errorf("%w: selector should at least one", ErrInvalidBoxedValue)
-	}
 
 	for _, element := range dataPath {
 		if element == "" {
