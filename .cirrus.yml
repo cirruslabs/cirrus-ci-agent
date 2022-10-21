@@ -16,7 +16,7 @@ task:
       format: golangci
 
 docker_builder:
-  name: Test (Linux with Docker)
+  name: Test (Linux)
   alias: test-linux
   modules_cache:
     fingerprint_script: cat go.sum
