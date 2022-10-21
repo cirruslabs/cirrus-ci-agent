@@ -13,6 +13,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/vaultunboxer"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -127,6 +128,41 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	executor.env.Merge(getScriptEnvironment(executor, response.Environment), false)
+
+	// Unbox VAULT[...] environment variables
+	var vaultUnboxer *vaultunboxer.VaultUnboxer
+
+	for key, value := range executor.env.Items() {
+		boxedValue, err := vaultunboxer.NewBoxedValue(value)
+		if err != nil {
+			if errors.Is(err, vaultunboxer.ErrNotABoxedValue) {
+				continue
+			}
+
+			log.Printf("failed to parse a Vault-boxed value: %v", err)
+
+			return
+		}
+
+		if vaultUnboxer == nil {
+			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, executor.env)
+			if err != nil {
+				log.Printf("failed to initialize a Vault client: %v", err)
+
+				return
+			}
+		}
+
+		unboxedValue, err := vaultUnboxer.Unbox(ctx, boxedValue)
+		if err != nil {
+			log.Printf("failed to unbox a Vault-boxed value: %v", err)
+
+			return
+		}
+
+		executor.env.Set(key, unboxedValue)
+		executor.env.AddSensitiveValues(unboxedValue)
+	}
 
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {

@@ -15,16 +15,22 @@ task:
       type: text/json
       format: golangci
 
-task:
-  name: Test (Linux)
+docker_builder:
+  name: Test (Linux with Docker)
   alias: test-linux
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
-  test_script:
+  install_zsh_script:
     - apt-get update
     - apt-get install -y zsh
+  install_golang_script:
+    - wget --no-verbose -O - https://go.dev/dl/go1.19.2.linux-amd64.tar.gz | tar -C /usr/local -xz
+  test_script:
+    - export PATH=$PATH:/usr/local/go/bin
     - go test ./...
+  env:
+    HOME: /root
 
 docker_builder:
   name: Test (Windows)
