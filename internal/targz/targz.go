@@ -141,7 +141,7 @@ func writeNewFile(fpath string, in io.Reader, fi os.FileInfo, buffer []byte) err
 		return fmt.Errorf("%s: making directory for file: %v", fpath, err)
 	}
 
-	out, err := os.Create(fpath)
+	out, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 	if err != nil {
 		return fmt.Errorf("%s: creating new file: %v", fpath, err)
 	}
