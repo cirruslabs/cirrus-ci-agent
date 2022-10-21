@@ -5,6 +5,7 @@ import (
 	"github.com/certifi/gocertifi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"strings"
 )
 
@@ -24,9 +25,9 @@ func TransportSettings(apiEndpoint string) (string, bool) {
 }
 
 func TransportSettingsAsDialOption(apiEndpoint string) (string, grpc.DialOption) {
-	target, insecure := TransportSettings(apiEndpoint)
-	if insecure {
-		return target, grpc.WithInsecure()
+	target, useInsecure := TransportSettings(apiEndpoint)
+	if useInsecure {
+		return target, grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
 	// Use embedded root certificates because the agent can be executed in a distroless container
