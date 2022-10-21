@@ -41,7 +41,7 @@ task:
   name: Test (macOS)
   alias: test-macos
   macos_instance:
-    image: big-sur-base
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
   test_script:
     - brew update
     - brew install go
@@ -70,7 +70,7 @@ task:
     - test-macos
     - test-freebsd
   macos_instance:
-    image: monterey-xcode
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
   install_script: brew update && brew install go goreleaser
   release_script: goreleaser build --snapshot
   binaries_artifacts:
@@ -87,6 +87,6 @@ task:
   env:
     GITHUB_TOKEN: ENCRYPTED[!98ace8259c6024da912c14d5a3c5c6aac186890a8d4819fad78f3e0c41a4e0cd3a2537dd6e91493952fb056fa434be7c!]
   macos_instance:
-    image: monterey-xcode
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
   install_script: brew update && brew install go goreleaser
   release_script: goreleaser
