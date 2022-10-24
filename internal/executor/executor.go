@@ -139,7 +139,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 				continue
 			}
 
-			log.Printf("failed to parse a Vault-boxed value: %v", err)
+			message := fmt.Sprintf("failed to parse a Vault-boxed value: %v", err)
+			log.Println(message)
+			executor.reportError(message)
 
 			return
 		}
@@ -147,7 +149,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		if vaultUnboxer == nil {
 			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, executor.env)
 			if err != nil {
-				log.Printf("failed to initialize a Vault client: %v", err)
+				message := fmt.Sprintf("failed to initialize a Vault client: %v", err)
+				log.Println(message)
+				executor.reportError(message)
 
 				return
 			}
@@ -155,7 +159,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		unboxedValue, err := vaultUnboxer.Unbox(ctx, boxedValue)
 		if err != nil {
-			log.Printf("failed to unbox a Vault-boxed value: %v", err)
+			message := fmt.Sprintf("failed to unbox a Vault-boxed value: %v", err)
+			log.Println(message)
+			executor.reportError(message)
 
 			return
 		}
@@ -801,4 +807,12 @@ func retryableCloneError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func (executor *Executor) reportError(message string) {
+	request := api.ReportAgentProblemRequest{
+		TaskIdentification: executor.taskIdentification,
+		Message:            message,
+	}
+	_, _ = client.CirrusClient.ReportAgentError(context.Background(), &request)
 }
