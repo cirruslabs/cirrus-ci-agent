@@ -13,6 +13,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/terminalwrapper"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/vaultunboxer"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -127,6 +128,47 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	executor.env.Merge(getScriptEnvironment(executor, response.Environment), false)
+
+	// Unbox VAULT[...] environment variables
+	var vaultUnboxer *vaultunboxer.VaultUnboxer
+
+	for key, value := range executor.env.Items() {
+		boxedValue, err := vaultunboxer.NewBoxedValue(value)
+		if err != nil {
+			if errors.Is(err, vaultunboxer.ErrNotABoxedValue) {
+				continue
+			}
+
+			message := fmt.Sprintf("failed to parse a Vault-boxed value: %v", err)
+			log.Println(message)
+			executor.reportError(message)
+
+			return
+		}
+
+		if vaultUnboxer == nil {
+			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, executor.env)
+			if err != nil {
+				message := fmt.Sprintf("failed to initialize a Vault client: %v", err)
+				log.Println(message)
+				executor.reportError(message)
+
+				return
+			}
+		}
+
+		unboxedValue, err := vaultUnboxer.Unbox(ctx, boxedValue)
+		if err != nil {
+			message := fmt.Sprintf("failed to unbox a Vault-boxed value: %v", err)
+			log.Println(message)
+			executor.reportError(message)
+
+			return
+		}
+
+		executor.env.Set(key, unboxedValue)
+		executor.env.AddSensitiveValues(unboxedValue)
+	}
 
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
@@ -765,4 +807,12 @@ func retryableCloneError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func (executor *Executor) reportError(message string) {
+	request := api.ReportAgentProblemRequest{
+		TaskIdentification: executor.taskIdentification,
+		Message:            message,
+	}
+	_, _ = client.CirrusClient.ReportAgentError(context.Background(), &request)
 }
