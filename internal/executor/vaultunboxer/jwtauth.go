@@ -2,12 +2,15 @@ package vaultunboxer
 
 import (
 	"context"
+	"fmt"
+
 	vault "github.com/hashicorp/vault/api"
 )
 
 type JWTAuth struct {
 	Token string
 	Role  string
+	Path  string
 }
 
 func (jwtAuth *JWTAuth) Login(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
@@ -19,5 +22,9 @@ func (jwtAuth *JWTAuth) Login(ctx context.Context, client *vault.Client) (*vault
 		data["role"] = jwtAuth.Role
 	}
 
-	return client.Logical().WriteWithContext(ctx, "auth/jwt/login", data)
+	if jwtAuth.Path == "" {
+		jwtAuth.Path = "jwt"
+	}
+
+	return client.Logical().WriteWithContext(ctx, fmt.Sprintf("auth/%s/login", jwtAuth.Path), data)
 }
