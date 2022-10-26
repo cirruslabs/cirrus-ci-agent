@@ -3,14 +3,16 @@ package vaultunboxer
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	vault "github.com/hashicorp/vault/api"
-	"net/http"
 )
 
 const (
 	EnvCirrusVaultURL       = "CIRRUS_VAULT_URL"
+	EnvCirrusVaultAuthPath  = "CIRRUS_VAULT_AUTH_PATH"
 	EnvCirrusVaultNamespace = "CIRRUS_VAULT_NAMESPACE"
 	EnvCirrusVaultRole      = "CIRRUS_VAULT_ROLE"
 )
@@ -55,6 +57,7 @@ func NewFromEnvironment(ctx context.Context, env *environment.Environment) (*Vau
 		auth := &JWTAuth{
 			Token: jwtToken,
 			Role:  env.Get(EnvCirrusVaultRole),
+			Path:  env.Get(EnvCirrusVaultAuthPath),
 		}
 
 		_, err := client.Auth().Login(ctx, auth)
