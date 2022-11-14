@@ -595,6 +595,7 @@ type CirrusCIServiceClient interface {
 	UploadArtifacts(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadArtifactsClient, error)
 	DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error)
 	CacheInfo(ctx context.Context, in *CacheInfoRequest, opts ...grpc.CallOption) (*CacheInfoResponse, error)
+	DeleteCache(ctx context.Context, in *DeleteCacheRequest, opts ...grpc.CallOption) (*DeleteCacheResponse, error)
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 	ReportStopHook(ctx context.Context, in *ReportStopHookRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ReportAgentError(ctx context.Context, in *ReportAgentProblemRequest, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -831,6 +832,15 @@ func (c *cirrusCIServiceClient) CacheInfo(ctx context.Context, in *CacheInfoRequ
 	return out, nil
 }
 
+func (c *cirrusCIServiceClient) DeleteCache(ctx context.Context, in *DeleteCacheRequest, opts ...grpc.CallOption) (*DeleteCacheResponse, error) {
+	out := new(DeleteCacheResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DeleteCache", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cirrusCIServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
 	out := new(HeartbeatResponse)
 	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/Heartbeat", in, out, opts...)
@@ -962,6 +972,7 @@ type CirrusCIServiceServer interface {
 	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
 	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
 	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
+	DeleteCache(context.Context, *DeleteCacheRequest) (*DeleteCacheResponse, error)
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
 	ReportStopHook(context.Context, *ReportStopHookRequest) (*empty.Empty, error)
 	ReportAgentError(context.Context, *ReportAgentProblemRequest) (*empty.Empty, error)
@@ -1011,6 +1022,9 @@ func (UnimplementedCirrusCIServiceServer) DownloadCache(*DownloadCacheRequest, C
 }
 func (UnimplementedCirrusCIServiceServer) CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CacheInfo not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) DeleteCache(context.Context, *DeleteCacheRequest) (*DeleteCacheResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteCache not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
@@ -1279,6 +1293,24 @@ func _CirrusCIService_CacheInfo_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CirrusCIService_DeleteCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).DeleteCache(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DeleteCache",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).DeleteCache(ctx, req.(*DeleteCacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CirrusCIService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HeartbeatRequest)
 	if err := dec(in); err != nil {
@@ -1539,6 +1571,10 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CacheInfo",
 			Handler:    _CirrusCIService_CacheInfo_Handler,
+		},
+		{
+			MethodName: "DeleteCache",
+			Handler:    _CirrusCIService_DeleteCache_Handler,
 		},
 		{
 			MethodName: "Heartbeat",
