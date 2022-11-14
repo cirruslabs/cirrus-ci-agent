@@ -95,14 +95,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		downloadCache(w, r, key)
-	} else if r.Method == "HEAD" {
+	} else if r.Method == http.MethodHead {
 		checkCacheExists(w, key)
-	} else if r.Method == "POST" {
+	} else if r.Method == http.MethodPost {
 		uploadCacheEntry(w, r, key)
-	} else if r.Method == "PUT" {
+	} else if r.Method == http.MethodPut {
 		uploadCacheEntry(w, r, key)
+	} else if r.Method == http.MethodDelete {
+		deleteCacheEntry(w, key)
 	} else {
 		log.Printf("Not supported request method: %s\n", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -231,4 +233,23 @@ func uploadCacheEntry(w http.ResponseWriter, r *http.Request, cacheKey string) {
 		resp.Write(log.Writer())
 	}
 	w.WriteHeader(resp.StatusCode)
+}
+
+func deleteCacheEntry(w http.ResponseWriter, cacheKey string) {
+	request := api.DeleteCacheRequest{
+		TaskIdentification: cirrusTaskIdentification,
+		CacheKey:           cacheKey,
+	}
+
+	_, err := client.CirrusClient.DeleteCache(context.Background(), &request)
+	if err != nil {
+		errorMsg := fmt.Sprintf("Failed to delete cache entry %s: %v", cacheKey, err)
+		log.Println(errorMsg)
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errorMsg))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
