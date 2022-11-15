@@ -640,6 +640,7 @@ func (executor *Executor) CloneRepository(
 			RefSpecs:   []config.RefSpec{config.RefSpec(headRefSpec)},
 			Tags:       git.NoTags,
 			Progress:   logUploader,
+			Depth:      clone_depth,
 		}
 		err = repo.FetchContext(ctx, fetchOptions)
 		if err != nil && strings.Contains(err.Error(), "couldn't find remote ref") {
@@ -681,9 +682,7 @@ func (executor *Executor) CloneRepository(
 		cloneOptions := git.CloneOptions{
 			URL:      clone_url,
 			Progress: logUploader,
-		}
-		if clone_depth > 0 {
-			cloneOptions.Depth = clone_depth
+			Depth:    clone_depth,
 		}
 		if !is_tag {
 			cloneOptions.Tags = git.NoTags
