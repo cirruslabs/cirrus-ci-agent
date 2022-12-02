@@ -139,7 +139,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 				continue
 			}
 
-			message := fmt.Sprintf("failed to parse a Vault-boxed value: %v", err)
+			message := fmt.Sprintf("failed to parse a Vault-boxed value %s: %v", value, err)
 			log.Println(message)
 			executor.reportError(message)
 
@@ -159,7 +159,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		unboxedValue, err := vaultUnboxer.Unbox(ctx, boxedValue)
 		if err != nil {
-			message := fmt.Sprintf("failed to unbox a Vault-boxed value: %v", err)
+			message := fmt.Sprintf("failed to unbox a Vault-boxed value %s: %v", value, err)
 			log.Println(message)
 			executor.reportError(message)
 
