@@ -592,7 +592,11 @@ type CirrusCIServiceClient interface {
 	StreamLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_StreamLogsClient, error)
 	SaveLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_SaveLogsClient, error)
 	UploadCache(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadCacheClient, error)
+	// Artifacts upload over gRPC
 	UploadArtifacts(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadArtifactsClient, error)
+	// Artifacts upload over HTTPS
+	GenerateArtifactUploadURL(ctx context.Context, in *GenerateArtifactUploadURLRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLResponse, error)
+	CommitUploadedArtifacts(ctx context.Context, in *CommitUploadedArtifactsRequest, opts ...grpc.CallOption) (*CommitUploadedArtifactsResponse, error)
 	DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error)
 	CacheInfo(ctx context.Context, in *CacheInfoRequest, opts ...grpc.CallOption) (*CacheInfoResponse, error)
 	DeleteCache(ctx context.Context, in *DeleteCacheRequest, opts ...grpc.CallOption) (*DeleteCacheResponse, error)
@@ -791,6 +795,24 @@ func (x *cirrusCIServiceUploadArtifactsClient) CloseAndRecv() (*UploadArtifactsR
 	return m, nil
 }
 
+func (c *cirrusCIServiceClient) GenerateArtifactUploadURL(ctx context.Context, in *GenerateArtifactUploadURLRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLResponse, error) {
+	out := new(GenerateArtifactUploadURLResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURL", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cirrusCIServiceClient) CommitUploadedArtifacts(ctx context.Context, in *CommitUploadedArtifactsRequest, opts ...grpc.CallOption) (*CommitUploadedArtifactsResponse, error) {
+	out := new(CommitUploadedArtifactsResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/CommitUploadedArtifacts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cirrusCIServiceClient) DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error) {
 	stream, err := c.cc.NewStream(ctx, &CirrusCIService_ServiceDesc.Streams[4], "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/DownloadCache", opts...)
 	if err != nil {
@@ -969,7 +991,11 @@ type CirrusCIServiceServer interface {
 	StreamLogs(CirrusCIService_StreamLogsServer) error
 	SaveLogs(CirrusCIService_SaveLogsServer) error
 	UploadCache(CirrusCIService_UploadCacheServer) error
+	// Artifacts upload over gRPC
 	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
+	// Artifacts upload over HTTPS
+	GenerateArtifactUploadURL(context.Context, *GenerateArtifactUploadURLRequest) (*GenerateArtifactUploadURLResponse, error)
+	CommitUploadedArtifacts(context.Context, *CommitUploadedArtifactsRequest) (*CommitUploadedArtifactsResponse, error)
 	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
 	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
 	DeleteCache(context.Context, *DeleteCacheRequest) (*DeleteCacheResponse, error)
@@ -1016,6 +1042,12 @@ func (UnimplementedCirrusCIServiceServer) UploadCache(CirrusCIService_UploadCach
 }
 func (UnimplementedCirrusCIServiceServer) UploadArtifacts(CirrusCIService_UploadArtifactsServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadArtifacts not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) GenerateArtifactUploadURL(context.Context, *GenerateArtifactUploadURLRequest) (*GenerateArtifactUploadURLResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateArtifactUploadURL not implemented")
+}
+func (UnimplementedCirrusCIServiceServer) CommitUploadedArtifacts(context.Context, *CommitUploadedArtifactsRequest) (*CommitUploadedArtifactsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitUploadedArtifacts not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error {
 	return status.Errorf(codes.Unimplemented, "method DownloadCache not implemented")
@@ -1252,6 +1284,42 @@ func (x *cirrusCIServiceUploadArtifactsServer) Recv() (*ArtifactEntry, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func _CirrusCIService_GenerateArtifactUploadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateArtifactUploadURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURL",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURL(ctx, req.(*GenerateArtifactUploadURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CirrusCIService_CommitUploadedArtifacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitUploadedArtifactsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CirrusCIServiceServer).CommitUploadedArtifacts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/CommitUploadedArtifacts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CirrusCIServiceServer).CommitUploadedArtifacts(ctx, req.(*CommitUploadedArtifactsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CirrusCIService_DownloadCache_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -1567,6 +1635,14 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportAnnotations",
 			Handler:    _CirrusCIService_ReportAnnotations_Handler,
+		},
+		{
+			MethodName: "GenerateArtifactUploadURL",
+			Handler:    _CirrusCIService_GenerateArtifactUploadURL_Handler,
+		},
+		{
+			MethodName: "CommitUploadedArtifacts",
+			Handler:    _CirrusCIService_CommitUploadedArtifacts_Handler,
 		},
 		{
 			MethodName: "CacheInfo",
