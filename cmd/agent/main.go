@@ -80,7 +80,7 @@ func main() {
 	var release string
 
 	if version != "unknown" {
-		release = version
+		release = fmt.Sprintf("cirrus-ci-agent@%s", version)
 	}
 
 	err := sentry.Init(sentry.ClientOptions{
