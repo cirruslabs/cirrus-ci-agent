@@ -77,7 +77,14 @@ func main() {
 	flag.Parse()
 
 	// Initialize Sentry
+	var release string
+
+	if version != "unknown" {
+		release = version
+	}
+
 	err := sentry.Init(sentry.ClientOptions{
+		Release:          release,
 		AttachStacktrace: true,
 	})
 	if err != nil {
