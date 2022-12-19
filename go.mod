@@ -9,6 +9,7 @@ require (
 	github.com/cirruslabs/cirrus-ci-annotations v0.9.0
 	github.com/cirruslabs/terminal v0.11.0
 	github.com/dustin/go-humanize v1.0.0
+	github.com/getsentry/sentry-go v0.16.0
 	github.com/go-git/go-git/v5 v5.4.3-0.20220108132248-a5bbcd278ab1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
@@ -20,15 +21,15 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/procfs v0.7.3
 	github.com/shirou/gopsutil v3.21.10-0.20211023024924-fb65e185a90c+incompatible
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	github.com/testcontainers/testcontainers-go v0.14.0
-	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9
+	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
+	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
 	google.golang.org/grpc v1.47.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 )
 
 require (
@@ -79,10 +80,10 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/joshdk/go-junit v0.0.0-20210226021600-6145f504ca0d // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
-	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
@@ -107,7 +108,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
+	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20220617124728-180714bec0ad // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect

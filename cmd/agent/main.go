@@ -11,6 +11,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/network"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/signalfilter"
 	"github.com/cirruslabs/cirrus-ci-agent/pkg/grpchelper"
+	"github.com/getsentry/sentry-go"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	goversion "github.com/hashicorp/go-version"
 	"golang.org/x/time/rate"
@@ -74,6 +75,64 @@ func main() {
 	preCreatedWorkingDir := flag.String("pre-created-working-dir", "",
 		"working directory to use when spawned via Persistent Worker")
 	flag.Parse()
+
+	// Initialize Sentry
+	var release string
+
+	if version != "unknown" {
+		release = fmt.Sprintf("cirrus-ci-agent@%s", version)
+	}
+
+	err := sentry.Init(sentry.ClientOptions{
+		Release:          release,
+		AttachStacktrace: true,
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize Sentry: %v", err)
+	}
+	defer sentry.Flush(2 * time.Second)
+
+	// Enrich future events with Cirrus CI-specific tags
+	if tags, ok := os.LookupEnv("CIRRUS_SENTRY_TAGS"); ok {
+		sentry.ConfigureScope(func(scope *sentry.Scope) {
+			for _, tag := range strings.Split(tags, ",") {
+				splits := strings.SplitN(tag, "=", 2)
+				if len(splits) != 2 {
+					continue
+				}
+
+				scope.SetTag(splits[0], splits[1])
+			}
+		})
+	}
+
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+
+		// Report exception to Sentry
+		hub := sentry.CurrentHub()
+		hub.Recover(err)
+
+		// Report exception to Cirrus CI
+		log.Printf("Recovered an error: %v", err)
+
+		if client.CirrusClient == nil {
+			return
+		}
+
+		request := &api.ReportAgentProblemRequest{
+			TaskIdentification: &api.TaskIdentification{
+				TaskId: *taskIdPtr,
+				Secret: *clientTokenPtr,
+			},
+			Message: fmt.Sprint(err),
+			Stack:   string(debug.Stack()),
+		}
+		_, _ = client.CirrusClient.ReportAgentError(context.Background(), request)
+	}()
 
 	if *versionFlag {
 		fmt.Println(fullVersion())
@@ -174,22 +233,6 @@ func main() {
 		}
 		os.Exit(0)
 	}
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("Recovered an error: %v", err)
-			taskIdentification := api.TaskIdentification{
-				TaskId: *taskIdPtr,
-				Secret: *clientTokenPtr,
-			}
-			request := api.ReportAgentProblemRequest{
-				TaskIdentification: &taskIdentification,
-				Message:            fmt.Sprint(err),
-				Stack:              string(debug.Stack()),
-			}
-			_, _ = client.CirrusClient.ReportAgentError(context.Background(), &request)
-		}
-	}()
 
 	if portsToWait, ok := os.LookupEnv("CIRRUS_PORTS_WAIT_FOR"); ok {
 		ports := strings.Split(portsToWait, ",")
