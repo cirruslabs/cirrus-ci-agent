@@ -13,9 +13,6 @@ const readBufferSizeBytes = 1024 * 1024
 
 type GRPCUploader struct {
 	taskIdentification *api.TaskIdentification
-	artifactName       string
-	artifactType       string
-	artifactFormat     string
 
 	client     api.CirrusCIService_UploadArtifactsClient
 	readBuffer []byte
@@ -49,9 +46,6 @@ func NewGRPCUploader(
 
 	return &GRPCUploader{
 		taskIdentification: taskIdentification,
-		artifactName:       artifactName,
-		artifactType:       artifactType,
-		artifactFormat:     artifactFormat,
 
 		client:     client,
 		readBuffer: make([]byte, readBufferSizeBytes),
