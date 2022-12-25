@@ -97,7 +97,7 @@ task:
     SENTRY_AUTH_TOKEN: ENCRYPTED[!c16a5cf7da5f856b4bc2f21fe8cb7aa2a6c981f851c094ed4d3025fd02ea59a58a86cee8b193a69a1fc20fa217e56ac3!]
   macos_instance:
     image: monterey-xcode
-  install_script: brew update && brew install go goreleaser
+  install_script: brew update && brew install go goreleaser getsentry/tools/sentry-cli
   release_script: goreleaser
   create_sentry_release_script:
     - export SENTRY_RELEASE="cirrus-ci-agent@$CIRRUS_TAG"
