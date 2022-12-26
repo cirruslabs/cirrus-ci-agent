@@ -595,7 +595,7 @@ type CirrusCIServiceClient interface {
 	// Artifacts upload over gRPC
 	UploadArtifacts(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_UploadArtifactsClient, error)
 	// Artifacts upload over HTTPS
-	GenerateArtifactUploadURL(ctx context.Context, in *GenerateArtifactUploadURLRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLResponse, error)
+	GenerateArtifactUploadURLs(ctx context.Context, in *GenerateArtifactUploadURLsRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLsResponse, error)
 	CommitUploadedArtifacts(ctx context.Context, in *CommitUploadedArtifactsRequest, opts ...grpc.CallOption) (*CommitUploadedArtifactsResponse, error)
 	DownloadCache(ctx context.Context, in *DownloadCacheRequest, opts ...grpc.CallOption) (CirrusCIService_DownloadCacheClient, error)
 	CacheInfo(ctx context.Context, in *CacheInfoRequest, opts ...grpc.CallOption) (*CacheInfoResponse, error)
@@ -795,9 +795,9 @@ func (x *cirrusCIServiceUploadArtifactsClient) CloseAndRecv() (*UploadArtifactsR
 	return m, nil
 }
 
-func (c *cirrusCIServiceClient) GenerateArtifactUploadURL(ctx context.Context, in *GenerateArtifactUploadURLRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLResponse, error) {
-	out := new(GenerateArtifactUploadURLResponse)
-	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURL", in, out, opts...)
+func (c *cirrusCIServiceClient) GenerateArtifactUploadURLs(ctx context.Context, in *GenerateArtifactUploadURLsRequest, opts ...grpc.CallOption) (*GenerateArtifactUploadURLsResponse, error) {
+	out := new(GenerateArtifactUploadURLsResponse)
+	err := c.cc.Invoke(ctx, "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURLs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -994,7 +994,7 @@ type CirrusCIServiceServer interface {
 	// Artifacts upload over gRPC
 	UploadArtifacts(CirrusCIService_UploadArtifactsServer) error
 	// Artifacts upload over HTTPS
-	GenerateArtifactUploadURL(context.Context, *GenerateArtifactUploadURLRequest) (*GenerateArtifactUploadURLResponse, error)
+	GenerateArtifactUploadURLs(context.Context, *GenerateArtifactUploadURLsRequest) (*GenerateArtifactUploadURLsResponse, error)
 	CommitUploadedArtifacts(context.Context, *CommitUploadedArtifactsRequest) (*CommitUploadedArtifactsResponse, error)
 	DownloadCache(*DownloadCacheRequest, CirrusCIService_DownloadCacheServer) error
 	CacheInfo(context.Context, *CacheInfoRequest) (*CacheInfoResponse, error)
@@ -1043,8 +1043,8 @@ func (UnimplementedCirrusCIServiceServer) UploadCache(CirrusCIService_UploadCach
 func (UnimplementedCirrusCIServiceServer) UploadArtifacts(CirrusCIService_UploadArtifactsServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadArtifacts not implemented")
 }
-func (UnimplementedCirrusCIServiceServer) GenerateArtifactUploadURL(context.Context, *GenerateArtifactUploadURLRequest) (*GenerateArtifactUploadURLResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateArtifactUploadURL not implemented")
+func (UnimplementedCirrusCIServiceServer) GenerateArtifactUploadURLs(context.Context, *GenerateArtifactUploadURLsRequest) (*GenerateArtifactUploadURLsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateArtifactUploadURLs not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) CommitUploadedArtifacts(context.Context, *CommitUploadedArtifactsRequest) (*CommitUploadedArtifactsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CommitUploadedArtifacts not implemented")
@@ -1286,20 +1286,20 @@ func (x *cirrusCIServiceUploadArtifactsServer) Recv() (*ArtifactEntry, error) {
 	return m, nil
 }
 
-func _CirrusCIService_GenerateArtifactUploadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateArtifactUploadURLRequest)
+func _CirrusCIService_GenerateArtifactUploadURLs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateArtifactUploadURLsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURL(ctx, in)
+		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURLs(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURL",
+		FullMethod: "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateArtifactUploadURLs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURL(ctx, req.(*GenerateArtifactUploadURLRequest))
+		return srv.(CirrusCIServiceServer).GenerateArtifactUploadURLs(ctx, req.(*GenerateArtifactUploadURLsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1637,8 +1637,8 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CirrusCIService_ReportAnnotations_Handler,
 		},
 		{
-			MethodName: "GenerateArtifactUploadURL",
-			Handler:    _CirrusCIService_GenerateArtifactUploadURL_Handler,
+			MethodName: "GenerateArtifactUploadURLs",
+			Handler:    _CirrusCIService_GenerateArtifactUploadURLs_Handler,
 		},
 		{
 			MethodName: "CommitUploadedArtifacts",
