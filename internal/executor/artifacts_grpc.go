@@ -21,9 +21,7 @@ type GRPCUploader struct {
 func NewGRPCUploader(
 	ctx context.Context,
 	taskIdentification *api.TaskIdentification,
-	artifactName string,
-	artifactType string,
-	artifactFormat string,
+	artifacts *Artifacts,
 ) (ArtifactUploader, error) {
 	client, err := client.CirrusClient.UploadArtifacts(ctx)
 	if err != nil {
@@ -34,9 +32,9 @@ func NewGRPCUploader(
 		Value: &api.ArtifactEntry_ArtifactsUpload_{
 			ArtifactsUpload: &api.ArtifactEntry_ArtifactsUpload{
 				TaskIdentification: taskIdentification,
-				Name:               artifactName,
-				Type:               artifactType,
-				Format:             artifactFormat,
+				Name:               artifacts.Name,
+				Type:               artifacts.Type,
+				Format:             artifacts.Format,
 			},
 		},
 	})
