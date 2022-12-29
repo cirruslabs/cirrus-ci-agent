@@ -34,6 +34,7 @@ func (executor *Executor) UploadArtifacts(
 
 	artifacts, err := NewArtifacts(name, artifactsInstruction, customEnv)
 	if err != nil {
+		fmt.Fprintf(logUploader, "Failed to upload artifacts: %v", err)
 		return false
 	}
 
