@@ -93,18 +93,12 @@ func (uploader *HTTPSUploader) Upload(
 }
 
 func (uploader *HTTPSUploader) Finish(ctx context.Context) error {
-	paths := uploader.artifacts.UploadableRelativePaths()
-
-	if len(paths) == 0 {
-		return nil
-	}
-
 	_, err := client.CirrusClient.CommitUploadedArtifacts(ctx, &api.CommitUploadedArtifactsRequest{
 		TaskIdentification: uploader.taskIdentification,
 		Name:               uploader.artifacts.Name,
 		Type:               uploader.artifacts.Type,
 		Format:             uploader.artifacts.Format,
-		Paths:              paths,
+		Paths:              uploader.artifacts.UploadableRelativePaths(),
 	})
 	if err != nil {
 		return err

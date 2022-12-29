@@ -34,6 +34,8 @@ func (executor *Executor) UploadArtifacts(
 
 	artifacts, err := NewArtifacts(name, artifactsInstruction, customEnv)
 	if err != nil {
+		fmt.Fprintf(logUploader, "Failed to upload artifacts: %v", err)
+
 		return false
 	}
 
@@ -135,18 +137,19 @@ func uploadArtifacts(
 
 		for _, artifactPath := range pattern.Paths {
 			if artifactPath.info.IsDir() {
-				fmt.Fprintf(logUploader, "Skipping uploading of '%s' because it's a folder\n", artifactPath)
+				fmt.Fprintf(logUploader, "Skipping uploading of '%s' because it's a folder\n",
+					artifactPath.absolutePath)
 				continue
 			}
 
 			if artifactPath.info.Size() > 100*humanize.MByte {
-				fmt.Fprintf(logUploader, "Uploading a quite hefty artifact '%s' of size %s\n", artifactPath,
-					humanize.Bytes(uint64(artifactPath.info.Size())))
+				fmt.Fprintf(logUploader, "Uploading a quite hefty artifact '%s' of size %s\n",
+					artifactPath.absolutePath, humanize.Bytes(uint64(artifactPath.info.Size())))
 			}
 
 			artifactFile, err := os.Open(artifactPath.absolutePath)
 			if err != nil {
-				return errors.Wrapf(err, "failed to read artifact file %s", artifactPath)
+				return errors.Wrapf(err, "failed to read artifact file %s", artifactPath.absolutePath)
 			}
 
 			err = artifactUploader.Upload(ctx, artifactFile, artifactPath.relativePath)
@@ -157,7 +160,7 @@ func uploadArtifacts(
 
 			_ = artifactFile.Close()
 
-			fmt.Fprintf(logUploader, "Uploaded %s\n", artifactPath)
+			fmt.Fprintf(logUploader, "Uploaded %s\n", artifactPath.absolutePath)
 		}
 	}
 
