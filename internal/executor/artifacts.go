@@ -51,7 +51,7 @@ func (executor *Executor) UploadArtifacts(
 	// Process and upload annotations
 	if artifactsInstruction.Format != "" {
 		return executor.processAndUploadAnnotations(ctx, customEnv.Get("CIRRUS_WORKING_DIR"),
-			artifacts.UploadableRelativePaths(), logUploader, artifactsInstruction.Format)
+			artifacts.UploadableFiles(), logUploader, artifactsInstruction.Format)
 	}
 
 	return true
@@ -152,7 +152,7 @@ func uploadArtifacts(
 				return errors.Wrapf(err, "failed to read artifact file %s", artifactPath.absolutePath)
 			}
 
-			err = artifactUploader.Upload(ctx, artifactFile, artifactPath.relativePath)
+			err = artifactUploader.Upload(ctx, artifactFile, artifactPath.relativePath, artifactPath.info.Size())
 			if err != nil {
 				_ = artifactFile.Close()
 				return err
@@ -170,18 +170,18 @@ func uploadArtifacts(
 func (executor *Executor) processAndUploadAnnotations(
 	ctx context.Context,
 	workingDir string,
-	uploadedPaths []string,
+	uploadedArtifacts []*api.ArtifactFileInfo,
 	logUploader *LogUploader,
 	format string,
 ) bool {
 	var allAnnotations []model.Annotation
 
-	for _, uploadedPath := range uploadedPaths {
+	for _, uploadedArtifact := range uploadedArtifacts {
 		fmt.Fprintf(logUploader, "Trying to parse annotations for %s format\n", format)
 
-		err, artifactAnnotations := annotations.ParseAnnotations(format, uploadedPath)
+		err, artifactAnnotations := annotations.ParseAnnotations(format, uploadedArtifact.Path)
 		if err != nil {
-			fmt.Fprintf(logUploader, "failed to create annotations from %s: %v", uploadedPath, err)
+			fmt.Fprintf(logUploader, "failed to create annotations from %s: %v", uploadedArtifact.Path, err)
 
 			return false
 		}

@@ -19,6 +19,7 @@ type HTTPSUploader struct {
 
 	artifacts         *Artifacts
 	uploadDescriptors map[string]*UploadDescriptor
+	uploadedFiles     []*api.ArtifactFileInfo
 }
 
 func NewHTTPSUploader(
@@ -30,7 +31,7 @@ func NewHTTPSUploader(
 	request := &api.GenerateArtifactUploadURLsRequest{
 		TaskIdentification: taskIdentification,
 		Name:               artifacts.Name,
-		Paths:              artifacts.UploadableRelativePaths(),
+		Files:              artifacts.UploadableFiles(),
 	}
 
 	response, err := client.CirrusClient.GenerateArtifactUploadURLs(ctx, request)
@@ -38,16 +39,16 @@ func NewHTTPSUploader(
 		return nil, err
 	}
 
-	if len(request.Paths) != len(response.Urls) {
+	if len(request.Files) != len(response.Urls) {
 		return nil, fmt.Errorf("GenerateArtifactUploadURLs() RPC call returned invalid data:"+
-			" requested %d URLs, got %d", len(request.Paths), len(response.Urls))
+			" requested %d URLs, got %d", len(request.Files), len(response.Urls))
 	}
 
 	// Create a mapping between relative artifact paths and upload URLs
 	uploadDescriptors := map[string]*UploadDescriptor{}
 
 	for idx, url := range response.Urls {
-		uploadDescriptors[request.Paths[idx]] = &UploadDescriptor{
+		uploadDescriptors[request.Files[idx].Path] = &UploadDescriptor{
 			url:     url.Url,
 			headers: url.Headers,
 		}
@@ -60,11 +61,7 @@ func NewHTTPSUploader(
 	}, nil
 }
 
-func (uploader *HTTPSUploader) Upload(
-	ctx context.Context,
-	artifact io.Reader,
-	relativeArtifactPath string,
-) error {
+func (uploader *HTTPSUploader) Upload(ctx context.Context, artifact io.Reader, relativeArtifactPath string, size int64) error {
 	uploadDescriptor, ok := uploader.uploadDescriptors[relativeArtifactPath]
 	if !ok {
 		return fmt.Errorf("no upload URL was generated for artifact path %s", relativeArtifactPath)
@@ -75,6 +72,8 @@ func (uploader *HTTPSUploader) Upload(
 		return err
 	}
 
+	httpRequest.Header.Set("Content-Type", "application/octet-stream")
+	httpRequest.ContentLength = size
 	for key, value := range uploadDescriptor.headers {
 		httpRequest.Header.Set(key, value)
 	}
@@ -89,17 +88,23 @@ func (uploader *HTTPSUploader) Upload(
 			httpResponse.StatusCode)
 	}
 
+	uploader.uploadedFiles = append(uploader.uploadedFiles, &api.ArtifactFileInfo{
+		Path:        relativeArtifactPath,
+		SizeInBytes: size,
+	})
+
 	return nil
 }
 
 func (uploader *HTTPSUploader) Finish(ctx context.Context) error {
-	_, err := client.CirrusClient.CommitUploadedArtifacts(ctx, &api.CommitUploadedArtifactsRequest{
+	commitRequest := &api.CommitUploadedArtifactsRequest{
 		TaskIdentification: uploader.taskIdentification,
 		Name:               uploader.artifacts.Name,
 		Type:               uploader.artifacts.Type,
 		Format:             uploader.artifacts.Format,
-		Paths:              uploader.artifacts.UploadableRelativePaths(),
-	})
+		Files:              uploader.uploadedFiles,
+	}
+	_, err := client.CirrusClient.CommitUploadedArtifacts(ctx, commitRequest)
 	if err != nil {
 		return err
 	}
