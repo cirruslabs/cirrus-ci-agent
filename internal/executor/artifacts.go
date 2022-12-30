@@ -39,13 +39,18 @@ func (executor *Executor) UploadArtifacts(
 		return false
 	}
 
-	// Upload artifacts: try first via HTTPS, then fallback via gRPC
-	success := executor.uploadArtifactsWithRetries(ctx, "HTTPS", NewHTTPSUploader, logUploader, artifacts)
-	if !success {
-		success = executor.uploadArtifactsWithRetries(ctx, "gRPC", NewGRPCUploader, logUploader, artifacts)
-		if !success {
-			return false
+	// Upload artifacts: try first via HTTPS, then fallback via gRPC if not implemented
+	err = executor.uploadArtifactsWithRetries(ctx, NewHTTPSUploader, logUploader, artifacts)
+	if errStatus, ok := status.FromError(err); ok {
+		if errStatus.Code() == codes.Unimplemented {
+			fmt.Fprintf(logUploader, "Artifact upload via pre-signed URLs is not supported! Falling back to gRPC...\n")
+			err = executor.uploadArtifactsWithRetries(ctx, NewGRPCUploader, logUploader, artifacts)
 		}
+	}
+
+	if err != nil {
+		fmt.Fprintf(logUploader, "Failed to upload artifacts: %s\n", err)
+		return false
 	}
 
 	// Process and upload annotations
@@ -57,25 +62,14 @@ func (executor *Executor) UploadArtifacts(
 	return true
 }
 
-func (executor *Executor) uploadArtifactsWithRetries(
-	ctx context.Context,
-	method string,
-	instantiateArtifactUploader InstantiateArtifactUploaderFunc,
-	logUploader *LogUploader,
-	artifacts *Artifacts,
-) (success bool) {
-	fmt.Fprintf(logUploader, "Trying to upload artifacts over %s...\n", method)
-
+func (executor *Executor) uploadArtifactsWithRetries(ctx context.Context, instantiateArtifactUploader InstantiateArtifactUploaderFunc, logUploader *LogUploader, artifacts *Artifacts) (err error) {
 	artifactUploader, err := instantiateArtifactUploader(ctx, executor.taskIdentification, artifacts)
 	if err != nil {
-		fmt.Fprintf(logUploader, "Failed to initialize %s artifact uploader: %v\n", method, err)
-
-		return false
+		return err
 	}
 	defer func() {
-		if err := artifactUploader.Finish(ctx); err != nil {
-			fmt.Fprintf(logUploader, "Failed to finalize %s artifact uploader: %v\n", method, err)
-			success = false
+		if err = artifactUploader.Finish(ctx); err != nil {
+			fmt.Fprintf(logUploader, "Failed to finalize artifact uploader: %v\n", err)
 		}
 	}()
 
@@ -107,23 +101,13 @@ func (executor *Executor) uploadArtifactsWithRetries(
 		if errors.Is(err, ErrArtifactsPathOutsideWorkingDir) {
 			fmt.Fprintf(logUploader, "Failed to upload artifacts: %v\n", err)
 
-			return false
+			return err
 		}
 
-		if status, ok := status.FromError(err); ok {
-			if status.Code() == codes.Unimplemented {
-				fmt.Fprintf(logUploader, "Artifact upload over %s is not supported\n", method)
-
-				return false
-			}
-		}
-
-		fmt.Fprintf(logUploader, "Failed to upload artifacts after multiple tries: %s\n", err)
-
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
 func uploadArtifacts(
