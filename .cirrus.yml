@@ -84,7 +84,6 @@ task:
     - test-linux
     - test-windows
     - test-macos
-    - Test Docker Build
   env:
     GITHUB_TOKEN: ENCRYPTED[!98ace8259c6024da912c14d5a3c5c6aac186890a8d4819fad78f3e0c41a4e0cd3a2537dd6e91493952fb056fa434be7c!]
     SENTRY_ORG: cirrus-labs
