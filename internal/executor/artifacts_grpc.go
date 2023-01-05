@@ -50,11 +50,7 @@ func NewGRPCUploader(
 	}, nil
 }
 
-func (uploader *GRPCUploader) Upload(
-	ctx context.Context,
-	artifact io.Reader,
-	relativeArtifactPath string,
-) error {
+func (uploader *GRPCUploader) Upload(ctx context.Context, artifact io.Reader, relativeArtifactPath string, _ int64) error {
 	bufferedArtifactReader := bufio.NewReaderSize(artifact, readBufferSizeBytes)
 
 	for {

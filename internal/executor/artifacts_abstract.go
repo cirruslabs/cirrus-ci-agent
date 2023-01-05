@@ -13,7 +13,7 @@ import (
 )
 
 type ArtifactUploader interface {
-	Upload(ctx context.Context, artifact io.Reader, relativeArtifactPath string) error
+	Upload(ctx context.Context, artifact io.Reader, relativeArtifactPath string, size int64) error
 	Finish(ctx context.Context) error
 }
 
@@ -105,8 +105,8 @@ func NewArtifacts(
 	return result, nil
 }
 
-func (artifacts *Artifacts) UploadableRelativePaths() []string {
-	var result []string
+func (artifacts *Artifacts) UploadableFiles() []*api.ArtifactFileInfo {
+	var result []*api.ArtifactFileInfo
 
 	for _, pattern := range artifacts.patterns {
 		for _, path := range pattern.Paths {
@@ -114,7 +114,10 @@ func (artifacts *Artifacts) UploadableRelativePaths() []string {
 				continue
 			}
 
-			result = append(result, path.relativePath)
+			result = append(result, &api.ArtifactFileInfo{
+				Path:        path.relativePath,
+				SizeInBytes: path.info.Size(),
+			})
 		}
 	}
 
