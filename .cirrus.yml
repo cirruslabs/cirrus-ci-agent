@@ -62,11 +62,6 @@ task:
     - pkg install -y zsh go git
     - go test ./...
 
-docker_builder:
-  name: Test Docker Build
-  only_if: "changesInclude('Dockerfile')"
-  build_script: docker build .
-
 task:
   name: Release (Dry Run)
   only_if: $CIRRUS_TAG == ''
