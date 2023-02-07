@@ -1,11 +1,8 @@
-FROM golang:latest as builder
+FROM goreleaser/goreleaser:latest as builder
 
 WORKDIR /tmp/cirrus-ci-agent
 ADD . /tmp/cirrus-ci-agent/
 
-RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | tee /etc/apt/sources.list.d/goreleaser.list
-RUN apt-get update
-RUN apt-get -y install goreleaser
 RUN goreleaser build --single-target --snapshot --timeout 60m
 
 FROM alpine:latest
