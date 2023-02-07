@@ -124,7 +124,7 @@ func untarFile(tr *tar.Reader, header *tar.Header, destination string, buffer []
 	switch header.Typeflag {
 	case tar.TypeDir:
 		return mkdir(filepath.Join(destination, header.Name))
-	case tar.TypeReg, tar.TypeRegA, tar.TypeChar, tar.TypeBlock, tar.TypeFifo:
+	case tar.TypeReg, tar.TypeChar, tar.TypeBlock, tar.TypeFifo:
 		return writeNewFile(filepath.Join(destination, header.Name), tr, header.FileInfo(), buffer)
 	case tar.TypeSymlink:
 		return writeNewSymbolicLink(filepath.Join(destination, header.Name), header.Linkname)

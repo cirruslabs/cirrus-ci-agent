@@ -63,19 +63,24 @@ func (executor *Executor) UploadArtifacts(
 }
 
 func (executor *Executor) uploadArtifactsWithRetries(ctx context.Context, instantiateArtifactUploader InstantiateArtifactUploaderFunc, logUploader *LogUploader, artifacts *Artifacts) (err error) {
-	artifactUploader, err := instantiateArtifactUploader(ctx, executor.taskIdentification, artifacts)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err = artifactUploader.Finish(ctx); err != nil {
-			fmt.Fprintf(logUploader, "Failed to finalize artifact uploader: %v\n", err)
-		}
-	}()
-
 	err = retry.Do(
 		func() error {
-			return uploadArtifacts(ctx, artifacts, logUploader, artifactUploader)
+			artifactUploader, err := instantiateArtifactUploader(ctx, executor.taskIdentification, artifacts)
+			if err != nil {
+				return err
+			}
+
+			if err := uploadArtifacts(ctx, artifacts, logUploader, artifactUploader); err != nil {
+				return err
+			}
+
+			if err := artifactUploader.Finish(ctx); err != nil {
+				fmt.Fprintf(logUploader, "Failed to finalize artifact uploader: %v\n", err)
+
+				return err
+			}
+
+			return nil
 		}, retry.OnRetry(func(n uint, err error) {
 			fmt.Fprintf(logUploader, "Failed to upload artifacts: %v\n", err)
 			fmt.Fprintln(logUploader, "Re-trying to artifacts upload...")
@@ -98,11 +103,7 @@ func (executor *Executor) uploadArtifactsWithRetries(ctx context.Context, instan
 		retry.LastErrorOnly(true),
 	)
 	if err != nil {
-		if errors.Is(err, ErrArtifactsPathOutsideWorkingDir) {
-			fmt.Fprintf(logUploader, "Failed to upload artifacts: %v\n", err)
-
-			return err
-		}
+		fmt.Fprintf(logUploader, "Failed to upload artifacts after multiple tries: %v\n", err)
 
 		return err
 	}

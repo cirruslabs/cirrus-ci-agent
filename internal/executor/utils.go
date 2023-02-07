@@ -1,12 +1,12 @@
 package executor
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-annotations/model"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
