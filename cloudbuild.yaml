@@ -1,6 +1,6 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['run', '--privileged', 'linuxkit/binfmt:v0.8']
+    args: ['run', '--privileged', '--rm', 'tonistiigi/binfmt', '--install', 'all']
     id: 'initialize-qemu'
   - name: 'gcr.io/cloud-builders/docker'
     args: ['buildx', 'create', '--name', 'mybuilder']
