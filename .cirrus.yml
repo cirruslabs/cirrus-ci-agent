@@ -63,7 +63,7 @@ task:
     - go test ./...
 
 task:
-  name: Release (Dry Run)
+  name: Release Binaries (Dry Run)
   only_if: $CIRRUS_TAG == ''
   depends_on:
     - test-linux
@@ -76,6 +76,20 @@ task:
   release_script: goreleaser build --snapshot
   binaries_artifacts:
     path: "dist/agent_*/agent*"
+
+docker_builder:
+  name: Release Docker Image (Dry Run)
+  only_if: $CIRRUS_TAG == ''
+  depends_on:
+    - test-linux
+    - test-windows
+    - test-macos
+    - test-freebsd
+  setup_script:
+    - docker buildx create --name multibuilder
+    - docker buildx use multibuilder
+    - docker buildx inspect --bootstrap
+  build_script: docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/cirruslabs/cirrus-ci-agent:latest .
 
 task:
   name: Release Binaries
