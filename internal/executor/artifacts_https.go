@@ -2,7 +2,9 @@ package executor
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"io"
@@ -15,6 +17,7 @@ type UploadDescriptor struct {
 }
 
 type HTTPSUploader struct {
+	httpClient         *http.Client
 	taskIdentification *api.TaskIdentification
 
 	artifacts         *Artifacts
@@ -27,6 +30,21 @@ func NewHTTPSUploader(
 	taskIdentification *api.TaskIdentification,
 	artifacts *Artifacts,
 ) (ArtifactUploader, error) {
+	// Use Certifi's trust database since default system CA trust database
+	// in some container images like ubuntu:18.04 is outdated (without
+	// running apt-get update, etc.) and uploading an artifact results
+	// in"x509: certificate signed by unknown authority" error
+	certPool, _ := gocertifi.CACerts()
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS13,
+				RootCAs:    certPool,
+			},
+		},
+	}
+
 	// Generate URLs to which we'll upload the artifacts
 	request := &api.GenerateArtifactUploadURLsRequest{
 		TaskIdentification: taskIdentification,
@@ -55,6 +73,7 @@ func NewHTTPSUploader(
 	}
 
 	return &HTTPSUploader{
+		httpClient:         httpClient,
 		taskIdentification: taskIdentification,
 		artifacts:          artifacts,
 		uploadDescriptors:  uploadDescriptors,
@@ -78,7 +97,7 @@ func (uploader *HTTPSUploader) Upload(ctx context.Context, artifact io.Reader, r
 		httpRequest.Header.Set(key, value)
 	}
 
-	httpResponse, err := http.DefaultClient.Do(httpRequest)
+	httpResponse, err := uploader.httpClient.Do(httpRequest)
 	if err != nil {
 		return err
 	}
