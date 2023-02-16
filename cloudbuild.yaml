@@ -15,6 +15,7 @@ steps:
     args: ['buildx', 'build', '--platform', 'linux/amd64,linux/arm64', '-t', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:$TAG_NAME', '-t', 'gcr.io/cirrus-ci-community/cirrus-ci-agent:latest', '--push', '.']
     id: 'build-multi-architecture-container-image'
 options:
+  machineType: t2d-standard-4
   env:
     # to use buildx for multiarch build via buildx
     - 'DOCKER_CLI_EXPERIMENTAL=enabled'
