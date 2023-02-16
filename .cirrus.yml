@@ -124,9 +124,9 @@ docker_builder:
     GITHUB_TOKEN: ENCRYPTED[!82ed873afdf627284305afef4958c85a8f73127b09978a9786ac521559630ea6c9a5ab6e7f8315abf9ead09b6eff6eae!]
     GCP_KEY_FILE: ENCRYPTED[!fb584977bdf72e954f51d427e302b718237fde511f8bf3499f876a1cd94ffad461e0dce5d5ceff345d1b6a9f239a4aa1!]
   login_script:
-    - rm ~/.docker/config.json
     - echo $GITHUB_TOKEN | docker login ghcr.io -u fkorotkov --password-stdin
-    - echo $GCP_KEY_FILE | docker login gcr.io -u _json_key --password-stdin
+    - echo $GCP_KEY_FILE > gcp_key.json
+    - gcloud auth activate-service-account container-image-pusher@cirrus-ci-community.iam.gserviceaccount.com --key-file=gcp_key.json
   setup_script:
     - docker buildx create --name multibuilder
     - docker buildx use multibuilder
