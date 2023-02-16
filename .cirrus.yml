@@ -127,6 +127,7 @@ docker_builder:
     - echo $GITHUB_TOKEN | docker login ghcr.io -u fkorotkov --password-stdin
     - echo $GCP_KEY_FILE > gcp_key.json
     - gcloud auth activate-service-account container-image-pusher@cirrus-ci-community.iam.gserviceaccount.com --key-file=gcp_key.json
+    - gcloud auth configure-docker gcr.io
   setup_script:
     - docker buildx create --name multibuilder
     - docker buildx use multibuilder
