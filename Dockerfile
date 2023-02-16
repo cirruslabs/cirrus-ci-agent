@@ -3,7 +3,7 @@ FROM goreleaser/goreleaser:latest as builder
 WORKDIR /tmp/cirrus-ci-agent
 ADD . /tmp/cirrus-ci-agent/
 
-RUN goreleaser build --single-target --snapshot --timeout 60m
+RUN goreleaser build --id=agent --single-target --snapshot --timeout 60m
 
 FROM alpine:latest
 
