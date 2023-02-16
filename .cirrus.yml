@@ -122,9 +122,18 @@ docker_builder:
     - test-macos
   env:
     GITHUB_TOKEN: ENCRYPTED[!82ed873afdf627284305afef4958c85a8f73127b09978a9786ac521559630ea6c9a5ab6e7f8315abf9ead09b6eff6eae!]
-  login_script: echo $GITHUB_TOKEN | docker login ghcr.io -u fkorotkov --password-stdin
+    GCP_KEY_FILE: ENCRYPTED[!ed0af0f539fc7070bee0d86134ec1e71d2ffde70e47fe02152497d6f2f9e87484e40402bd3eb83cf89324a650579e419!]
+  login_script:
+    - echo $GITHUB_TOKEN | docker login ghcr.io -u fkorotkov --password-stdin
+    - echo $GCP_KEY_FILE | docker login gcr.io -u _json_key_base64 --password-stdin
   setup_script:
     - docker buildx create --name multibuilder
     - docker buildx use multibuilder
     - docker buildx inspect --bootstrap
-  deploy_script: docker buildx build --push --platform linux/amd64,linux/arm64 --tag ghcr.io/cirruslabs/cirrus-ci-agent:$CIRRUS_TAG --tag ghcr.io/cirruslabs/cirrus-ci-agent:latest .
+  deploy_script: |
+    docker buildx build --push --platform linux/amd64,linux/arm64 \
+      --tag ghcr.io/cirruslabs/cirrus-ci-agent:$CIRRUS_TAG \
+      --tag ghcr.io/cirruslabs/cirrus-ci-agent:latest \
+      --tag gcr.io/cirrus-ci-community/cirrus-ci-agent:$CIRRUS_TAG \
+      --tag gcr.io/cirrus-ci-community/cirrus-ci-agent:latest \
+      .
