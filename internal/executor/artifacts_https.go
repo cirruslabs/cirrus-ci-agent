@@ -39,8 +39,7 @@ func NewHTTPSUploader(
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				MinVersion: tls.VersionTLS13,
-				RootCAs:    certPool,
+				RootCAs: certPool,
 			},
 		},
 	}
