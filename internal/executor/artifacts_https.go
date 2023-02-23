@@ -85,7 +85,14 @@ func (uploader *HTTPSUploader) Upload(ctx context.Context, artifact io.Reader, r
 		return fmt.Errorf("no upload URL was generated for artifact path %s", relativeArtifactPath)
 	}
 
-	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadDescriptor.url, artifact)
+	body := artifact
+	if size == 0 {
+		// According to the docs:
+		// > The only way to explicitly say that the ContentLength is zero is to set the Body to nil.
+		// Otherwise, the HTTP client will try to use chunked encoding which will lead to 501 (Not Implemented) for S3.
+		body = nil
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadDescriptor.url, body)
 	if err != nil {
 		return err
 	}
