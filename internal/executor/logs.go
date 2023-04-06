@@ -215,7 +215,7 @@ func (uploader *LogUploader) WriteChunk(bytesToWrite []byte) (int, error) {
 }
 
 func (uploader *LogUploader) Finalize() {
-	log.Printf("Finilizing log uploading for %s!\n", uploader.commandName)
+	log.Printf("Finalizing log uploading for %s!\n", uploader.commandName)
 	uploader.mutex.Lock()
 	uploader.closed = true
 	close(uploader.logsChannel)
