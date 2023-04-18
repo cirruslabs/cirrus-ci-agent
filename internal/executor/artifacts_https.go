@@ -7,6 +7,7 @@ import (
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/samber/lo"
 	"io"
 	"net/http"
 )
@@ -44,30 +45,32 @@ func NewHTTPSUploader(
 		},
 	}
 
-	// Generate URLs to which we'll upload the artifacts
-	request := &api.GenerateArtifactUploadURLsRequest{
-		TaskIdentification: taskIdentification,
-		Name:               artifacts.Name,
-		Files:              artifacts.UploadableFiles(),
-	}
-
-	response, err := client.CirrusClient.GenerateArtifactUploadURLs(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(request.Files) != len(response.Urls) {
-		return nil, fmt.Errorf("GenerateArtifactUploadURLs() RPC call returned invalid data:"+
-			" requested %d URLs, got %d", len(request.Files), len(response.Urls))
-	}
-
 	// Create a mapping between relative artifact paths and upload URLs
 	uploadDescriptors := map[string]*UploadDescriptor{}
 
-	for idx, url := range response.Urls {
-		uploadDescriptors[request.Files[idx].Path] = &UploadDescriptor{
-			url:     url.Url,
-			headers: url.Headers,
+	// Generate URLs to which we'll upload the artifacts
+	for _, uploadableFilesChunk := range lo.Chunk(artifacts.UploadableFiles(), 100) {
+		request := &api.GenerateArtifactUploadURLsRequest{
+			TaskIdentification: taskIdentification,
+			Name:               artifacts.Name,
+			Files:              uploadableFilesChunk,
+		}
+
+		response, err := client.CirrusClient.GenerateArtifactUploadURLs(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(request.Files) != len(response.Urls) {
+			return nil, fmt.Errorf("GenerateArtifactUploadURLs() RPC call returned invalid data:"+
+				" requested %d URLs, got %d", len(request.Files), len(response.Urls))
+		}
+
+		for idx, url := range response.Urls {
+			uploadDescriptors[request.Files[idx].Path] = &UploadDescriptor{
+				url:     url.Url,
+				headers: url.Headers,
+			}
 		}
 	}
 
