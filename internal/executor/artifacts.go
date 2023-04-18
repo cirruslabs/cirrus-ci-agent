@@ -39,7 +39,6 @@ func (executor *Executor) UploadArtifacts(
 		return false
 	}
 
-	fmt.Fprintf(logUploader, "Artifacts to upload: %d\n", len(artifacts.UploadableFiles()))
 	// Upload artifacts: try first via HTTPS, then fallback via gRPC if not implemented
 	err = executor.uploadArtifactsWithRetries(ctx, NewHTTPSUploader, logUploader, artifacts)
 	if errStatus, ok := status.FromError(err); ok {
