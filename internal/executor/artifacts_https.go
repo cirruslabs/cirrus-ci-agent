@@ -7,7 +7,7 @@ import (
 	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
-	"github.com/cirruslabs/cirrus-ci-agent/internal/utils"
+	"github.com/samber/lo"
 	"io"
 	"net/http"
 )
@@ -49,7 +49,7 @@ func NewHTTPSUploader(
 	uploadDescriptors := map[string]*UploadDescriptor{}
 
 	// Generate URLs to which we'll upload the artifacts
-	for _, uploadableFilesChunk := range utils.Chunk(artifacts.UploadableFiles(), 100) {
+	for _, uploadableFilesChunk := range lo.Chunk(artifacts.UploadableFiles(), 100) {
 		request := &api.GenerateArtifactUploadURLsRequest{
 			TaskIdentification: taskIdentification,
 			Name:               artifacts.Name,
