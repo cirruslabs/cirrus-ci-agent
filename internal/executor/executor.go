@@ -793,6 +793,9 @@ func retryableCloneError(err error) bool {
 	if strings.Contains(errorMessage, "timeout") {
 		return true
 	}
+	if strings.Contains(errorMessage, "timed out") {
+		return true
+	}
 	if strings.Contains(errorMessage, "tls") {
 		return true
 	}
