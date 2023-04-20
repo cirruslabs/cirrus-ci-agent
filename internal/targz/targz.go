@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 )
 
 const DEFAULT_BUFFER_SIZE = 1024 * 1024
@@ -50,10 +49,6 @@ func archiveSingleFolder(baseFolder string, folderPath string, tarWriter *tar.Wr
 			return fmt.Errorf("error  making header %s: %v", path, err)
 		}
 		header.Name = strings.TrimPrefix(path, baseFolder)
-		unixEpoch := time.Unix(0, 0)
-		header.ModTime = unixEpoch
-		header.AccessTime = unixEpoch
-		header.ChangeTime = unixEpoch
 
 		if header.Typeflag == tar.TypeSymlink {
 			linkDest, _ := os.Readlink(path)
