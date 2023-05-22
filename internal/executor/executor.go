@@ -173,8 +173,13 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
 		EnsureFolderExists(workingDir)
+
 		if err := os.Chdir(workingDir); err != nil {
-			log.Printf("Failed to change current working directory to '%s': %v", workingDir, err)
+			message := fmt.Sprintf("Failed to change current working directory to '%s': %v", workingDir, err)
+			log.Println(message)
+			executor.reportError(message)
+
+			return
 		}
 	} else {
 		log.Printf("Not changing current working directory because CIRRUS_WORKING_DIR is not set")
