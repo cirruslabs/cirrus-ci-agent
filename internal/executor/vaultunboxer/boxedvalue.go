@@ -9,11 +9,13 @@ import (
 type BoxedValue struct {
 	vaultPath string
 	dataPath  []string
+	useCache  bool
 }
 
 const (
-	prefix = "VAULT["
-	suffix = "]"
+	prefixNormal = "VAULT["
+	prefixCached = "VAULT_CACHED["
+	suffix       = "]"
 )
 
 var (
@@ -22,12 +24,22 @@ var (
 )
 
 func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
-	if !strings.HasPrefix(rawBoxedValue, prefix) || !strings.HasSuffix(rawBoxedValue, suffix) {
+	var useCache bool
+
+	if trimmed := strings.TrimPrefix(rawBoxedValue, prefixNormal); trimmed != rawBoxedValue {
+		rawBoxedValue = trimmed
+	} else if trimmed := strings.TrimPrefix(rawBoxedValue, prefixCached); trimmed != rawBoxedValue {
+		rawBoxedValue = trimmed
+		useCache = true
+	} else {
 		return nil, ErrNotABoxedValue
 	}
 
-	rawBoxedValue = strings.TrimPrefix(rawBoxedValue, prefix)
-	rawBoxedValue = strings.TrimSuffix(rawBoxedValue, suffix)
+	if trimmed := strings.TrimSuffix(rawBoxedValue, suffix); trimmed != rawBoxedValue {
+		rawBoxedValue = trimmed
+	} else {
+		return nil, ErrNotABoxedValue
+	}
 
 	parts := strings.Split(rawBoxedValue, " ")
 	if len(parts) != 2 {
@@ -46,11 +58,16 @@ func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
 	return &BoxedValue{
 		vaultPath: parts[0],
 		dataPath:  dataPath,
+		useCache:  useCache,
 	}, nil
 }
 
-func (selector *BoxedValue) Select(data interface{}) (string, error) {
-	for _, element := range selector.dataPath {
+func (value *BoxedValue) UseCache() bool {
+	return value.useCache
+}
+
+func (value *BoxedValue) Select(data interface{}) (string, error) {
+	for _, element := range value.dataPath {
 		dataAsMap, ok := data.(map[string]interface{})
 		if !ok {
 			return "", fmt.Errorf("%w: selector's element %q should always "+
@@ -69,7 +86,7 @@ func (selector *BoxedValue) Select(data interface{}) (string, error) {
 	s, ok := data.(string)
 	if !ok {
 		return "", fmt.Errorf("%w: selector's element %q should point to a string",
-			ErrInvalidBoxedValue, selector.dataPath[len(selector.dataPath)-1])
+			ErrInvalidBoxedValue, value.dataPath[len(value.dataPath)-1])
 	}
 
 	return s, nil

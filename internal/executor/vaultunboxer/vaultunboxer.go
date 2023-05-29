@@ -19,11 +19,18 @@ const (
 
 type VaultUnboxer struct {
 	client *vault.Client
+	cache  map[string]*CachedSecret
+}
+
+type CachedSecret struct {
+	Secret *vault.Secret
+	Err    error
 }
 
 func New(client *vault.Client) *VaultUnboxer {
 	return &VaultUnboxer{
 		client: client,
+		cache:  map[string]*CachedSecret{},
 	}
 }
 
@@ -69,8 +76,8 @@ func NewFromEnvironment(ctx context.Context, env *environment.Environment) (*Vau
 	return New(client), nil
 }
 
-func (unboxer *VaultUnboxer) Unbox(ctx context.Context, selector *BoxedValue) (string, error) {
-	secret, err := unboxer.client.Logical().ReadWithContext(ctx, selector.vaultPath)
+func (unboxer *VaultUnboxer) Unbox(ctx context.Context, value *BoxedValue) (string, error) {
+	secret, err := unboxer.retrieveSecret(ctx, value)
 	if err != nil {
 		return "", err
 	}
@@ -79,5 +86,27 @@ func (unboxer *VaultUnboxer) Unbox(ctx context.Context, selector *BoxedValue) (s
 		return "", fmt.Errorf("associated Vault secret contains no data")
 	}
 
-	return selector.Select(secret.Data)
+	return value.Select(secret.Data)
+}
+
+func (unboxer *VaultUnboxer) retrieveSecret(ctx context.Context, value *BoxedValue) (*vault.Secret, error) {
+	if value.UseCache() {
+		// VAULT_CACHED[...] is used, try the cache first,
+		// and fall back to poking the Vault if no entry
+		// exists in the cache
+		cachedSecret, ok := unboxer.cache[value.vaultPath]
+		if ok {
+			return cachedSecret.Secret, cachedSecret.Err
+		}
+	}
+
+	secret, err := unboxer.client.Logical().ReadWithContext(ctx, value.vaultPath)
+
+	// Cache the result, even a negative one (with err != nil)
+	unboxer.cache[value.vaultPath] = &CachedSecret{
+		Secret: secret,
+		Err:    err,
+	}
+
+	return secret, err
 }
