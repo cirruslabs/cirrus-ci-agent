@@ -33,6 +33,8 @@ func CloneRepository(
 	tag, is_tag := env.Lookup("CIRRUS_TAG")
 	is_clone_modules := env.Get("CIRRUS_CLONE_SUBMODULES") == "true"
 
+	useMergeRef := env.Get("CIRRUS_RESOLUTION_STRATEGY") == "MERGE_FOR_PRS"
+
 	clone_url := env.Get("CIRRUS_REPO_CLONE_URL")
 	if _, has_clone_token := env.Lookup("CIRRUS_REPO_CLONE_TOKEN"); has_clone_token {
 		clone_url = env.ExpandText("https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@${CIRRUS_REPO_CLONE_HOST}/${CIRRUS_REPO_FULL_NAME}.git")
@@ -80,26 +82,27 @@ func CloneRepository(
 			return false
 		}
 
-		headRefSpec := fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
-		logUploader.Write([]byte(fmt.Sprintf("\nFetching %s...\n", headRefSpec)))
+		var refSpec string
+
+		if useMergeRef {
+			refSpec = fmt.Sprintf("+refs/pull/%s/merge:refs/remotes/origin/pull/%[1]s", pr_number)
+			if clone_depth > 0 {
+				// increase by one since we are cloning with an extra "merge" commit from GH
+				clone_depth = clone_depth + 1
+			}
+		} else {
+			refSpec = fmt.Sprintf("+refs/pull/%s/head:refs/remotes/origin/pull/%[1]s", pr_number)
+		}
+
+		logUploader.Write([]byte(fmt.Sprintf("\nFetching %s...\n", refSpec)))
 		fetchOptions := &git.FetchOptions{
 			RemoteName: remoteConfig.Name,
-			RefSpecs:   []config.RefSpec{config.RefSpec(headRefSpec)},
+			RefSpecs:   []config.RefSpec{config.RefSpec(refSpec)},
 			Tags:       git.NoTags,
 			Progress:   logUploader,
 			Depth:      clone_depth,
 		}
 		err = repo.FetchContext(ctx, fetchOptions)
-		if err != nil && strings.Contains(err.Error(), "couldn't find remote ref") {
-			logUploader.Write([]byte("\nFailed to fetch head ref! Trying to fall back to merge ref..."))
-			mergeRefSpec := fmt.Sprintf("+refs/pull/%s/merge:refs/remotes/origin/pull/%[1]s", pr_number)
-			fetchOptions.RefSpecs = []config.RefSpec{config.RefSpec(mergeRefSpec)}
-			if clone_depth > 0 {
-				// increase by one since we are cloning with an extra "merge" commit from GH
-				fetchOptions.Depth = clone_depth + 1
-			}
-			err = repo.FetchContext(ctx, fetchOptions)
-		}
 		if err != nil && retryableCloneError(err) {
 			logUploader.Write([]byte(fmt.Sprintf("\nFetch failed: %s!", err)))
 			logUploader.Write([]byte("\nRe-trying to fetch..."))
@@ -116,14 +119,26 @@ func CloneRepository(
 			return false
 		}
 
-		checkoutOptions := git.CheckoutOptions{
-			Hash: plumbing.NewHash(change),
-		}
-		logUploader.Write([]byte(fmt.Sprintf("\nChecking out %s...", checkoutOptions.Hash)))
-		err = workTree.Checkout(&checkoutOptions)
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("\nFailed to checkout %s: %s!", checkoutOptions.Hash, err)))
-			return false
+		if useMergeRef {
+			checkoutOptions := git.CheckoutOptions{
+				Branch: plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/pull/%[1]s", pr_number)),
+			}
+			logUploader.Write([]byte(fmt.Sprintf("\nChecking out %s...", checkoutOptions.Branch)))
+			err = workTree.Checkout(&checkoutOptions)
+			if err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to checkout %s: %s!", checkoutOptions.Branch, err)))
+				return false
+			}
+		} else {
+			checkoutOptions := git.CheckoutOptions{
+				Hash: plumbing.NewHash(change),
+			}
+			logUploader.Write([]byte(fmt.Sprintf("\nChecking out %s...", checkoutOptions.Hash)))
+			err = workTree.Checkout(&checkoutOptions)
+			if err != nil {
+				logUploader.Write([]byte(fmt.Sprintf("\nFailed to checkout %s: %s!", checkoutOptions.Hash, err)))
+				return false
+			}
 		}
 	} else {
 		cloneOptions := git.CloneOptions{
@@ -169,7 +184,7 @@ func CloneRepository(
 		return false
 	}
 
-	if ref.Hash() != plumbing.NewHash(change) {
+	if !useMergeRef && ref.Hash() != plumbing.NewHash(change) {
 		logUploader.Write([]byte(fmt.Sprintf("\nHEAD is at %s.", ref.Hash())))
 		logUploader.Write([]byte(fmt.Sprintf("\nHard resetting to %s...", change)))
 
