@@ -114,12 +114,12 @@ func TestSelector(t *testing.T) {
 	}
 }
 
-func TestUseCache(t *testing.T) {
-	valueThatDoesNotUseCache, err := vaultunboxer.NewBoxedValue("VAULT[path key]")
-	require.NoError(t, err)
-	require.False(t, valueThatDoesNotUseCache.UseCache())
-
-	valueThatUsesCache, err := vaultunboxer.NewBoxedValue("VAULT_CACHED[path key]")
+func TestWithAndWithoutCache(t *testing.T) {
+	valueThatUsesCache, err := vaultunboxer.NewBoxedValue("VAULT[path key]")
 	require.NoError(t, err)
 	require.True(t, valueThatUsesCache.UseCache())
+
+	valueThatDoesNotUseCache, err := vaultunboxer.NewBoxedValue("VAULT_NOCACHE[path key]")
+	require.NoError(t, err)
+	require.False(t, valueThatDoesNotUseCache.UseCache())
 }

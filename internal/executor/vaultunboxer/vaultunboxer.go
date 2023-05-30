@@ -91,9 +91,8 @@ func (unboxer *VaultUnboxer) Unbox(ctx context.Context, value *BoxedValue) (stri
 
 func (unboxer *VaultUnboxer) retrieveSecret(ctx context.Context, value *BoxedValue) (*vault.Secret, error) {
 	if value.UseCache() {
-		// VAULT_CACHED[...] is used, try the cache first,
-		// and fall back to poking the Vault if no entry
-		// exists in the cache
+		// Try the cache first, and fall back to poking the Vault
+		// if no entry exists in the cache
 		cachedSecret, ok := unboxer.cache[value.vaultPath]
 		if ok {
 			return cachedSecret.Secret, cachedSecret.Err

@@ -13,9 +13,9 @@ type BoxedValue struct {
 }
 
 const (
-	prefixNormal = "VAULT["
-	prefixCached = "VAULT_CACHED["
-	suffix       = "]"
+	prefixNormal  = "VAULT["
+	prefixNocache = "VAULT_NOCACHE["
+	suffix        = "]"
 )
 
 var (
@@ -28,9 +28,10 @@ func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
 
 	if trimmed := strings.TrimPrefix(rawBoxedValue, prefixNormal); trimmed != rawBoxedValue {
 		rawBoxedValue = trimmed
-	} else if trimmed := strings.TrimPrefix(rawBoxedValue, prefixCached); trimmed != rawBoxedValue {
-		rawBoxedValue = trimmed
 		useCache = true
+	} else if trimmed := strings.TrimPrefix(rawBoxedValue, prefixNocache); trimmed != rawBoxedValue {
+		rawBoxedValue = trimmed
+		useCache = false
 	} else {
 		return nil, ErrNotABoxedValue
 	}

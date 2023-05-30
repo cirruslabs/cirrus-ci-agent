@@ -103,26 +103,26 @@ func TestVaultUseCache(t *testing.T) {
 	// Prepare
 	vaultUnboxer := vaultunboxer.New(client)
 
-	otpWithoutCache, err := vaultunboxer.NewBoxedValue("VAULT[totp/code/test code]")
+	otpWithCache, err := vaultunboxer.NewBoxedValue("VAULT[totp/code/test code]")
 	require.NoError(t, err)
 
-	otpWithCache, err := vaultunboxer.NewBoxedValue("VAULT_CACHED[totp/code/test code]")
+	otpWithoutCache, err := vaultunboxer.NewBoxedValue("VAULT_NOCACHE[totp/code/test code]")
 	require.NoError(t, err)
 
-	// Make sure VAULT_CACHED[...] falls back to VAULT[...] in case no cache entry is found
+	// Make sure that VAULT[...] works when no cache entry is found
 	first, err := vaultUnboxer.Unbox(ctx, otpWithCache)
 	require.NoError(t, err)
 
 	// Wait for the OTP code to rotate
 	time.Sleep(time.Second * 5)
 
-	// Make sure VAULT_CACHED[...] uses cache
+	// Make sure that VAULT[...] uses cache
 	second, err := vaultUnboxer.Unbox(ctx, otpWithCache)
 	require.NoError(t, err)
 
 	require.EqualValues(t, first, second)
 
-	// Make sure VAULT[...] busts the cache
+	// Make sure that VAULT_NOCACHE[...] busts the cache
 	third, err := vaultUnboxer.Unbox(ctx, otpWithoutCache)
 	require.NoError(t, err)
 
@@ -136,7 +136,7 @@ func TestVaultUseCache(t *testing.T) {
 
 	require.NotEqualValues(t, third, fourth)
 
-	// Make sure that VAULT_CACHED[...] invocation re-uses the value previously retrieved by VAULT[...] invocation
+	// Make sure that VAULT[...] invocation re-uses the value previously retrieved by VAULT_NOCACHE[...] invocation
 	fifth, err := vaultUnboxer.Unbox(ctx, otpWithCache)
 	require.NoError(t, err)
 
