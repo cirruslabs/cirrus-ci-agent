@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	gitclient "github.com/go-git/go-git/v5/plumbing/transport/client"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,7 +21,7 @@ import (
 
 func CloneRepository(
 	ctx context.Context,
-	logUploader *LogUploader,
+	logUploader io.Writer,
 	env *environment.Environment,
 ) bool {
 	logUploader.Write([]byte("Using built-in Git...\n"))
