@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func (executor *Executor) CloneRepository(
+func CloneRepository(
 	ctx context.Context,
 	logUploader *LogUploader,
 	env *environment.Environment,

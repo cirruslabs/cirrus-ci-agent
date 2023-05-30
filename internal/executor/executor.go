@@ -430,7 +430,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 	case *api.Command_ExitInstruction:
 		return nil, ErrStepExit
 	case *api.Command_CloneInstruction:
-		success = executor.CloneRepository(ctx, logUploader, executor.env)
+		success = CloneRepository(ctx, logUploader, executor.env)
 	case *api.Command_FileInstruction:
 		success = executor.CreateFile(ctx, logUploader, instruction.FileInstruction, executor.env)
 	case *api.Command_ScriptInstruction:
