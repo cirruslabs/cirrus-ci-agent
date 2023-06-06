@@ -202,6 +202,9 @@ func CloneRepository(
 			logUploader.Write([]byte(fmt.Sprintf("\nFailed to force reset to %s: %s!", change, err)))
 			return false
 		}
+	} else if useMergeRef {
+		logUploader.Write([]byte(fmt.Sprintf("\n\"Merge for PRs\" config resolution strategy enabled, " +
+			"skipping hard reset to preserve the merge commit")))
 	}
 
 	if is_clone_modules {
