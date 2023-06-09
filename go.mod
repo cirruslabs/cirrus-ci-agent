@@ -1,17 +1,16 @@
 module github.com/cirruslabs/cirrus-ci-agent
 
-go 1.18
+go 1.20
 
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.4
-	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d
+	github.com/breml/rootcerts v0.2.11
 	github.com/cirruslabs/cirrus-ci-annotations v0.9.0
 	github.com/cirruslabs/terminal v0.13.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/getsentry/sentry-go v0.18.0
 	github.com/go-git/go-git/v5 v5.6.0
-	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/go-version v1.6.0
@@ -57,6 +56,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.4.0 // indirect

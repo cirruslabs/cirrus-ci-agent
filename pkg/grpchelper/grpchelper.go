@@ -2,7 +2,6 @@ package grpchelper
 
 import (
 	"crypto/tls"
-	"github.com/certifi/gocertifi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	insecurepkg "google.golang.org/grpc/credentials/insecure"
@@ -32,10 +31,8 @@ func TransportSettingsAsDialOption(apiEndpoint string) (string, grpc.DialOption)
 
 	// Use embedded root certificates because the agent can be executed in a distroless container
 	// and don't check for error, since then the default certificates from the host will be used
-	certPool, _ := gocertifi.CACerts()
 	tlsCredentials := credentials.NewTLS(&tls.Config{
 		MinVersion: tls.VersionTLS13,
-		RootCAs:    certPool,
 	})
 
 	return target, grpc.WithTransportCredentials(tlsCredentials)

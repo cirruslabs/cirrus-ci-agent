@@ -2,9 +2,7 @@ package executor
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -48,24 +46,14 @@ func CloneRepository(
 		logUploader.Write([]byte(fmt.Sprintf("\nLimiting clone depth to %d!", clone_depth)))
 	}
 
-	// if an environment doesn't have git installed most likely it an alpine container
-	// which also most likely doesn't have CA certificates so SSL will fail :-(
-	// let's configure CA certs our self!
-	cert_pool, err := gocertifi.CACerts()
-	if err != nil {
-		logUploader.Write([]byte(fmt.Sprintf("\nFailed to get CA certificates: %s!", err)))
-		return false
-	}
 	customClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: cert_pool},
-		},
 		Timeout: 900 * time.Second,
 	}
 	gitclient.InstallProtocol("https", githttp.NewClient(customClient))
 	gitclient.InstallProtocol("http", githttp.NewClient(customClient))
 
 	var repo *git.Repository
+	var err error
 
 	if is_pr {
 		repo, err = git.PlainInit(working_dir, false)

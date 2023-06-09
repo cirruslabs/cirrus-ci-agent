@@ -3,9 +3,6 @@ package vaultunboxer
 import (
 	"context"
 	"fmt"
-	"net/http"
-
-	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
 	vault "github.com/hashicorp/vault/api"
 )
@@ -36,10 +33,6 @@ func New(client *vault.Client) *VaultUnboxer {
 
 func NewFromEnvironment(ctx context.Context, env *environment.Environment) (*VaultUnboxer, error) {
 	config := vault.DefaultConfig()
-
-	tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
-	pool, _ := gocertifi.CACerts()
-	tlsConfig.RootCAs = pool
 
 	client, err := vault.NewClient(config)
 	if err != nil {
