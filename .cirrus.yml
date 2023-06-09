@@ -25,7 +25,7 @@ docker_builder:
     - apt-get update
     - apt-get install -y zsh
   install_golang_script:
-    - wget --no-verbose -O - https://go.dev/dl/go1.19.2.linux-amd64.tar.gz | tar -C /usr/local -xz
+    - wget --no-verbose -O - https://go.dev/dl/go1.20.5.linux-amd64.tar.gz | tar -C /usr/local -xz
   test_script:
     - export PATH=$PATH:/usr/local/go/bin
     - go test ./...

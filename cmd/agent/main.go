@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"github.com/avast/retry-go"
+	"github.com/breml/rootcerts/embedded"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor"
@@ -63,6 +65,11 @@ func fullVersion() string {
 }
 
 func main() {
+	// Provide fallback root CA certificates
+	mozillaRoots := x509.NewCertPool()
+	mozillaRoots.AppendCertsFromPEM([]byte(embedded.MozillaCACertificatesPEM()))
+	x509.SetFallbackRoots(mozillaRoots)
+
 	apiEndpointPtr := flag.String("api-endpoint", "https://grpc.cirrus-ci.com:443", "GRPC endpoint URL")
 	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")

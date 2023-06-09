@@ -3,10 +3,8 @@ package http_cache
 import (
 	"bufio"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/certifi/gocertifi"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"golang.org/x/sync/semaphore"
@@ -36,17 +34,13 @@ var httpProxyClient = &http.Client{}
 func Start(taskIdentification *api.TaskIdentification) string {
 	cirrusTaskIdentification = taskIdentification
 
-	certPool, err := gocertifi.CACerts()
-	if err == nil {
-		maxConcurrentConnections := runtime.NumCPU() * activeRequestsPerLogicalCPU
-		httpProxyClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig:     &tls.Config{RootCAs: certPool},
-				MaxIdleConns:        maxConcurrentConnections,
-				MaxIdleConnsPerHost: maxConcurrentConnections, // default is 2 which is too small
-			},
-			Timeout: 10 * time.Minute,
-		}
+	maxConcurrentConnections := runtime.NumCPU() * activeRequestsPerLogicalCPU
+	httpProxyClient = &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:        maxConcurrentConnections,
+			MaxIdleConnsPerHost: maxConcurrentConnections, // default is 2 which is too small
+		},
+		Timeout: 10 * time.Minute,
 	}
 
 	http.HandleFunc("/", handler)
