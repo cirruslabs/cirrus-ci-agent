@@ -226,7 +226,8 @@ func CloneRepository(
 		logUploader.Write([]byte("\nSucessfully updated submodules!"))
 	}
 
-	logUploader.Write([]byte(fmt.Sprintf("\nChecked out %s on %s branch.", change, branch)))
+	logUploader.Write([]byte(fmt.Sprintf("\nChecked out %s on %s branch.",
+		ref.Hash().String(), branch)))
 	logUploader.Write([]byte("\nSuccessfully cloned!"))
 
 	return true
