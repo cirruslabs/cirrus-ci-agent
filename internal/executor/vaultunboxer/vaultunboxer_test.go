@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const vaultContainerImage = "hashicorp/vault:latest"
+
 func TestVault(t *testing.T) {
 	ctx := context.Background()
 
@@ -22,7 +24,7 @@ func TestVault(t *testing.T) {
 	// Create and start the HashiCorp's Vault container
 	request := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "vault:latest",
+			Image:        vaultContainerImage,
 			ExposedPorts: []string{"8200/tcp"},
 			Env: map[string]string{
 				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,
@@ -70,7 +72,7 @@ func TestVaultUseCache(t *testing.T) {
 	// Create and start the HashiCorp's Vault container
 	request := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "vault:latest",
+			Image:        vaultContainerImage,
 			ExposedPorts: []string{"8200/tcp"},
 			Env: map[string]string{
 				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,
