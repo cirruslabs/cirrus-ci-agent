@@ -1,6 +1,7 @@
 package executor_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"
@@ -78,4 +79,24 @@ func TestClonePRMergeForPRs(t *testing.T) {
 	// Ensure that the working directory CONTAINS a change from `main` that was added
 	// after the Outstanding PR was made
 	require.Contains(t, string(readmeBytes), "# `CIRRUS_RESOLUTION_STRATEGY`")
+}
+
+func TestCloneActualHEADIsReported(t *testing.T) {
+	dir := t.TempDir()
+
+	output := &bytes.Buffer{}
+
+	env := environment.New(map[string]string{
+		"CIRRUS_WORKING_DIR":         dir,
+		"CIRRUS_REPO_CLONE_URL":      "https://github.com/cirruslabs/gradle-example.git",
+		"CIRRUS_BRANCH":              "master",
+		"CIRRUS_CHANGE_IN_REPO":      "a84fff9ad2177fa3f9a48f535f0067f948e22130",
+		"CIRRUS_RESOLUTION_STRATEGY": "SAME_SHA",
+	})
+
+	require.True(t, executor.CloneRepository(context.Background(),
+		io.MultiWriter(newNewlineNormalizingWriter(os.Stdout), output), env))
+
+	require.Contains(t, output.String(),
+		"Checked out a84fff9ad2177fa3f9a48f535f0067f948e22130 on master branch.")
 }
