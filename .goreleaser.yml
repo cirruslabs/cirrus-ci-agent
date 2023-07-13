@@ -30,6 +30,9 @@ builds:
       - arm64
       - s390x
       - ppc64le
+    ignore:
+      - goos: windows
+        goarch: arm
   - id: "agent_cgo"
     main: cmd/agent/main.go
     ldflags: -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
