@@ -226,6 +226,12 @@ func CloneRepository(
 		logUploader.Write([]byte("\nSucessfully updated submodules!"))
 	}
 
+	ref, err = repo.Head()
+	if err != nil {
+		logUploader.Write([]byte("\nFailed to get HEAD information!"))
+		return false
+	}
+
 	logUploader.Write([]byte(fmt.Sprintf("\nChecked out %s on %s branch.",
 		ref.Hash().String(), branch)))
 	logUploader.Write([]byte("\nSuccessfully cloned!"))
