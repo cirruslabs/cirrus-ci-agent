@@ -15,23 +15,23 @@ func Dump() {
 	} else {
 		log.Printf("Process list:")
 		for _, process := range processes {
-			log.Printf("%d %d %s", process.Pid(), process.PPid(), processExeOrComm(process))
+			log.Printf("%d %d %s", process.Pid(), process.PPid(), processExeOrCmdline(process))
 		}
 	}
 }
 
-func processExeOrComm(process ps.Process) string {
+func processExeOrCmdline(process ps.Process) string {
 	gopsutilProcess, err := gopsutilprocess.NewProcess(int32(process.Pid()))
 	if err != nil {
 		// Fall back to just the comm value
 		return process.Executable()
 	}
 
-	exe, err := gopsutilProcess.Exe()
+	cmdline, err := gopsutilProcess.Cmdline()
 	if err != nil {
 		// Fall back to just the comm value
 		return process.Executable()
 	}
 
-	return exe
+	return cmdline
 }
