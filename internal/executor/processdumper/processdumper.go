@@ -3,6 +3,7 @@
 package processdumper
 
 import (
+	"fmt"
 	"github.com/mitchellh/go-ps"
 	gopsutilprocess "github.com/shirou/gopsutil/process"
 	"log"
@@ -13,9 +14,11 @@ func Dump() {
 	if err != nil {
 		log.Printf("Failed to retrieve processes to diagnose the time out")
 	} else {
-		log.Printf("Process list:")
+		fmt.Println("Dumping process list to diagnose the time out")
+		fmt.Println("PID\tPPID\tExe or cmdline")
+
 		for _, process := range processes {
-			log.Printf("%d %d %s", process.Pid(), process.PPid(), processExeOrCmdline(process))
+			fmt.Printf("%d\t%d\t%s\n", process.Pid(), process.PPid(), processExeOrCmdline(process))
 		}
 	}
 }
