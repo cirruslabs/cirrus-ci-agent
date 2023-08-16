@@ -5,7 +5,7 @@ package processdumper
 import (
 	"fmt"
 	"github.com/mitchellh/go-ps"
-	gopsutilprocess "github.com/shirou/gopsutil/process"
+	gopsutilprocess "github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/exp/slices"
 	"log"
 )

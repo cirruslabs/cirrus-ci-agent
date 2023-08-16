@@ -7,7 +7,7 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/resolver"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/metrics/source/cgroup/subsystem"
-	gopsutilcpu "github.com/shirou/gopsutil/cpu"
+	gopsutilcpu "github.com/shirou/gopsutil/v3/cpu"
 	"math"
 	"runtime"
 	"time"
