@@ -50,6 +50,7 @@ func (cpu *VersionlessCPU) NumCpusUsed(ctx context.Context, pollInterval time.Du
 	}
 	var systemBefore float64
 	for _, time := range times {
+		//nolint:staticcheck // continue to use deprecated function for now, see https://github.com/shirou/gopsutil/pull/1325
 		systemBefore += time.Total()
 	}
 
@@ -70,6 +71,7 @@ func (cpu *VersionlessCPU) NumCpusUsed(ctx context.Context, pollInterval time.Du
 	}
 	var systemAfter float64
 	for _, time := range times {
+		//nolint:staticcheck // continue to use deprecated function for now, see https://github.com/shirou/gopsutil/pull/1325
 		systemAfter += time.Total()
 	}
 
