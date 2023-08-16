@@ -296,6 +296,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	select {
 	case metricsResult := <-metricsResultChan:
+		log.Printf("Received metrics: %d CPU points, %d memory points and %d errors",
+			len(metricsResult.ResourceUtilization.CpuChart), len(metricsResult.ResourceUtilization.MemoryChart),
+			metricsResult.Errors())
 		for _, err := range metricsResult.Errors() {
 			message := fmt.Sprintf("Encountered an error while gathering resource utilization metrics: %v", err)
 			log.Print(message)
