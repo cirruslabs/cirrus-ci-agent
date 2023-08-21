@@ -144,3 +144,50 @@ func TestVaultUseCache(t *testing.T) {
 
 	require.EqualValues(t, fourth, fifth)
 }
+
+func TestVaultDictionaryAsJSON(t *testing.T) {
+	ctx := context.Background()
+
+	var vaultToken = uuid.New().String()
+
+	// Create and start the HashiCorp's Vault container
+	request := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        vaultContainerImage,
+			ExposedPorts: []string{"8200/tcp"},
+			Env: map[string]string{
+				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,
+			},
+		},
+		Started: true,
+	}
+	container, err := testcontainers.GenericContainer(ctx, request)
+	require.NoError(t, err)
+	defer container.Terminate(ctx)
+
+	// Create demo data
+	vaultURL, err := container.Endpoint(ctx, "http")
+	require.NoError(t, err)
+
+	client, err := vault.NewClient(vault.DefaultConfig())
+	require.NoError(t, err)
+
+	require.NoError(t, client.SetAddress(vaultURL))
+	client.SetToken(vaultToken)
+
+	_, err = client.KVv2("secret").Put(ctx, "token", map[string]interface{}{
+		"json_token": map[string]interface{}{
+			"secret1": "secret1",
+			"secret2": "secret2",
+		},
+	})
+	require.NoError(t, err)
+
+	// Unbox a Vault-boxed value
+	selector, err := vaultunboxer.NewBoxedValue("VAULT[secret/data/token data.json_token]")
+	require.NoError(t, err)
+
+	secretValue, err := vaultunboxer.New(client).Unbox(ctx, selector)
+	require.NoError(t, err)
+	require.Equal(t, "{\"secret1\":\"secret1\",\"secret2\":\"secret2\"}", secretValue)
+}
