@@ -1,6 +1,7 @@
 package vaultunboxer
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -84,11 +85,19 @@ func (value *BoxedValue) Select(data interface{}) (string, error) {
 		data = newData
 	}
 
-	s, ok := data.(string)
-	if !ok {
-		return "", fmt.Errorf("%w: selector's element %q should point to a string",
-			ErrInvalidBoxedValue, value.dataPath[len(value.dataPath)-1])
-	}
+	switch typedData := data.(type) {
+	case string:
+		return typedData, nil
+	case map[string]interface{}:
+		jsonBytes, err := json.Marshal(typedData)
+		if err != nil {
+			return "", fmt.Errorf("%w: selector's element %q points to a value that cannot be "+
+				"marshalled as JSON: %v", ErrInvalidBoxedValue, value.dataPath[len(value.dataPath)-1], err)
+		}
 
-	return s, nil
+		return string(jsonBytes), nil
+	default:
+		return "", fmt.Errorf("%w: selector's element %q should point to a string, got %T instead",
+			ErrInvalidBoxedValue, value.dataPath[len(value.dataPath)-1], typedData)
+	}
 }
