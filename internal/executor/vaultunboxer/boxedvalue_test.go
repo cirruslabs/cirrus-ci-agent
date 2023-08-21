@@ -38,6 +38,7 @@ func TestSelectorInvalidCombinations(t *testing.T) {
 	data := map[string]interface{}{
 		"data": map[string]interface{}{
 			"first_key": "first secret key value",
+			"integer":   42,
 		},
 	}
 
@@ -54,8 +55,8 @@ func TestSelectorInvalidCombinations(t *testing.T) {
 			RawBoxedValue: "VAULT[secret/data/keys data.nonexistent]",
 		},
 		{
-			Name:          "when querying terminating element is not a string",
-			RawBoxedValue: "VAULT[secret/data/keys data]",
+			Name:          "when querying terminating element that is not a string and not a dictionary",
+			RawBoxedValue: "VAULT[secret/data/keys data.integer]",
 		},
 	}
 
