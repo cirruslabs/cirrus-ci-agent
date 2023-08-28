@@ -290,18 +290,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	// Retrieve resource utilization metrics
+	log.Println("Retrieving resource utilization metrics...")
+
 	metricsCancel()
 
 	var resourceUtilization *api.ResourceUtilization
 
 	select {
 	case metricsResult := <-metricsResultChan:
-		log.Printf("Received metrics: %d CPU points, %d memory points and %d errors",
+		log.Printf("Received metrics: %d CPU points, %d memory points and %d errors\n",
 			len(metricsResult.ResourceUtilization.CpuChart), len(metricsResult.ResourceUtilization.MemoryChart),
-			metricsResult.Errors())
+			len(metricsResult.Errors()))
 		for _, err := range metricsResult.Errors() {
 			message := fmt.Sprintf("Encountered an error while gathering resource utilization metrics: %v", err)
-			log.Print(message)
+			log.Println(message)
 			_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
 				TaskIdentification: executor.taskIdentification,
 				Message:            message,
@@ -314,14 +316,16 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		//
 		// [1]: https://github.com/shirou/gopsutil/issues/724
 		message := "Failed to retrieve resource utilization metrics in time"
-		log.Print(message)
+		log.Println(message)
 		_, _ = client.CirrusClient.ReportAgentWarning(ctx, &api.ReportAgentProblemRequest{
 			TaskIdentification: executor.taskIdentification,
 			Message:            message,
 		})
 	}
 
-	_ = retry.Do(
+	log.Println("Reporting that the agent has finished...")
+
+	if err = retry.Do(
 		func() error {
 			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
 				TaskIdentification:     executor.taskIdentification,
@@ -336,7 +340,9 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		retry.Delay(10*time.Second),
 		retry.Attempts(2),
 		retry.Context(ctx),
-	)
+	); err != nil {
+		log.Printf("Failed to report that the agent has finished: %v\n", err)
+	}
 }
 
 // BoundedCommands bounds a slice of commands with unique names to a half-open range [fromName, toName).
