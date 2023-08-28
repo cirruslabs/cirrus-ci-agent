@@ -298,9 +298,13 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	select {
 	case metricsResult := <-metricsResultChan:
-		log.Printf("Received metrics: %d CPU points, %d memory points and %d errors\n",
-			len(metricsResult.ResourceUtilization.CpuChart), len(metricsResult.ResourceUtilization.MemoryChart),
-			len(metricsResult.Errors()))
+		if resourceUtilization := metricsResult.ResourceUtilization; resourceUtilization != nil {
+			log.Printf("Received metrics: %d CPU points, %d memory points and %d errors\n",
+				len(metricsResult.ResourceUtilization.CpuChart), len(metricsResult.ResourceUtilization.MemoryChart),
+				len(metricsResult.Errors()))
+		} else {
+			log.Println("Received no metrics (this OS/architecture likely doesn't support metric gathering)")
+		}
 		for _, err := range metricsResult.Errors() {
 			message := fmt.Sprintf("Encountered an error while gathering resource utilization metrics: %v", err)
 			log.Println(message)
