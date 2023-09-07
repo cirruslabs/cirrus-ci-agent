@@ -121,7 +121,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	executor.env.Merge(getScriptEnvironment(executor, response.Environment), false)
 
-	// Unbox VAULT[...] environment variables
+	log.Println("Unboxing VAULT[...] environment variables, if any")
+
 	var vaultUnboxer *vaultunboxer.VaultUnboxer
 
 	for key, value := range executor.env.Items() {
@@ -139,6 +140,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		}
 
 		if vaultUnboxer == nil {
+			log.Println("Found at least one VAULT[...] environment variable, initializing Vault client")
+
 			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, executor.env)
 			if err != nil {
 				message := fmt.Sprintf("failed to initialize a Vault client: %v", err)
@@ -147,6 +150,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 				return
 			}
+
+			log.Println("Vault client successfully initialized")
 		}
 
 		unboxedValue, err := vaultUnboxer.Unbox(ctx, boxedValue)
@@ -164,6 +169,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
+		log.Printf("Changing current working directory to %s", workingDir)
+
 		EnsureFolderExists(workingDir)
 
 		if err := os.Chdir(workingDir); err != nil {
@@ -193,6 +200,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	executor.env.AddSensitiveValues(response.SecretsToMask...)
 
 	if len(commands) == 0 {
+		log.Printf("No commands to run, exiting!")
+
 		return
 	}
 
