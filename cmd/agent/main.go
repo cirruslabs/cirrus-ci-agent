@@ -125,6 +125,13 @@ func main() {
 		log.Printf("Failed to create log file: %v", err)
 	} else {
 		defer func() {
+			logFilePos, err := logFile.Seek(0, io.SeekCurrent)
+			if err != nil {
+				log.Printf("Failed to determine the final log file size: %v", err)
+			}
+
+			log.Printf("Finalizing log file, %d bytes written", logFilePos)
+
 			_ = logFile.Close()
 			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
 		}()
