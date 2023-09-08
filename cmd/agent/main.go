@@ -151,9 +151,12 @@ func main() {
 		hub := sentry.CurrentHub()
 		hub.Recover(err)
 
-		// Report exception to Cirrus CI
+		// Report exception to log file
 		log.Printf("Recovered an error: %v", err)
+		stack := string(debug.Stack())
+		log.Println(stack)
 
+		// Report exception to Cirrus CI
 		if client.CirrusClient == nil {
 			return
 		}
@@ -164,7 +167,7 @@ func main() {
 				Secret: *clientTokenPtr,
 			},
 			Message: fmt.Sprint(err),
-			Stack:   string(debug.Stack()),
+			Stack:   stack,
 		}
 		_, err = client.CirrusClient.ReportAgentError(context.Background(), request)
 		if err != nil {
