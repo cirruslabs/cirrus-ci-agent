@@ -113,6 +113,34 @@ func main() {
 		})
 	}
 
+	// Initialize logger
+	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
+	if *stopHook {
+		// In case of a failure the log file will be persisted on the machine for debugging purposes.
+		// But unfortunately stop hook invocation will override it so let's use a different name.
+		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d-hook.log", *taskIdPtr))
+	}
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
+	if err != nil {
+		log.Printf("Failed to create log file: %v", err)
+	} else {
+		defer func() {
+			logFilePos, err := logFile.Seek(0, io.SeekCurrent)
+			if err != nil {
+				log.Printf("Failed to determine the final log file size: %v", err)
+			}
+
+			log.Printf("Finalizing log file, %d bytes written", logFilePos)
+
+			_ = logFile.Close()
+			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
+		}()
+	}
+	multiWriter := io.MultiWriter(logFile, os.Stdout)
+	log.SetOutput(multiWriter)
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
+
+	// Handle panics
 	defer func() {
 		err := recover()
 		if err == nil {
@@ -123,9 +151,12 @@ func main() {
 		hub := sentry.CurrentHub()
 		hub.Recover(err)
 
-		// Report exception to Cirrus CI
+		// Report exception to log file
 		log.Printf("Recovered an error: %v", err)
+		stack := string(debug.Stack())
+		log.Println(stack)
 
+		// Report exception to Cirrus CI
 		if client.CirrusClient == nil {
 			return
 		}
@@ -136,9 +167,12 @@ func main() {
 				Secret: *clientTokenPtr,
 			},
 			Message: fmt.Sprint(err),
-			Stack:   string(debug.Stack()),
+			Stack:   stack,
 		}
-		_, _ = client.CirrusClient.ReportAgentError(context.Background(), request)
+		_, err = client.CirrusClient.ReportAgentError(context.Background(), request)
+		if err != nil {
+			log.Printf("Failed to report agent error: %v\n", err)
+		}
 	}()
 
 	if *versionFlag {
@@ -152,28 +186,6 @@ func main() {
 	}
 
 	var conn *grpc.ClientConn
-
-	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
-	if *stopHook {
-		// In case of a failure the log file will be persisted on the machine for debugging purposes.
-		// But unfortunately stop hook invocation will override it so let's use a different name.
-		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d-hook.log", *taskIdPtr))
-	}
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
-	if err != nil {
-		log.Printf("Failed to create log file: %v", err)
-	} else {
-		defer func() {
-			_ = logFile.Close()
-			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
-			if conn != nil {
-				conn.Close()
-			}
-		}()
-	}
-	multiWriter := io.MultiWriter(logFile, os.Stdout)
-	log.SetOutput(multiWriter)
-	grpclog.SetLoggerV2(grpclog.NewLoggerV2(multiWriter, multiWriter, multiWriter))
 
 	log.Printf("Running agent version %s", fullVersion())
 
