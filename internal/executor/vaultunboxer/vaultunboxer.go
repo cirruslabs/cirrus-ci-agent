@@ -75,6 +75,10 @@ func (unboxer *VaultUnboxer) Unbox(ctx context.Context, value *BoxedValue) (stri
 		return "", err
 	}
 
+	if secret == nil {
+		return "", fmt.Errorf("associated Vault secret doesn't exist")
+	}
+
 	if secret.Data == nil {
 		return "", fmt.Errorf("associated Vault secret contains no data")
 	}
