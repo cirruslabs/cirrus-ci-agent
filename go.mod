@@ -6,7 +6,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/bmatcuk/doublestar v1.3.4
 	github.com/breml/rootcerts v0.2.11
-	github.com/cirruslabs/cirrus-ci-annotations v0.9.0
+	github.com/cirruslabs/cirrus-ci-annotations v0.10.0
 	github.com/cirruslabs/terminal v0.13.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/getsentry/sentry-go v0.18.0
