@@ -102,6 +102,12 @@ func TestArchive(t *testing.T) {
 			{tar.TypeDir, "", "", []byte{}},
 			{tar.TypeSymlink, "/symlink", ".", []byte{}},
 		}},
+		{"absolute links outside base are NOT made relative", func(dir string) {
+			os.Symlink("/tmp", filepath.Join(dir, "symlink"))
+		}, []PartialTarHeader{
+			{tar.TypeDir, "", "", []byte{}},
+			{tar.TypeSymlink, "/symlink", "/tmp", []byte{}},
+		}},
 	}
 
 	for _, testCase := range testCases {

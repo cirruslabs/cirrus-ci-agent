@@ -52,7 +52,7 @@ func archiveSingleFolder(baseFolder string, folderPath string, tarWriter *tar.Wr
 
 		if header.Typeflag == tar.TypeSymlink {
 			linkDest, _ := os.Readlink(path)
-			if filepath.IsAbs(linkDest) {
+			if filepath.IsAbs(linkDest) && strings.HasPrefix(linkDest, baseFolder) {
 				linkDest, _ = filepath.Rel(baseFolder, linkDest)
 			}
 			header.Linkname = linkDest
