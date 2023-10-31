@@ -126,12 +126,6 @@ func TestArchive(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Make paths OS-aware before comparing
-			for i := range testCase.Expected {
-				testCase.Expected[i].Name = filepath.FromSlash(testCase.Expected[i].Name)
-				testCase.Expected[i].Linkname = filepath.FromSlash(testCase.Expected[i].Linkname)
-			}
-
 			assert.Equal(t, testCase.Expected, TarGzContentsHelper(t, dest))
 		})
 	}
@@ -158,8 +152,8 @@ func TestArchiveMultiple(t *testing.T) {
 	}
 
 	expected := []PartialTarHeader{
-		{tar.TypeDir, filepath.FromSlash("/left/hot"), "", []byte{}},
-		{tar.TypeDir, filepath.FromSlash("/right/cold"), "", []byte{}},
+		{tar.TypeDir, "/left/hot", "", []byte{}},
+		{tar.TypeDir, "/right/cold", "", []byte{}},
 	}
 	assert.Equal(t, expected, TarGzContentsHelper(t, dest))
 }
