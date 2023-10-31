@@ -48,14 +48,14 @@ func archiveSingleFolder(baseFolder string, folderPath string, tarWriter *tar.Wr
 		if err != nil {
 			return fmt.Errorf("error  making header %s: %v", path, err)
 		}
-		header.Name = strings.TrimPrefix(path, baseFolder)
+		header.Name = filepath.ToSlash(strings.TrimPrefix(path, baseFolder))
 
 		if header.Typeflag == tar.TypeSymlink {
 			linkDest, _ := os.Readlink(path)
 			if filepath.IsAbs(linkDest) && strings.HasPrefix(linkDest, baseFolder) {
 				linkDest, _ = filepath.Rel(baseFolder, linkDest)
 			}
-			header.Linkname = linkDest
+			header.Linkname = filepath.ToSlash(linkDest)
 		}
 
 		err = tarWriter.WriteHeader(header)
@@ -118,13 +118,13 @@ func Unarchive(tarPath string, destFolder string) error {
 func untarFile(tr *tar.Reader, header *tar.Header, destination string, buffer []byte) error {
 	switch header.Typeflag {
 	case tar.TypeDir:
-		return mkdir(filepath.Join(destination, header.Name))
+		return mkdir(filepath.Join(destination, filepath.FromSlash(header.Name)))
 	case tar.TypeReg, tar.TypeChar, tar.TypeBlock, tar.TypeFifo:
-		return writeNewFile(filepath.Join(destination, header.Name), tr, header.FileInfo(), buffer)
+		return writeNewFile(filepath.Join(destination, filepath.FromSlash(header.Name)), tr, header.FileInfo(), buffer)
 	case tar.TypeSymlink:
-		return writeNewSymbolicLink(filepath.Join(destination, header.Name), header.Linkname)
+		return writeNewSymbolicLink(filepath.Join(destination, filepath.FromSlash(header.Name)), filepath.FromSlash(header.Linkname))
 	case tar.TypeLink:
-		return writeNewHardLink(filepath.Join(destination, header.Name), filepath.Join(destination, header.Linkname))
+		return writeNewHardLink(filepath.Join(destination, filepath.FromSlash(header.Name)), filepath.Join(destination, filepath.FromSlash(header.Linkname)))
 	default:
 		return fmt.Errorf("%s: unknown type flag: %c", header.Name, header.Typeflag)
 	}
