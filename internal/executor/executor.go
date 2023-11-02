@@ -564,31 +564,44 @@ func (executor *Executor) CreateFile(
 	instruction *api.FileInstruction,
 	env *environment.Environment,
 ) bool {
+	var content string
+
 	switch source := instruction.GetSource().(type) {
 	case *api.FileInstruction_FromEnvironmentVariable:
-		envName := source.FromEnvironmentVariable
-		content, is_provided := env.Lookup(envName)
-		if !is_provided {
-			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s is not set! Skipping file creation...", envName)))
+		var isProvided bool
+
+		content, isProvided = env.Lookup(source.FromEnvironmentVariable)
+		if !isProvided {
+			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s is not set! Skipping file creation...",
+				source.FromEnvironmentVariable)))
+
 			return true
 		}
+
 		if strings.HasPrefix(content, "ENCRYPTED") {
-			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s wasn't decrypted! Skipping file creation...", envName)))
+			logUploader.Write([]byte(fmt.Sprintf("Environment variable %s wasn't decrypted! Skipping file creation...",
+				source.FromEnvironmentVariable)))
+
 			return true
 		}
-		filePath := env.ExpandText(instruction.DestinationPath)
-		EnsureFolderExists(filepath.Dir(filePath))
-		err := os.WriteFile(filePath, []byte(content), 0644)
-		if err != nil {
-			logUploader.Write([]byte(fmt.Sprintf("Failed to write file %s: %s!", filePath, err)))
-			return false
-		}
-		logUploader.Write([]byte(fmt.Sprintf("Created file %s!", filePath)))
-		return true
+	case *api.FileInstruction_FromContents:
+		content = source.FromContents
 	default:
 		log.Printf("Unsupported source %T", source)
+
 		return false
 	}
+
+	filePath := env.ExpandText(instruction.DestinationPath)
+	EnsureFolderExists(filepath.Dir(filePath))
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		logUploader.Write([]byte(fmt.Sprintf("Failed to write file %s: %s!", filePath, err)))
+		return false
+	}
+
+	logUploader.Write([]byte(fmt.Sprintf("Created file %s!", filePath)))
+
+	return true
 }
 
 func (executor *Executor) shouldKillProcesses() bool {
