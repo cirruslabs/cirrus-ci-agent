@@ -7273,7 +7273,8 @@ type Isolation_Tart struct {
 	// [1]: https://github.com/cirruslabs/cirrus-cli/issues/605
 	MountTemporaryWorkingDirectoryFromHost bool `protobuf:"varint,7,opt,name=mount_temporary_working_directory_from_host,json=mountTemporaryWorkingDirectoryFromHost,proto3" json:"mount_temporary_working_directory_from_host,omitempty"`
 	// VM display resolution in a format of <width>x<height>. For example, 1200x800
-	Display string `protobuf:"bytes,8,opt,name=display,proto3" json:"display,omitempty"`
+	Display string                   `protobuf:"bytes,8,opt,name=display,proto3" json:"display,omitempty"`
+	Volumes []*Isolation_Tart_Volume `protobuf:"bytes,9,rep,name=volumes,proto3" json:"volumes,omitempty"`
 }
 
 func (x *Isolation_Tart) Reset() {
@@ -7362,6 +7363,92 @@ func (x *Isolation_Tart) GetDisplay() string {
 		return x.Display
 	}
 	return ""
+}
+
+func (x *Isolation_Tart) GetVolumes() []*Isolation_Tart_Volume {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
+type Isolation_Tart_Volume struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name     string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Source   string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Target   string `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	ReadOnly bool   `protobuf:"varint,4,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	Cleanup  bool   `protobuf:"varint,5,opt,name=cleanup,proto3" json:"cleanup,omitempty"`
+}
+
+func (x *Isolation_Tart_Volume) Reset() {
+	*x = Isolation_Tart_Volume{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cirrus_ci_service_proto_msgTypes[129]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Isolation_Tart_Volume) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Isolation_Tart_Volume) ProtoMessage() {}
+
+func (x *Isolation_Tart_Volume) ProtoReflect() protoreflect.Message {
+	mi := &file_cirrus_ci_service_proto_msgTypes[129]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Isolation_Tart_Volume.ProtoReflect.Descriptor instead.
+func (*Isolation_Tart_Volume) Descriptor() ([]byte, []int) {
+	return file_cirrus_ci_service_proto_rawDescGZIP(), []int{85, 3, 0}
+}
+
+func (x *Isolation_Tart_Volume) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Isolation_Tart_Volume) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *Isolation_Tart_Volume) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *Isolation_Tart_Volume) GetReadOnly() bool {
+	if x != nil {
+		return x.ReadOnly
+	}
+	return false
+}
+
+func (x *Isolation_Tart_Volume) GetCleanup() bool {
+	if x != nil {
+		return x.Cleanup
+	}
+	return false
 }
 
 var File_cirrus_ci_service_proto protoreflect.FileDescriptor
@@ -8594,7 +8681,7 @@ var file_cirrus_ci_service_proto_rawDesc = []byte{
 	0x72, 0x67, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x74, 0x61, 0x72, 0x67,
 	0x65, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x72, 0x65, 0x61, 0x64, 0x5f, 0x6f, 0x6e, 0x6c, 0x79, 0x18,
 	0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x72, 0x65, 0x61, 0x64, 0x4f, 0x6e, 0x6c, 0x79, 0x22,
-	0xec, 0x09, 0x0a, 0x09, 0x49, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x4d, 0x0a,
+	0xcc, 0x0b, 0x0a, 0x09, 0x49, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x4d, 0x0a,
 	0x04, 0x6e, 0x6f, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x37, 0x2e, 0x6f, 0x72,
 	0x67, 0x2e, 0x63, 0x69, 0x72, 0x72, 0x75, 0x73, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x69, 0x2e,
 	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x2e, 0x63, 0x69, 0x72, 0x72, 0x75, 0x73, 0x63,
@@ -8655,7 +8742,7 @@ var file_cirrus_ci_service_proto_rawDesc = []byte{
 	0x65, 0x72, 0x41, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79,
 	0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b,
 	0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0x87, 0x02, 0x0a,
+	0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0xe7, 0x03, 0x0a,
 	0x04, 0x54, 0x61, 0x72, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x75,
 	0x73, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x75, 0x73, 0x65, 0x72, 0x12,
@@ -8672,7 +8759,21 @@ var file_cirrus_ci_service_proto_rawDesc = []byte{
 	0x72, 0x61, 0x72, 0x79, 0x57, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x44, 0x69, 0x72, 0x65, 0x63,
 	0x74, 0x6f, 0x72, 0x79, 0x46, 0x72, 0x6f, 0x6d, 0x48, 0x6f, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07,
 	0x64, 0x69, 0x73, 0x70, 0x6c, 0x61, 0x79, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x64,
-	0x69, 0x73, 0x70, 0x6c, 0x61, 0x79, 0x42, 0x06, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0xe3,
+	0x69, 0x73, 0x70, 0x6c, 0x61, 0x79, 0x12, 0x58, 0x0a, 0x07, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65,
+	0x73, 0x18, 0x09, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x3e, 0x2e, 0x6f, 0x72, 0x67, 0x2e, 0x63, 0x69,
+	0x72, 0x72, 0x75, 0x73, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x69, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x73, 0x2e, 0x63, 0x69, 0x72, 0x72, 0x75, 0x73, 0x63, 0x69, 0x67, 0x72, 0x70,
+	0x63, 0x2e, 0x49, 0x73, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x54, 0x61, 0x72, 0x74,
+	0x2e, 0x56, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x52, 0x07, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x73,
+	0x1a, 0x83, 0x01, 0x0a, 0x06, 0x56, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12,
+	0x16, 0x0a, 0x06, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x74, 0x61, 0x72, 0x67, 0x65,
+	0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x12,
+	0x1b, 0x0a, 0x09, 0x72, 0x65, 0x61, 0x64, 0x5f, 0x6f, 0x6e, 0x6c, 0x79, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x08, 0x52, 0x08, 0x72, 0x65, 0x61, 0x64, 0x4f, 0x6e, 0x6c, 0x79, 0x12, 0x18, 0x0a, 0x07,
+	0x63, 0x6c, 0x65, 0x61, 0x6e, 0x75, 0x70, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x63,
+	0x6c, 0x65, 0x61, 0x6e, 0x75, 0x70, 0x42, 0x06, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0xe3,
 	0x03, 0x0a, 0x18, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x74, 0x57, 0x6f, 0x72,
 	0x6b, 0x65, 0x72, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x12, 0x65, 0x0a, 0x06, 0x6c,
 	0x61, 0x62, 0x65, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x4d, 0x2e, 0x6f, 0x72,
@@ -9098,7 +9199,7 @@ func file_cirrus_ci_service_proto_rawDescGZIP() []byte {
 }
 
 var file_cirrus_ci_service_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_cirrus_ci_service_proto_msgTypes = make([]protoimpl.MessageInfo, 132)
+var file_cirrus_ci_service_proto_msgTypes = make([]protoimpl.MessageInfo, 133)
 var file_cirrus_ci_service_proto_goTypes = []interface{}{
 	(Status)(0),                                          // 0: org.cirruslabs.ci.services.cirruscigrpc.Status
 	(Platform)(0),                                        // 1: org.cirruslabs.ci.services.cirruscigrpc.Platform
@@ -9236,23 +9337,24 @@ var file_cirrus_ci_service_proto_goTypes = []interface{}{
 	(*Isolation_Container)(nil),            // 133: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container
 	(*Isolation_Tart)(nil),                 // 134: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Tart
 	nil,                                    // 135: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container.DockerArgumentsEntry
-	nil,                                    // 136: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.LabelsEntry
-	nil,                                    // 137: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.ResourcesToAcquireEntry
-	nil,                                    // 138: org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.ExtraHeadersEntry
-	(*descriptorpb.FileDescriptorSet)(nil), // 139: google.protobuf.FileDescriptorSet
-	(*descriptorpb.FieldDescriptorProto)(nil), // 140: google.protobuf.FieldDescriptorProto
-	(*structpb.ListValue)(nil),                // 141: google.protobuf.ListValue
-	(*structpb.Value)(nil),                    // 142: google.protobuf.Value
-	(*anypb.Any)(nil),                         // 143: google.protobuf.Any
-	(*emptypb.Empty)(nil),                     // 144: google.protobuf.Empty
+	(*Isolation_Tart_Volume)(nil),          // 136: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Tart.Volume
+	nil,                                    // 137: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.LabelsEntry
+	nil,                                    // 138: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.ResourcesToAcquireEntry
+	nil,                                    // 139: org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.ExtraHeadersEntry
+	(*descriptorpb.FileDescriptorSet)(nil), // 140: google.protobuf.FileDescriptorSet
+	(*descriptorpb.FieldDescriptorProto)(nil), // 141: google.protobuf.FieldDescriptorProto
+	(*structpb.ListValue)(nil),                // 142: google.protobuf.ListValue
+	(*structpb.Value)(nil),                    // 143: google.protobuf.Value
+	(*anypb.Any)(nil),                         // 144: google.protobuf.Any
+	(*emptypb.Empty)(nil),                     // 145: google.protobuf.Empty
 }
 var file_cirrus_ci_service_proto_depIdxs = []int32{
 	9,   // 0: org.cirruslabs.ci.services.cirruscigrpc.CapabilitiesResponse.supported_instances:type_name -> org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo
 	98,  // 1: org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo.instances:type_name -> org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo.InstancesEntry
-	139, // 2: org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo.descriptor_set:type_name -> google.protobuf.FileDescriptorSet
+	140, // 2: org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo.descriptor_set:type_name -> google.protobuf.FileDescriptorSet
 	99,  // 3: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.environment:type_name -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.EnvironmentEntry
 	9,   // 4: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.additional_instances_info:type_name -> org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo
-	140, // 5: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.additional_task_properties:type_name -> google.protobuf.FieldDescriptorProto
+	141, // 5: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.additional_task_properties:type_name -> google.protobuf.FieldDescriptorProto
 	11,  // 6: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest.fs:type_name -> org.cirruslabs.ci.services.cirruscigrpc.FileSystem
 	100, // 7: org.cirruslabs.ci.services.cirruscigrpc.FileSystem.memory:type_name -> org.cirruslabs.ci.services.cirruscigrpc.FileSystem.Memory
 	101, // 8: org.cirruslabs.ci.services.cirruscigrpc.FileSystem.github:type_name -> org.cirruslabs.ci.services.cirruscigrpc.FileSystem.Github
@@ -9260,9 +9362,9 @@ var file_cirrus_ci_service_proto_depIdxs = []int32{
 	14,  // 10: org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigResponse.issues:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Issue
 	3,   // 11: org.cirruslabs.ci.services.cirruscigrpc.Issue.level:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Issue.Level
 	9,   // 12: org.cirruslabs.ci.services.cirruscigrpc.JSONSchemaRequest.additional_instances_info:type_name -> org.cirruslabs.ci.services.cirruscigrpc.AdditionalInstancesInfo
-	141, // 13: org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest.arguments:type_name -> google.protobuf.ListValue
+	142, // 13: org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest.arguments:type_name -> google.protobuf.ListValue
 	103, // 14: org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest.environment:type_name -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest.EnvironmentEntry
-	142, // 15: org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionResponse.result:type_name -> google.protobuf.Value
+	143, // 15: org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionResponse.result:type_name -> google.protobuf.Value
 	26,  // 16: org.cirruslabs.ci.services.cirruscigrpc.RegisterRequest.worker_info:type_name -> org.cirruslabs.ci.services.cirruscigrpc.WorkerInfo
 	26,  // 17: org.cirruslabs.ci.services.cirruscigrpc.PollRequest.worker_info:type_name -> org.cirruslabs.ci.services.cirruscigrpc.WorkerInfo
 	104, // 18: org.cirruslabs.ci.services.cirruscigrpc.PollRequest.resources_in_use:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PollRequest.ResourcesInUseEntry
@@ -9325,7 +9427,7 @@ var file_cirrus_ci_service_proto_depIdxs = []int32{
 	123, // 75: org.cirruslabs.ci.services.cirruscigrpc.Task.metadata:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Task.Metadata
 	124, // 76: org.cirruslabs.ci.services.cirruscigrpc.Task.deprecated_instance:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Task.Instance
 	76,  // 77: org.cirruslabs.ci.services.cirruscigrpc.Task.commands:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Command
-	143, // 78: org.cirruslabs.ci.services.cirruscigrpc.Task.instance:type_name -> google.protobuf.Any
+	144, // 78: org.cirruslabs.ci.services.cirruscigrpc.Task.instance:type_name -> google.protobuf.Any
 	77,  // 79: org.cirruslabs.ci.services.cirruscigrpc.Command.exit_instruction:type_name -> org.cirruslabs.ci.services.cirruscigrpc.ExitInstruction
 	78,  // 80: org.cirruslabs.ci.services.cirruscigrpc.Command.script_instruction:type_name -> org.cirruslabs.ci.services.cirruscigrpc.ScriptInstruction
 	79,  // 81: org.cirruslabs.ci.services.cirruscigrpc.Command.background_script_instruction:type_name -> org.cirruslabs.ci.services.cirruscigrpc.BackgroundScriptInstruction
@@ -9349,11 +9451,11 @@ var file_cirrus_ci_service_proto_depIdxs = []int32{
 	132, // 99: org.cirruslabs.ci.services.cirruscigrpc.Isolation.parallels:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation.Parallels
 	133, // 100: org.cirruslabs.ci.services.cirruscigrpc.Isolation.container:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container
 	134, // 101: org.cirruslabs.ci.services.cirruscigrpc.Isolation.tart:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation.Tart
-	136, // 102: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.labels:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.LabelsEntry
+	137, // 102: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.labels:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.LabelsEntry
 	92,  // 103: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.isolation:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation
-	137, // 104: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.resources_to_acquire:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.ResourcesToAcquireEntry
+	138, // 104: org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.resources_to_acquire:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PersistentWorkerInstance.ResourcesToAcquireEntry
 	1,   // 105: org.cirruslabs.ci.services.cirruscigrpc.DockerBuilder.platform:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Platform
-	138, // 106: org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.extra_headers:type_name -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.ExtraHeadersEntry
+	139, // 106: org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.extra_headers:type_name -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse.ExtraHeadersEntry
 	102, // 107: org.cirruslabs.ci.services.cirruscigrpc.FileSystem.Memory.filesContents:type_name -> org.cirruslabs.ci.services.cirruscigrpc.FileSystem.Memory.FilesContentsEntry
 	92,  // 108: org.cirruslabs.ci.services.cirruscigrpc.PollResponse.AgentAwareTask.isolation:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation
 	106, // 109: org.cirruslabs.ci.services.cirruscigrpc.PollResponse.AgentAwareTask.resources_to_use:type_name -> org.cirruslabs.ci.services.cirruscigrpc.PollResponse.AgentAwareTask.ResourcesToUseEntry
@@ -9366,85 +9468,86 @@ var file_cirrus_ci_service_proto_depIdxs = []int32{
 	91,  // 116: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container.volumes:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Volume
 	135, // 117: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container.docker_arguments:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container.DockerArgumentsEntry
 	1,   // 118: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Container.platform:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Platform
-	10,  // 119: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateConfig:input_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest
-	15,  // 120: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.JSONSchema:input_type -> org.cirruslabs.ci.services.cirruscigrpc.JSONSchemaRequest
-	17,  // 121: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateFunction:input_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest
-	7,   // 122: org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService.Capabilities:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CapabilitiesRequest
-	19,  // 123: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Register:input_type -> org.cirruslabs.ci.services.cirruscigrpc.RegisterRequest
-	21,  // 124: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Poll:input_type -> org.cirruslabs.ci.services.cirruscigrpc.PollRequest
-	33,  // 125: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStarted:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskIdentification
-	24,  // 126: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskFailed:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskFailedRequest
-	33,  // 127: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStopped:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskIdentification
-	27,  // 128: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.UpdateStatus:input_type -> org.cirruslabs.ci.services.cirruscigrpc.UpdateStatusRequest
-	22,  // 129: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.QueryRunningTasks:input_type -> org.cirruslabs.ci.services.cirruscigrpc.QueryRunningTasksRequest
-	35,  // 130: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.InitialCommands:input_type -> org.cirruslabs.ci.services.cirruscigrpc.InitialCommandsRequest
-	50,  // 131: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportSingleCommand:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportSingleCommandRequest
-	52,  // 132: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportCommandUpdates:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportCommandUpdatesRequest
-	54,  // 133: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAnnotations:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAnnotationsCommandRequest
-	36,  // 134: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.StreamLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.LogEntry
-	36,  // 135: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.SaveLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.LogEntry
-	39,  // 136: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheEntry
-	41,  // 137: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadArtifacts:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ArtifactEntry
-	44,  // 138: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateArtifactUploadURLs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateArtifactUploadURLsRequest
-	46,  // 139: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CommitUploadedArtifacts:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CommitUploadedArtifactsRequest
-	48,  // 140: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DownloadCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.DownloadCacheRequest
-	58,  // 141: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CacheInfo:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheInfoRequest
-	61,  // 142: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DeleteCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.DeleteCacheRequest
-	56,  // 143: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.Heartbeat:input_type -> org.cirruslabs.ci.services.cirruscigrpc.HeartbeatRequest
-	64,  // 144: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportStopHook:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportStopHookRequest
-	63,  // 145: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentError:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentProblemRequest
-	63,  // 146: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentWarning:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentProblemRequest
-	65,  // 147: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentSignal:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentSignalRequest
-	66,  // 148: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentLogsRequest
-	71,  // 149: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentFinished:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentFinishedRequest
-	73,  // 150: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ParseConfig:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ParseConfigRequest
-	29,  // 151: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalAttached:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalAttachedRequest
-	31,  // 152: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalLifecycle:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalLifecycleRequest
-	38,  // 153: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheUploadURL:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
-	38,  // 154: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURL:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
-	38,  // 155: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURLs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
-	12,  // 156: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateConfig:output_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigResponse
-	16,  // 157: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.JSONSchema:output_type -> org.cirruslabs.ci.services.cirruscigrpc.JSONSchemaResponse
-	18,  // 158: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateFunction:output_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionResponse
-	8,   // 159: org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService.Capabilities:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CapabilitiesResponse
-	20,  // 160: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Register:output_type -> org.cirruslabs.ci.services.cirruscigrpc.RegisterResponse
-	25,  // 161: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Poll:output_type -> org.cirruslabs.ci.services.cirruscigrpc.PollResponse
-	144, // 162: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStarted:output_type -> google.protobuf.Empty
-	144, // 163: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskFailed:output_type -> google.protobuf.Empty
-	144, // 164: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStopped:output_type -> google.protobuf.Empty
-	28,  // 165: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.UpdateStatus:output_type -> org.cirruslabs.ci.services.cirruscigrpc.WorkerStatus
-	23,  // 166: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.QueryRunningTasks:output_type -> org.cirruslabs.ci.services.cirruscigrpc.QueryRunningTasksResponse
-	49,  // 167: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.InitialCommands:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CommandsResponse
-	51,  // 168: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportSingleCommand:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportSingleCommandResponse
-	53,  // 169: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportCommandUpdates:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportCommandUpdatesResponse
-	144, // 170: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAnnotations:output_type -> google.protobuf.Empty
-	37,  // 171: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.StreamLogs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadLogsResponse
-	37,  // 172: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.SaveLogs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadLogsResponse
-	40,  // 173: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadCacheResponse
-	42,  // 174: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadArtifacts:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadArtifactsResponse
-	45,  // 175: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateArtifactUploadURLs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateArtifactUploadURLsResponse
-	47,  // 176: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CommitUploadedArtifacts:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CommitUploadedArtifactsResponse
-	34,  // 177: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DownloadCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.DataChunk
-	60,  // 178: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CacheInfo:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheInfoResponse
-	62,  // 179: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DeleteCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.DeleteCacheResponse
-	57,  // 180: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.Heartbeat:output_type -> org.cirruslabs.ci.services.cirruscigrpc.HeartbeatResponse
-	144, // 181: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportStopHook:output_type -> google.protobuf.Empty
-	144, // 182: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentError:output_type -> google.protobuf.Empty
-	144, // 183: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentWarning:output_type -> google.protobuf.Empty
-	144, // 184: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentSignal:output_type -> google.protobuf.Empty
-	144, // 185: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentLogs:output_type -> google.protobuf.Empty
-	72,  // 186: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentFinished:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentFinishedResponse
-	74,  // 187: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ParseConfig:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ParseConfigResponse
-	30,  // 188: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalAttached:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalAttachedResponse
-	32,  // 189: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalLifecycle:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalLifecycleResponse
-	96,  // 190: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheUploadURL:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse
-	96,  // 191: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURL:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse
-	97,  // 192: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURLs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLsResponse
-	156, // [156:193] is the sub-list for method output_type
-	119, // [119:156] is the sub-list for method input_type
-	119, // [119:119] is the sub-list for extension type_name
-	119, // [119:119] is the sub-list for extension extendee
-	0,   // [0:119] is the sub-list for field type_name
+	136, // 119: org.cirruslabs.ci.services.cirruscigrpc.Isolation.Tart.volumes:type_name -> org.cirruslabs.ci.services.cirruscigrpc.Isolation.Tart.Volume
+	10,  // 120: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateConfig:input_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigRequest
+	15,  // 121: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.JSONSchema:input_type -> org.cirruslabs.ci.services.cirruscigrpc.JSONSchemaRequest
+	17,  // 122: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateFunction:input_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionRequest
+	7,   // 123: org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService.Capabilities:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CapabilitiesRequest
+	19,  // 124: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Register:input_type -> org.cirruslabs.ci.services.cirruscigrpc.RegisterRequest
+	21,  // 125: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Poll:input_type -> org.cirruslabs.ci.services.cirruscigrpc.PollRequest
+	33,  // 126: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStarted:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskIdentification
+	24,  // 127: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskFailed:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskFailedRequest
+	33,  // 128: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStopped:input_type -> org.cirruslabs.ci.services.cirruscigrpc.TaskIdentification
+	27,  // 129: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.UpdateStatus:input_type -> org.cirruslabs.ci.services.cirruscigrpc.UpdateStatusRequest
+	22,  // 130: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.QueryRunningTasks:input_type -> org.cirruslabs.ci.services.cirruscigrpc.QueryRunningTasksRequest
+	35,  // 131: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.InitialCommands:input_type -> org.cirruslabs.ci.services.cirruscigrpc.InitialCommandsRequest
+	50,  // 132: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportSingleCommand:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportSingleCommandRequest
+	52,  // 133: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportCommandUpdates:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportCommandUpdatesRequest
+	54,  // 134: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAnnotations:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAnnotationsCommandRequest
+	36,  // 135: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.StreamLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.LogEntry
+	36,  // 136: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.SaveLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.LogEntry
+	39,  // 137: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheEntry
+	41,  // 138: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadArtifacts:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ArtifactEntry
+	44,  // 139: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateArtifactUploadURLs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateArtifactUploadURLsRequest
+	46,  // 140: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CommitUploadedArtifacts:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CommitUploadedArtifactsRequest
+	48,  // 141: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DownloadCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.DownloadCacheRequest
+	58,  // 142: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CacheInfo:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheInfoRequest
+	61,  // 143: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DeleteCache:input_type -> org.cirruslabs.ci.services.cirruscigrpc.DeleteCacheRequest
+	56,  // 144: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.Heartbeat:input_type -> org.cirruslabs.ci.services.cirruscigrpc.HeartbeatRequest
+	64,  // 145: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportStopHook:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportStopHookRequest
+	63,  // 146: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentError:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentProblemRequest
+	63,  // 147: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentWarning:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentProblemRequest
+	65,  // 148: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentSignal:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentSignalRequest
+	66,  // 149: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentLogs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentLogsRequest
+	71,  // 150: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentFinished:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentFinishedRequest
+	73,  // 151: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ParseConfig:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ParseConfigRequest
+	29,  // 152: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalAttached:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalAttachedRequest
+	31,  // 153: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalLifecycle:input_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalLifecycleRequest
+	38,  // 154: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheUploadURL:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
+	38,  // 155: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURL:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
+	38,  // 156: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURLs:input_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheKey
+	12,  // 157: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateConfig:output_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateConfigResponse
+	16,  // 158: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.JSONSchema:output_type -> org.cirruslabs.ci.services.cirruscigrpc.JSONSchemaResponse
+	18,  // 159: org.cirruslabs.ci.services.cirruscigrpc.CirrusConfigurationEvaluatorService.EvaluateFunction:output_type -> org.cirruslabs.ci.services.cirruscigrpc.EvaluateFunctionResponse
+	8,   // 160: org.cirruslabs.ci.services.cirruscigrpc.CirrusRemoteExecutorService.Capabilities:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CapabilitiesResponse
+	20,  // 161: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Register:output_type -> org.cirruslabs.ci.services.cirruscigrpc.RegisterResponse
+	25,  // 162: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.Poll:output_type -> org.cirruslabs.ci.services.cirruscigrpc.PollResponse
+	145, // 163: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStarted:output_type -> google.protobuf.Empty
+	145, // 164: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskFailed:output_type -> google.protobuf.Empty
+	145, // 165: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.TaskStopped:output_type -> google.protobuf.Empty
+	28,  // 166: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.UpdateStatus:output_type -> org.cirruslabs.ci.services.cirruscigrpc.WorkerStatus
+	23,  // 167: org.cirruslabs.ci.services.cirruscigrpc.CirrusWorkersService.QueryRunningTasks:output_type -> org.cirruslabs.ci.services.cirruscigrpc.QueryRunningTasksResponse
+	49,  // 168: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.InitialCommands:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CommandsResponse
+	51,  // 169: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportSingleCommand:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportSingleCommandResponse
+	53,  // 170: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportCommandUpdates:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportCommandUpdatesResponse
+	145, // 171: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAnnotations:output_type -> google.protobuf.Empty
+	37,  // 172: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.StreamLogs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadLogsResponse
+	37,  // 173: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.SaveLogs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadLogsResponse
+	40,  // 174: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadCacheResponse
+	42,  // 175: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.UploadArtifacts:output_type -> org.cirruslabs.ci.services.cirruscigrpc.UploadArtifactsResponse
+	45,  // 176: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateArtifactUploadURLs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateArtifactUploadURLsResponse
+	47,  // 177: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CommitUploadedArtifacts:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CommitUploadedArtifactsResponse
+	34,  // 178: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DownloadCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.DataChunk
+	60,  // 179: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.CacheInfo:output_type -> org.cirruslabs.ci.services.cirruscigrpc.CacheInfoResponse
+	62,  // 180: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.DeleteCache:output_type -> org.cirruslabs.ci.services.cirruscigrpc.DeleteCacheResponse
+	57,  // 181: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.Heartbeat:output_type -> org.cirruslabs.ci.services.cirruscigrpc.HeartbeatResponse
+	145, // 182: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportStopHook:output_type -> google.protobuf.Empty
+	145, // 183: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentError:output_type -> google.protobuf.Empty
+	145, // 184: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentWarning:output_type -> google.protobuf.Empty
+	145, // 185: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentSignal:output_type -> google.protobuf.Empty
+	145, // 186: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentLogs:output_type -> google.protobuf.Empty
+	72,  // 187: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportAgentFinished:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportAgentFinishedResponse
+	74,  // 188: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ParseConfig:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ParseConfigResponse
+	30,  // 189: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalAttached:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalAttachedResponse
+	32,  // 190: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.ReportTerminalLifecycle:output_type -> org.cirruslabs.ci.services.cirruscigrpc.ReportTerminalLifecycleResponse
+	96,  // 191: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheUploadURL:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse
+	96,  // 192: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURL:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLResponse
+	97,  // 193: org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService.GenerateCacheDownloadURLs:output_type -> org.cirruslabs.ci.services.cirruscigrpc.GenerateURLsResponse
+	157, // [157:194] is the sub-list for method output_type
+	120, // [120:157] is the sub-list for method input_type
+	120, // [120:120] is the sub-list for extension type_name
+	120, // [120:120] is the sub-list for extension extendee
+	0,   // [0:120] is the sub-list for field type_name
 }
 
 func init() { file_cirrus_ci_service_proto_init() }
@@ -10761,6 +10864,18 @@ func file_cirrus_ci_service_proto_init() {
 				return nil
 			}
 		}
+		file_cirrus_ci_service_proto_msgTypes[129].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Isolation_Tart_Volume); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_cirrus_ci_service_proto_msgTypes[4].OneofWrappers = []interface{}{
 		(*FileSystem_Memory_)(nil),
@@ -10813,7 +10928,7 @@ func file_cirrus_ci_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_cirrus_ci_service_proto_rawDesc,
 			NumEnums:      7,
-			NumMessages:   132,
+			NumMessages:   133,
 			NumExtensions: 0,
 			NumServices:   4,
 		},
