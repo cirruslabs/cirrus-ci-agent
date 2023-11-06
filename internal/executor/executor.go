@@ -195,8 +195,18 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	}
 
 	executor.httpCacheHost = executor.env.Get("CIRRUS_HTTP_CACHE_HOST")
-	subCtx, cancel := context.WithTimeout(ctx, time.Duration(response.TimeoutInSeconds)*time.Second)
-	defer cancel()
+
+	// Normal timeout-bounded context
+	timeout := time.Duration(response.TimeoutInSeconds) * time.Second
+
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, timeout)
+	defer timeoutCtxCancel()
+
+	// Like timeout-bounded context, but extended by 5 minutes
+	// to allow for "on_timeout:" user-defined instructions to succeed
+	extendedTimeoutCtx, extendedTimeoutCtxCancel := context.WithTimeout(ctx, timeout+(5*time.Minute))
+	defer extendedTimeoutCtxCancel()
+
 	executor.env.AddSensitiveValues(response.SecretsToMask...)
 
 	if len(commands) == 0 {
@@ -232,7 +242,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		shellEnv := append(os.Environ(), EnvMapAsSlice(executor.env.Items())...)
 
-		executor.terminalWrapper = terminalwrapper.New(subCtx, executor.taskIdentification, terminalServerAddress,
+		executor.terminalWrapper = terminalwrapper.New(timeoutCtx, executor.taskIdentification, terminalServerAddress,
 			expireIn, shellEnv)
 	}
 
@@ -243,7 +253,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
 		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
 			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
-			command.ExecutionBehaviour == api.Command_ALWAYS
+			command.ExecutionBehaviour == api.Command_ALWAYS ||
+			(command.ExecutionBehaviour == api.Command_ON_TIMEOUT && errors.Is(timeoutCtx.Err(), context.DeadlineExceeded))
 		if !shouldRun {
 			ub.Queue(&api.CommandResult{
 				Name:   command.Name,
@@ -260,7 +271,15 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("Executing %s...", command.Name)
 
-		stepResult, err := executor.performStep(subCtx, command)
+		var stepCtx context.Context
+
+		if command.ExecutionBehaviour == api.Command_ON_TIMEOUT {
+			stepCtx = extendedTimeoutCtx
+		} else {
+			stepCtx = timeoutCtx
+		}
+
+		stepResult, err := executor.performStep(stepCtx, command)
 		if err != nil {
 			return
 		}
