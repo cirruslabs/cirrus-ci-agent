@@ -243,7 +243,8 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 	for _, command := range BoundedCommands(commands, executor.commandFrom, executor.commandTo) {
 		shouldRun := (command.ExecutionBehaviour == api.Command_ON_SUCCESS && !failedAtLeastOnce) ||
 			(command.ExecutionBehaviour == api.Command_ON_FAILURE && failedAtLeastOnce) ||
-			command.ExecutionBehaviour == api.Command_ALWAYS
+			command.ExecutionBehaviour == api.Command_ALWAYS ||
+			(command.ExecutionBehaviour == api.Command_ON_TIMEOUT && errors.Is(subCtx.Err(), context.DeadlineExceeded))
 		if !shouldRun {
 			ub.Queue(&api.CommandResult{
 				Name:   command.Name,
@@ -260,7 +261,15 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		log.Printf("Executing %s...", command.Name)
 
-		stepResult, err := executor.performStep(subCtx, command)
+		var stepCtx context.Context
+
+		if command.ExecutionBehaviour == api.Command_ON_TIMEOUT {
+			stepCtx = context.Background()
+		} else {
+			stepCtx = subCtx
+		}
+
+		stepResult, err := executor.performStep(stepCtx, command)
 		if err != nil {
 			return
 		}
