@@ -169,8 +169,8 @@ func NewShellCommands(
 
 	if custom_env != nil {
 		if _, ok := custom_env.Lookup("CIRRUS_AGENT_EXPOSE_SCRIPTS_OUTPUTS"); ok {
-			cmd.Stderr = io.MultiWriter(cmd.Stderr, sc.piper.FileProxy())
-			cmd.Stdout = io.MultiWriter(cmd.Stdout, sc.piper.FileProxy())
+			cmd.Stderr = io.MultiWriter(os.Stderr, sc.piper.FileProxy())
+			cmd.Stdout = io.MultiWriter(os.Stdout, sc.piper.FileProxy())
 		}
 	}
 
