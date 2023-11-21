@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
 	"math"
@@ -222,9 +223,15 @@ func main() {
 		}
 	}()
 
+	// Connect to the RPC server
+	md := metadata.New(map[string]string{
+		"org.cirruslabs.task-id":       *taskIdPtr,
+		"org.cirruslabs.client-secret": *clientTokenPtr,
+	})
+
 	err = retry.Do(
 		func() error {
-			conn, err = dialWithTimeout(ctx, *apiEndpointPtr)
+			conn, err = dialWithTimeout(ctx, *apiEndpointPtr, md)
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
 			log.Printf("Failed to open a connection: %v\n", err)
@@ -324,7 +331,7 @@ func reportSignal(ctx context.Context, sig os.Signal, taskId int64, clientToken 
 	_, _ = client.CirrusClient.ReportAgentSignal(ctx, &request)
 }
 
-func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn, error) {
+func dialWithTimeout(ctx context.Context, apiEndpoint string, md metadata.MD) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
@@ -345,14 +352,30 @@ func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn,
 				PermitWithoutStream: true,             // always send Pings even if there are no RPCs
 			},
 		),
-		grpc.WithUnaryInterceptor(
+		grpc.WithChainUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
 				grpc_retry.WithCodes(retryCodes...),
 				grpc_retry.WithPerRetryTimeout(60*time.Second),
 			),
+			metadataInterceptor(md),
 		),
 	)
+}
+
+func metadataInterceptor(md metadata.MD) grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {

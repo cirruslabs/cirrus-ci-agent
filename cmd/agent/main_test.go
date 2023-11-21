@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/metadata"
 	"testing"
 )
 
@@ -16,7 +17,7 @@ func Test_DialNoSchema(t *testing.T) {
 }
 
 func checkEndpoint(endpoint string) error {
-	clientConn, err := dialWithTimeout(context.Background(), endpoint)
+	clientConn, err := dialWithTimeout(context.Background(), endpoint, metadata.New(map[string]string{}))
 	if err != nil {
 		return err
 	}
