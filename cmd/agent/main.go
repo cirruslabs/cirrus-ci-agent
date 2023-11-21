@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
 	"math"
@@ -71,7 +72,7 @@ func main() {
 	x509.SetFallbackRoots(mozillaRoots)
 
 	apiEndpointPtr := flag.String("api-endpoint", "https://grpc.cirrus-ci.com:443", "GRPC endpoint URL")
-	taskIdPtr := flag.Int64("task-id", 0, "Task ID")
+	taskIdPtr := flag.String("task-id", "0", "Task ID")
 	clientTokenPtr := flag.String("client-token", "", "Secret token")
 	serverTokenPtr := flag.String("server-token", "", "Secret token")
 	versionFlag := flag.Bool("version", false, "display the version and exit")
@@ -99,6 +100,14 @@ func main() {
 	}
 	defer sentry.Flush(2 * time.Second)
 
+	// Parse task ID as an integer for backwards-compatibility with the TaskIdentification message
+	oldStyleTaskID, err := strconv.ParseInt(*taskIdPtr, 10, 64)
+	if err != nil {
+		log.Printf("Failed to parse task ID %q as an integer (%v), assuming that "+
+			"the new format of task IDs is in play", *taskIdPtr, err)
+		oldStyleTaskID = 0
+	}
+
 	// Enrich future events with Cirrus CI-specific tags
 	if tags, ok := os.LookupEnv("CIRRUS_SENTRY_TAGS"); ok {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
@@ -114,11 +123,11 @@ func main() {
 	}
 
 	// Initialize logger
-	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d.log", *taskIdPtr))
+	logFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%s.log", *taskIdPtr))
 	if *stopHook {
 		// In case of a failure the log file will be persisted on the machine for debugging purposes.
 		// But unfortunately stop hook invocation will override it so let's use a different name.
-		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%d-hook.log", *taskIdPtr))
+		logFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("cirrus-agent-%s-hook.log", *taskIdPtr))
 	}
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0660)
 	if err != nil {
@@ -133,7 +142,7 @@ func main() {
 			log.Printf("Finalizing log file, %d bytes written", logFilePos)
 
 			_ = logFile.Close()
-			uploadAgentLogs(context.Background(), logFilePath, *taskIdPtr, *clientTokenPtr)
+			uploadAgentLogs(context.Background(), logFilePath, oldStyleTaskID, *clientTokenPtr)
 		}()
 	}
 	multiWriter := io.MultiWriter(logFile, os.Stdout)
@@ -163,7 +172,7 @@ func main() {
 
 		request := &api.ReportAgentProblemRequest{
 			TaskIdentification: &api.TaskIdentification{
-				TaskId: *taskIdPtr,
+				TaskId: oldStyleTaskID,
 				Secret: *clientTokenPtr,
 			},
 			Message: fmt.Sprint(err),
@@ -210,13 +219,19 @@ func main() {
 
 			log.Printf("Captured %v...", sig)
 
-			reportSignal(context.Background(), sig, *taskIdPtr, *clientTokenPtr)
+			reportSignal(context.Background(), sig, oldStyleTaskID, *clientTokenPtr)
 		}
 	}()
 
+	// Connect to the RPC server
+	md := metadata.New(map[string]string{
+		"org.cirruslabs.task-id":       *taskIdPtr,
+		"org.cirruslabs.client-secret": *clientTokenPtr,
+	})
+
 	err = retry.Do(
 		func() error {
-			conn, err = dialWithTimeout(ctx, *apiEndpointPtr)
+			conn, err = dialWithTimeout(ctx, *apiEndpointPtr, md)
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
 			log.Printf("Failed to open a connection: %v\n", err)
@@ -237,7 +252,7 @@ func main() {
 	if *stopHook {
 		log.Printf("Stop hook!\n")
 		taskIdentification := api.TaskIdentification{
-			TaskId: *taskIdPtr,
+			TaskId: oldStyleTaskID,
 			Secret: *clientTokenPtr,
 		}
 		request := api.ReportStopHookRequest{
@@ -245,7 +260,7 @@ func main() {
 		}
 		_, err = client.CirrusClient.ReportStopHook(ctx, &request)
 		if err != nil {
-			log.Printf("Failed to report stop hook for task %d: %v\n", *taskIdPtr, err)
+			log.Printf("Failed to report stop hook for task %s: %v\n", *taskIdPtr, err)
 		} else {
 			logFile.Close()
 			os.Remove(logFilePath)
@@ -270,9 +285,9 @@ func main() {
 		}
 	}
 
-	go runHeartbeat(*taskIdPtr, *clientTokenPtr, conn)
+	go runHeartbeat(oldStyleTaskID, *clientTokenPtr, conn)
 
-	buildExecutor := executor.NewExecutor(*taskIdPtr, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr,
+	buildExecutor := executor.NewExecutor(oldStyleTaskID, *clientTokenPtr, *serverTokenPtr, *commandFromPtr, *commandToPtr,
 		*preCreatedWorkingDir)
 	buildExecutor.RunBuild(ctx)
 }
@@ -316,7 +331,7 @@ func reportSignal(ctx context.Context, sig os.Signal, taskId int64, clientToken 
 	_, _ = client.CirrusClient.ReportAgentSignal(ctx, &request)
 }
 
-func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn, error) {
+func dialWithTimeout(ctx context.Context, apiEndpoint string, md metadata.MD) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
@@ -337,14 +352,30 @@ func dialWithTimeout(ctx context.Context, apiEndpoint string) (*grpc.ClientConn,
 				PermitWithoutStream: true,             // always send Pings even if there are no RPCs
 			},
 		),
-		grpc.WithUnaryInterceptor(
+		grpc.WithChainUnaryInterceptor(
 			grpc_retry.UnaryClientInterceptor(
 				grpc_retry.WithMax(3),
 				grpc_retry.WithCodes(retryCodes...),
 				grpc_retry.WithPerRetryTimeout(60*time.Second),
 			),
+			metadataInterceptor(md),
 		),
 	)
+}
+
+func metadataInterceptor(md metadata.MD) grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func runHeartbeat(taskId int64, clientToken string, conn *grpc.ClientConn) {
