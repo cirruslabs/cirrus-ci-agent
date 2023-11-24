@@ -14,6 +14,12 @@ import (
 	"time"
 )
 
+func TestCirrusAgentExposeScriptsOutputs(t *testing.T) {
+	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"echo test; sleep 1; echo test"},
+		environment.New(map[string]string{"CIRRUS_AGENT_EXPOSE_SCRIPTS_OUTPUTS": ""}))
+	assert.True(t, success)
+}
+
 func TestZshDoesNotHang(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
