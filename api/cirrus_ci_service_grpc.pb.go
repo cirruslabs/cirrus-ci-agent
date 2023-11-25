@@ -603,7 +603,6 @@ var CirrusWorkersService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	CirrusCIService_InitialCommands_FullMethodName            = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/InitialCommands"
-	CirrusCIService_ReportSingleCommand_FullMethodName        = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportSingleCommand"
 	CirrusCIService_ReportCommandUpdates_FullMethodName       = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportCommandUpdates"
 	CirrusCIService_ReportAnnotations_FullMethodName          = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAnnotations"
 	CirrusCIService_StreamLogs_FullMethodName                 = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/StreamLogs"
@@ -622,11 +621,9 @@ const (
 	CirrusCIService_ReportAgentSignal_FullMethodName          = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentSignal"
 	CirrusCIService_ReportAgentLogs_FullMethodName            = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentLogs"
 	CirrusCIService_ReportAgentFinished_FullMethodName        = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportAgentFinished"
-	CirrusCIService_ParseConfig_FullMethodName                = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ParseConfig"
 	CirrusCIService_ReportTerminalAttached_FullMethodName     = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportTerminalAttached"
 	CirrusCIService_ReportTerminalLifecycle_FullMethodName    = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/ReportTerminalLifecycle"
 	CirrusCIService_GenerateCacheUploadURL_FullMethodName     = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheUploadURL"
-	CirrusCIService_GenerateCacheDownloadURL_FullMethodName   = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheDownloadURL"
 	CirrusCIService_GenerateCacheDownloadURLs_FullMethodName  = "/org.cirruslabs.ci.services.cirruscigrpc.CirrusCIService/GenerateCacheDownloadURLs"
 )
 
@@ -635,7 +632,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CirrusCIServiceClient interface {
 	InitialCommands(ctx context.Context, in *InitialCommandsRequest, opts ...grpc.CallOption) (*CommandsResponse, error)
-	ReportSingleCommand(ctx context.Context, in *ReportSingleCommandRequest, opts ...grpc.CallOption) (*ReportSingleCommandResponse, error)
 	ReportCommandUpdates(ctx context.Context, in *ReportCommandUpdatesRequest, opts ...grpc.CallOption) (*ReportCommandUpdatesResponse, error)
 	ReportAnnotations(ctx context.Context, in *ReportAnnotationsCommandRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	StreamLogs(ctx context.Context, opts ...grpc.CallOption) (CirrusCIService_StreamLogsClient, error)
@@ -656,11 +652,9 @@ type CirrusCIServiceClient interface {
 	ReportAgentSignal(ctx context.Context, in *ReportAgentSignalRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ReportAgentLogs(ctx context.Context, in *ReportAgentLogsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ReportAgentFinished(ctx context.Context, in *ReportAgentFinishedRequest, opts ...grpc.CallOption) (*ReportAgentFinishedResponse, error)
-	ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error)
 	ReportTerminalAttached(ctx context.Context, in *ReportTerminalAttachedRequest, opts ...grpc.CallOption) (*ReportTerminalAttachedResponse, error)
 	ReportTerminalLifecycle(ctx context.Context, in *ReportTerminalLifecycleRequest, opts ...grpc.CallOption) (*ReportTerminalLifecycleResponse, error)
 	GenerateCacheUploadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
-	GenerateCacheDownloadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error)
 	GenerateCacheDownloadURLs(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLsResponse, error)
 }
 
@@ -675,15 +669,6 @@ func NewCirrusCIServiceClient(cc grpc.ClientConnInterface) CirrusCIServiceClient
 func (c *cirrusCIServiceClient) InitialCommands(ctx context.Context, in *InitialCommandsRequest, opts ...grpc.CallOption) (*CommandsResponse, error) {
 	out := new(CommandsResponse)
 	err := c.cc.Invoke(ctx, CirrusCIService_InitialCommands_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *cirrusCIServiceClient) ReportSingleCommand(ctx context.Context, in *ReportSingleCommandRequest, opts ...grpc.CallOption) (*ReportSingleCommandResponse, error) {
-	out := new(ReportSingleCommandResponse)
-	err := c.cc.Invoke(ctx, CirrusCIService_ReportSingleCommand_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -975,15 +960,6 @@ func (c *cirrusCIServiceClient) ReportAgentFinished(ctx context.Context, in *Rep
 	return out, nil
 }
 
-func (c *cirrusCIServiceClient) ParseConfig(ctx context.Context, in *ParseConfigRequest, opts ...grpc.CallOption) (*ParseConfigResponse, error) {
-	out := new(ParseConfigResponse)
-	err := c.cc.Invoke(ctx, CirrusCIService_ParseConfig_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *cirrusCIServiceClient) ReportTerminalAttached(ctx context.Context, in *ReportTerminalAttachedRequest, opts ...grpc.CallOption) (*ReportTerminalAttachedResponse, error) {
 	out := new(ReportTerminalAttachedResponse)
 	err := c.cc.Invoke(ctx, CirrusCIService_ReportTerminalAttached_FullMethodName, in, out, opts...)
@@ -1011,15 +987,6 @@ func (c *cirrusCIServiceClient) GenerateCacheUploadURL(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *cirrusCIServiceClient) GenerateCacheDownloadURL(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLResponse, error) {
-	out := new(GenerateURLResponse)
-	err := c.cc.Invoke(ctx, CirrusCIService_GenerateCacheDownloadURL_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *cirrusCIServiceClient) GenerateCacheDownloadURLs(ctx context.Context, in *CacheKey, opts ...grpc.CallOption) (*GenerateURLsResponse, error) {
 	out := new(GenerateURLsResponse)
 	err := c.cc.Invoke(ctx, CirrusCIService_GenerateCacheDownloadURLs_FullMethodName, in, out, opts...)
@@ -1034,7 +1001,6 @@ func (c *cirrusCIServiceClient) GenerateCacheDownloadURLs(ctx context.Context, i
 // for forward compatibility
 type CirrusCIServiceServer interface {
 	InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error)
-	ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error)
 	ReportCommandUpdates(context.Context, *ReportCommandUpdatesRequest) (*ReportCommandUpdatesResponse, error)
 	ReportAnnotations(context.Context, *ReportAnnotationsCommandRequest) (*emptypb.Empty, error)
 	StreamLogs(CirrusCIService_StreamLogsServer) error
@@ -1055,11 +1021,9 @@ type CirrusCIServiceServer interface {
 	ReportAgentSignal(context.Context, *ReportAgentSignalRequest) (*emptypb.Empty, error)
 	ReportAgentLogs(context.Context, *ReportAgentLogsRequest) (*emptypb.Empty, error)
 	ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error)
-	ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error)
 	ReportTerminalAttached(context.Context, *ReportTerminalAttachedRequest) (*ReportTerminalAttachedResponse, error)
 	ReportTerminalLifecycle(context.Context, *ReportTerminalLifecycleRequest) (*ReportTerminalLifecycleResponse, error)
 	GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
-	GenerateCacheDownloadURL(context.Context, *CacheKey) (*GenerateURLResponse, error)
 	GenerateCacheDownloadURLs(context.Context, *CacheKey) (*GenerateURLsResponse, error)
 	mustEmbedUnimplementedCirrusCIServiceServer()
 }
@@ -1070,9 +1034,6 @@ type UnimplementedCirrusCIServiceServer struct {
 
 func (UnimplementedCirrusCIServiceServer) InitialCommands(context.Context, *InitialCommandsRequest) (*CommandsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitialCommands not implemented")
-}
-func (UnimplementedCirrusCIServiceServer) ReportSingleCommand(context.Context, *ReportSingleCommandRequest) (*ReportSingleCommandResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReportSingleCommand not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) ReportCommandUpdates(context.Context, *ReportCommandUpdatesRequest) (*ReportCommandUpdatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportCommandUpdates not implemented")
@@ -1128,9 +1089,6 @@ func (UnimplementedCirrusCIServiceServer) ReportAgentLogs(context.Context, *Repo
 func (UnimplementedCirrusCIServiceServer) ReportAgentFinished(context.Context, *ReportAgentFinishedRequest) (*ReportAgentFinishedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportAgentFinished not implemented")
 }
-func (UnimplementedCirrusCIServiceServer) ParseConfig(context.Context, *ParseConfigRequest) (*ParseConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ParseConfig not implemented")
-}
 func (UnimplementedCirrusCIServiceServer) ReportTerminalAttached(context.Context, *ReportTerminalAttachedRequest) (*ReportTerminalAttachedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportTerminalAttached not implemented")
 }
@@ -1139,9 +1097,6 @@ func (UnimplementedCirrusCIServiceServer) ReportTerminalLifecycle(context.Contex
 }
 func (UnimplementedCirrusCIServiceServer) GenerateCacheUploadURL(context.Context, *CacheKey) (*GenerateURLResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheUploadURL not implemented")
-}
-func (UnimplementedCirrusCIServiceServer) GenerateCacheDownloadURL(context.Context, *CacheKey) (*GenerateURLResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheDownloadURL not implemented")
 }
 func (UnimplementedCirrusCIServiceServer) GenerateCacheDownloadURLs(context.Context, *CacheKey) (*GenerateURLsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateCacheDownloadURLs not implemented")
@@ -1173,24 +1128,6 @@ func _CirrusCIService_InitialCommands_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CirrusCIServiceServer).InitialCommands(ctx, req.(*InitialCommandsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CirrusCIService_ReportSingleCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReportSingleCommandRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ReportSingleCommand(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CirrusCIService_ReportSingleCommand_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ReportSingleCommand(ctx, req.(*ReportSingleCommandRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1554,24 +1491,6 @@ func _CirrusCIService_ReportAgentFinished_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CirrusCIService_ParseConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ParseConfigRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).ParseConfig(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CirrusCIService_ParseConfig_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).ParseConfig(ctx, req.(*ParseConfigRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CirrusCIService_ReportTerminalAttached_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportTerminalAttachedRequest)
 	if err := dec(in); err != nil {
@@ -1626,24 +1545,6 @@ func _CirrusCIService_GenerateCacheUploadURL_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CirrusCIService_GenerateCacheDownloadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CacheKey)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CirrusCIServiceServer).GenerateCacheDownloadURL(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CirrusCIService_GenerateCacheDownloadURL_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CirrusCIServiceServer).GenerateCacheDownloadURL(ctx, req.(*CacheKey))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CirrusCIService_GenerateCacheDownloadURLs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CacheKey)
 	if err := dec(in); err != nil {
@@ -1672,10 +1573,6 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitialCommands",
 			Handler:    _CirrusCIService_InitialCommands_Handler,
-		},
-		{
-			MethodName: "ReportSingleCommand",
-			Handler:    _CirrusCIService_ReportSingleCommand_Handler,
 		},
 		{
 			MethodName: "ReportCommandUpdates",
@@ -1730,10 +1627,6 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CirrusCIService_ReportAgentFinished_Handler,
 		},
 		{
-			MethodName: "ParseConfig",
-			Handler:    _CirrusCIService_ParseConfig_Handler,
-		},
-		{
 			MethodName: "ReportTerminalAttached",
 			Handler:    _CirrusCIService_ReportTerminalAttached_Handler,
 		},
@@ -1744,10 +1637,6 @@ var CirrusCIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateCacheUploadURL",
 			Handler:    _CirrusCIService_GenerateCacheUploadURL_Handler,
-		},
-		{
-			MethodName: "GenerateCacheDownloadURL",
-			Handler:    _CirrusCIService_GenerateCacheDownloadURL_Handler,
 		},
 		{
 			MethodName: "GenerateCacheDownloadURLs",
