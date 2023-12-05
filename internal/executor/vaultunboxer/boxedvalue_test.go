@@ -25,13 +25,70 @@ func TestInvalidBoxedValues(t *testing.T) {
 	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path]")
 	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
 
-	// Value with too much arguments
+	// Value with invalid argument
 	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path some.path extraneous]")
 	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
 
 	// Value that contains a selector with empty elements
 	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path some.]")
 	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
+
+	// Value that contains a argument but is missing a selector
+	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path arg=value]")
+	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
+
+	// Value that contains a argument with empty value
+	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path some.path arg=]")
+	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
+
+	// Value that contains a argument with empty key
+	_, err = vaultunboxer.NewBoxedValue("VAULT[some/path some.path =value]")
+	require.ErrorIs(t, err, vaultunboxer.ErrInvalidBoxedValue)
+}
+
+func TestArguments(t *testing.T) {
+	trials := []struct {
+		Name          string
+		RawBoxedValue string
+		Expected      map[string][]string
+	}{
+		{
+			Name:          "no arguments",
+			RawBoxedValue: "VAULT[some/path some.path]",
+			Expected:      map[string][]string{},
+		},
+		{
+			Name:          "one argument",
+			RawBoxedValue: "VAULT[some/path some.path arg=value]",
+			Expected: map[string][]string{
+				"arg": {"value"},
+			},
+		},
+		{
+			Name:          "multiple arguments",
+			RawBoxedValue: "VAULT[some/path some.path arg=value arg2=value2]",
+			Expected: map[string][]string{
+				"arg":  {"value"},
+				"arg2": {"value2"},
+			},
+		},
+		{
+			Name:          "multiple arguments with the same name",
+			RawBoxedValue: "VAULT[some/path some.path arg=value arg=value2]",
+			Expected: map[string][]string{
+				"arg": {"value", "value2"},
+			},
+		},
+	}
+
+	for _, trial := range trials {
+		t.Run(trial.Name, func(t *testing.T) {
+			boxedValue, err := vaultunboxer.NewBoxedValue(trial.RawBoxedValue)
+			require.NoError(t, err)
+
+			require.Equal(t, trial.Expected, boxedValue.VaultPathArgs())
+		})
+	}
 }
 
 func TestSelectorInvalidCombinations(t *testing.T) {

@@ -59,7 +59,14 @@ func TestVault(t *testing.T) {
 	selector, err := vaultunboxer.NewBoxedValue("VAULT[secret/data/keys data.admin]")
 	require.NoError(t, err)
 
+	selector_arg, err := vaultunboxer.NewBoxedValue("VAULT[secret/data/keys data.admin version=1]")
+	require.NoError(t, err)
+
 	secretValue, err := vaultunboxer.New(client).Unbox(ctx, selector)
+	require.NoError(t, err)
+	require.Equal(t, secretKeyValue, secretValue)
+
+	secretValue, err = vaultunboxer.New(client).Unbox(ctx, selector_arg)
 	require.NoError(t, err)
 	require.Equal(t, secretKeyValue, secretValue)
 }
