@@ -87,19 +87,21 @@ func (unboxer *VaultUnboxer) Unbox(ctx context.Context, value *BoxedValue) (stri
 }
 
 func (unboxer *VaultUnboxer) retrieveSecret(ctx context.Context, value *BoxedValue) (*vault.Secret, error) {
+	cacheKey := fmt.Sprintf("%s %v", value.vaultPath, value.vaultPathArgs)
+
 	if value.UseCache() {
 		// Try the cache first, and fall back to poking the Vault
 		// if no entry exists in the cache
-		cachedSecret, ok := unboxer.cache[value.vaultPath]
+		cachedSecret, ok := unboxer.cache[cacheKey]
 		if ok {
 			return cachedSecret.Secret, cachedSecret.Err
 		}
 	}
 
-	secret, err := unboxer.client.Logical().ReadWithContext(ctx, value.vaultPath)
+	secret, err := unboxer.client.Logical().ReadWithDataWithContext(ctx, value.vaultPath, value.vaultPathArgs)
 
 	// Cache the result, even a negative one (with err != nil)
-	unboxer.cache[value.vaultPath] = &CachedSecret{
+	unboxer.cache[cacheKey] = &CachedSecret{
 		Secret: secret,
 		Err:    err,
 	}

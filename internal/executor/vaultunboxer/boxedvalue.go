@@ -8,9 +8,10 @@ import (
 )
 
 type BoxedValue struct {
-	vaultPath string
-	dataPath  []string
-	useCache  bool
+	vaultPath     string
+	vaultPathArgs map[string][]string
+	dataPath      []string
+	useCache      bool
 }
 
 const (
@@ -44,9 +45,12 @@ func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
 	}
 
 	parts := strings.Split(rawBoxedValue, " ")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("%w: there should be 2 parameters (path and a selector), found %d",
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("%w: there should be at least 2 parameters (path and a selector), found %d",
 			ErrInvalidBoxedValue, len(parts))
+	}
+	if strings.Contains(parts[1], "=") {
+		return nil, fmt.Errorf("%w: missing selector element, found %q", ErrInvalidBoxedValue, parts[1])
 	}
 
 	dataPath := strings.Split(parts[1], ".")
@@ -57,15 +61,34 @@ func NewBoxedValue(rawBoxedValue string) (*BoxedValue, error) {
 		}
 	}
 
+	vaultPathArgs := map[string][]string{}
+	if len(parts) > 2 {
+		for _, arg := range parts[2:] {
+			argParts := strings.Split(arg, "=")
+			if len(argParts) != 2 {
+				return nil, fmt.Errorf("%w: found an invalid argument %q: argument should be in form of A=B, and only one \"=\" is allowed", ErrInvalidBoxedValue, arg)
+			}
+			if argParts[0] == "" || argParts[1] == "" {
+				return nil, fmt.Errorf("%w: found an unvalid argument %q: key and/or value are empty", ErrInvalidBoxedValue, arg)
+			}
+			vaultPathArgs[argParts[0]] = append(vaultPathArgs[argParts[0]], argParts[1])
+		}
+	}
+
 	return &BoxedValue{
-		vaultPath: parts[0],
-		dataPath:  dataPath,
-		useCache:  useCache,
+		vaultPath:     parts[0],
+		vaultPathArgs: vaultPathArgs,
+		dataPath:      dataPath,
+		useCache:      useCache,
 	}, nil
 }
 
 func (value *BoxedValue) UseCache() bool {
 	return value.useCache
+}
+
+func (value *BoxedValue) VaultPathArgs() map[string][]string {
+	return value.vaultPathArgs
 }
 
 func (value *BoxedValue) Select(data interface{}) (string, error) {
