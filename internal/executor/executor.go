@@ -142,7 +142,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		if vaultUnboxer == nil {
 			log.Println("Found at least one VAULT[...] environment variable, initializing Vault client")
 
-			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, executor.env)
+			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, environment.New(scriptEnvironment))
 			if err != nil {
 				message := fmt.Sprintf("failed to initialize a Vault client: %v", err)
 				log.Println(message)
