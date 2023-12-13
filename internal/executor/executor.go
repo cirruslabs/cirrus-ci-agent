@@ -119,13 +119,13 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
-	executor.env.Merge(getScriptEnvironment(executor, response.Environment), false)
+	scriptEnvironment := getScriptEnvironment(executor, response.Environment)
 
 	log.Println("Unboxing VAULT[...] environment variables, if any")
 
 	var vaultUnboxer *vaultunboxer.VaultUnboxer
 
-	for key, value := range executor.env.Items() {
+	for key, value := range scriptEnvironment {
 		boxedValue, err := vaultunboxer.NewBoxedValue(value)
 		if err != nil {
 			if errors.Is(err, vaultunboxer.ErrNotABoxedValue) {
@@ -163,9 +163,11 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			return
 		}
 
-		executor.env.Set(key, unboxedValue)
+		scriptEnvironment[key] = unboxedValue
 		executor.env.AddSensitiveValues(unboxedValue)
 	}
+
+	executor.env.Merge(scriptEnvironment, false)
 
 	workingDir, ok := executor.env.Lookup("CIRRUS_WORKING_DIR")
 	if ok {
