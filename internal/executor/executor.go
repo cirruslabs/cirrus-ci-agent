@@ -654,6 +654,9 @@ func retryableCloneError(err error) bool {
 	if strings.Contains(errorMessage, "not found") {
 		return true
 	}
+	if strings.Contains(errorMessage, "short write") {
+		return true
+	}
 	return false
 }
 
