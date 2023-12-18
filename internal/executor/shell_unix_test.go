@@ -14,6 +14,15 @@ import (
 	"time"
 )
 
+func TestPipelineFailureDetection(t *testing.T) {
+	env := environment.New(map[string]string{
+		"CIRRUS_SHELL": "/bin/sh",
+	})
+
+	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"false | true"}, env)
+	assert.False(t, success)
+}
+
 func TestCirrusAgentExposeScriptsOutputs(t *testing.T) {
 	success, _ := ShellCommandsAndGetOutput(context.Background(), []string{"echo test; sleep 1; echo test"},
 		environment.New(map[string]string{"CIRRUS_AGENT_EXPOSE_SCRIPTS_OUTPUTS": ""}))

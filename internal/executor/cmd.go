@@ -9,7 +9,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/shellwords"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 )
 
@@ -41,9 +40,7 @@ func createCmd(scripts []string, customEnv *environment.Environment) (*exec.Cmd,
 	// add shebang
 	scriptFile.WriteString(fmt.Sprintf("#!%s\n", cmdShell))
 	scriptFile.WriteString("set -e\n")
-	if strings.Contains(cmdShell, "bash") {
-		scriptFile.WriteString("set -o pipefail\n")
-	}
+	scriptFile.WriteString("set -o pipefail 2>/dev/null || true\n")
 	scriptFile.WriteString("set -o verbose\n")
 	for i := 0; i < len(scripts); i++ {
 		scriptFile.WriteString(scripts[i])
