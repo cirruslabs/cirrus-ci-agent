@@ -17,7 +17,7 @@ func TempFileName(prefix, suffix string) (*os.File, error) {
 	for i := 0; i < 10000; i++ {
 		rand.Read(randBytes)
 		path := filepath.Join(os.TempDir(), prefix+hex.EncodeToString(randBytes)+suffix)
-		f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 		if os.IsExist(err) {
 			continue
 		}
