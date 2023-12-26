@@ -53,7 +53,9 @@ func NewFromEnvironment(ctx context.Context, env *environment.Environment) (*Vau
 		client.SetNamespace(namespace)
 	}
 
-	if jwtToken, ok := env.Lookup("CIRRUS_OIDC_TOKEN"); ok {
+	if vaultToken, ok := env.Lookup("CIRRUS_VAULT_TOKEN"); ok {
+		client.SetToken(vaultToken)
+	} else if jwtToken, ok := env.Lookup("CIRRUS_OIDC_TOKEN"); ok {
 		auth := &JWTAuth{
 			Token: jwtToken,
 			Role:  env.Get(EnvCirrusVaultRole),

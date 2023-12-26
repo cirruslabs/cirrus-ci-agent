@@ -1,16 +1,15 @@
 package environment
 
 import (
+	"maps"
 	"os"
 	"regexp"
 	"strings"
 )
 
 func ExpandEnvironmentRecursively(environment map[string]string) map[string]string {
-	result := make(map[string]string)
-	for key, value := range environment {
-		result[key] = value
-	}
+	result := maps.Clone(environment)
+
 	for step := 0; step < 10; step++ {
 		var changed = false
 		for key, value := range result {
