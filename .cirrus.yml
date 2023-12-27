@@ -21,14 +21,14 @@ docker_builder:
   modules_cache:
     fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
-  install_zsh_script:
+  prepare_script:
     - apt-get update
     - apt-get install -y zsh
   install_golang_script:
-    - wget --no-verbose -O - https://go.dev/dl/go1.20.5.linux-amd64.tar.gz | tar -C /usr/local -xz
+    - wget --no-verbose -O - https://go.dev/dl/go1.21.5.linux-amd64.tar.gz | tar -C /usr/local -xz
   test_script:
     - export PATH=$PATH:/usr/local/go/bin
-    - go test ./...
+    - go test -v ./...
   env:
     HOME: /root
 
@@ -41,7 +41,7 @@ docker_builder:
     - choco install -y golang git
     - refreshenv
     - md C:\Windows\system32\config\systemprofile\AppData\Local\Temp
-    - go test ./...
+    - go test -v ./...
 
 task:
   name: Test (macOS)
@@ -51,16 +51,22 @@ task:
   test_script:
     - brew update
     - brew install go
-    - go test ./...
+    - go test -v ./...
 
 task:
   name: Test (FreeBSD)
   alias: test-freebsd
   freebsd_instance:
-    image_family: freebsd-12-2
+    image_family: freebsd-13-2
+  prepare_script:
+    - pkg install -y zsh git wget
+  install_golang_script:
+    - wget --no-verbose -O - https://go.dev/dl/go1.21.5.freebsd-amd64.tar.gz | tar -C /usr/local -xz
   test_script:
-    - pkg install -y zsh go git
-    - go test ./...
+    - export PATH=$PATH:/usr/local/go/bin
+    - go test -v ./...
+  env:
+    HOME: /root
 
 task:
   name: Release Binaries (Dry Run)

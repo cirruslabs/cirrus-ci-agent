@@ -1,11 +1,11 @@
 //go:build linux
-// +build linux
 
 package vaultunboxer_test
 
 import (
 	"context"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/vaultunboxer"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/testutil"
 	"github.com/google/uuid"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 )
-
-const vaultContainerImage = "hashicorp/vault:latest"
 
 func TestVault(t *testing.T) {
 	ctx := context.Background()
@@ -24,7 +22,7 @@ func TestVault(t *testing.T) {
 	// Create and start the HashiCorp's Vault container
 	request := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        vaultContainerImage,
+			Image:        testutil.VaultContainerImage,
 			ExposedPorts: []string{"8200/tcp"},
 			Env: map[string]string{
 				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,
@@ -79,7 +77,7 @@ func TestVaultUseCache(t *testing.T) {
 	// Create and start the HashiCorp's Vault container
 	request := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        vaultContainerImage,
+			Image:        testutil.VaultContainerImage,
 			ExposedPorts: []string{"8200/tcp"},
 			Env: map[string]string{
 				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,
@@ -160,7 +158,7 @@ func TestVaultDictionaryAsJSON(t *testing.T) {
 	// Create and start the HashiCorp's Vault container
 	request := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        vaultContainerImage,
+			Image:        testutil.VaultContainerImage,
 			ExposedPorts: []string{"8200/tcp"},
 			Env: map[string]string{
 				"VAULT_DEV_ROOT_TOKEN_ID": vaultToken,

@@ -119,13 +119,28 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		return
 	}
 
+	// Retrieve the script/commands environment, but do not merge it into the
+	// executor.env yet. We'll unbox the VAULT[...] environment variables first,
+	// and overwrite the corresponding scriptEnvironment variables directly.
+	//
+	// This allows us to defer the expansion of variables pointing to Vault-boxed
+	// variables, e.g.:
+	//
+	// env:
+	//   HOSTNAME: VAULT[...]
+	//   SERVER_FQDN: "${HOSTNAME}.local"
 	scriptEnvironment := getScriptEnvironment(executor, response.Environment)
+
+	// However, expand the environment just for the Vault-unboxer, so that
+	// things like "CIRRUS_VAULT_URL: ${CIRRUS_VAULT_URL_GLOBAL}" and
+	// "PASSWORD: VAULT[$PATH $ARGS]" would work.
+	vaultUnboxerEnv := environment.New(scriptEnvironment)
 
 	log.Println("Unboxing VAULT[...] environment variables, if any")
 
 	var vaultUnboxer *vaultunboxer.VaultUnboxer
 
-	for key, value := range scriptEnvironment {
+	for key, value := range vaultUnboxerEnv.Items() {
 		boxedValue, err := vaultunboxer.NewBoxedValue(value)
 		if err != nil {
 			if errors.Is(err, vaultunboxer.ErrNotABoxedValue) {
@@ -142,7 +157,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 		if vaultUnboxer == nil {
 			log.Println("Found at least one VAULT[...] environment variable, initializing Vault client")
 
-			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, environment.New(scriptEnvironment))
+			vaultUnboxer, err = vaultunboxer.NewFromEnvironment(ctx, vaultUnboxerEnv)
 			if err != nil {
 				message := fmt.Sprintf("failed to initialize a Vault client: %v", err)
 				log.Println(message)
