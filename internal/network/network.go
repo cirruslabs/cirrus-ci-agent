@@ -3,8 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
-	"github.com/avast/retry-go"
-	"math"
+	"github.com/avast/retry-go/v4"
 	"net"
 	"time"
 )
@@ -29,7 +28,7 @@ func WaitForLocalPort(ctx context.Context, port int) {
 			return nil
 		},
 		retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second),
-		retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+		retry.Attempts(0), retry.LastErrorOnly(true),
 		retry.Context(ctx),
 	)
 }

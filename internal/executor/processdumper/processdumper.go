@@ -18,8 +18,8 @@ func Dump() {
 		fmt.Println("Dumping process list to diagnose the time out")
 		fmt.Println("PID\tPPID\tExe or cmdline")
 
-		slices.SortFunc(processes, func(left, right ps.Process) bool {
-			return left.Pid() < right.Pid()
+		slices.SortFunc(processes, func(left, right ps.Process) int {
+			return left.Pid() - right.Pid()
 		})
 
 		for _, process := range processes {

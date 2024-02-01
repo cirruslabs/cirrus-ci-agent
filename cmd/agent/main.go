@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/breml/rootcerts/embedded"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -25,7 +25,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
-	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -237,7 +236,7 @@ func main() {
 			log.Printf("Failed to open a connection: %v\n", err)
 		}),
 		retry.Delay(1*time.Second), retry.MaxDelay(1*time.Second),
-		retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+		retry.Attempts(0), retry.LastErrorOnly(true),
 		retry.Context(ctx),
 	)
 	if err != nil {

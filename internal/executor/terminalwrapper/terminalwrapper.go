@@ -5,12 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/terminal/pkg/host"
 	"github.com/cirruslabs/terminal/pkg/host/session"
-	"math"
 	"time"
 )
 
@@ -99,7 +98,7 @@ func New(
 			}),
 			retry.Context(ctx),
 			retry.Delay(5*time.Second), retry.MaxDelay(5*time.Second),
-			retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+			retry.Attempts(0), retry.LastErrorOnly(true),
 		)
 	}()
 

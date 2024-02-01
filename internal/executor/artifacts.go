@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 	"fmt"
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/environment"

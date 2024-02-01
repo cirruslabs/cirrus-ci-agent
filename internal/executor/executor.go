@@ -3,7 +3,7 @@ package executor
 import (
 	"errors"
 	"fmt"
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/cirrusenv"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
@@ -15,7 +15,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
 	"golang.org/x/net/context"
 	"log"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,7 +105,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 			log.Printf("Failed to get initial commands: %v", err)
 		}),
 		retry.Delay(5*time.Second),
-		retry.Attempts(math.MaxUint32), retry.LastErrorOnly(true),
+		retry.Attempts(0), retry.LastErrorOnly(true),
 		retry.Context(ctx),
 	)
 	if err != nil {
