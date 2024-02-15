@@ -289,7 +289,7 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 		var stepCtx context.Context
 
-		if command.ExecutionBehaviour == api.Command_ON_TIMEOUT {
+		if command.ExecutionBehaviour == api.Command_ON_TIMEOUT || command.ExecutionBehaviour == api.Command_ALWAYS {
 			stepCtx = extendedTimeoutCtx
 		} else {
 			stepCtx = timeoutCtx
