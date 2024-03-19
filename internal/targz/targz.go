@@ -74,7 +74,13 @@ func archiveSingleFolder(baseFolder string, folderPath string, tarWriter *tar.Wr
 			}
 			defer file.Close()
 
-			_, err = io.CopyBuffer(tarWriter, file, buffer)
+			_, err = io.CopyBuffer(
+				// Work around https://github.com/golang/go/issues/16474
+				struct{ io.Writer }{tarWriter},
+				// Work around https://github.com/golang/go/issues/16474
+				struct{ io.Reader }{file},
+				buffer,
+			)
 			if err != nil && err != io.EOF {
 				return fmt.Errorf("%s: copying contents: %v", path, err)
 			}
@@ -147,7 +153,12 @@ func writeNewFile(fpath string, in io.Reader, fi os.FileInfo, buffer []byte) err
 		return fmt.Errorf("%s: changing file mode: %v", fpath, err)
 	}
 
-	writtenBytes, err := io.CopyBuffer(out, io.LimitReader(in, fi.Size()), buffer)
+	writtenBytes, err := io.CopyBuffer(
+		// Work around https://github.com/golang/go/issues/16474
+		struct{ io.Writer }{out},
+		io.LimitReader(in, fi.Size()),
+		buffer,
+	)
 	if err != nil {
 		return fmt.Errorf("%s: writing file after %d bytes (expected %d): %v", fpath, writtenBytes, fi.Size(), err)
 	}
