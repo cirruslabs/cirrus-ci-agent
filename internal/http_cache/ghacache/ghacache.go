@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/puzpuzpuz/xsync/v3"
 	"io"
@@ -19,7 +18,7 @@ const APIMountPoint = "/_apis/artifactcache"
 
 type GHACache struct {
 	cacheHost   string
-	mux         *chi.Mux
+	mux         *http.ServeMux
 	uploadables *xsync.MapOf[int64, *uploadable]
 }
 
@@ -32,14 +31,14 @@ type uploadable struct {
 func New(cacheHost string) *GHACache {
 	cache := &GHACache{
 		cacheHost:   cacheHost,
-		mux:         chi.NewMux(),
+		mux:         http.NewServeMux(),
 		uploadables: xsync.NewMapOf[int64, *uploadable](),
 	}
 
-	cache.mux.Get("/cache", cache.get)
-	cache.mux.Post("/caches", cache.reserveUploadable)
-	cache.mux.Patch("/caches/{id}", cache.updateUploadable)
-	cache.mux.Post("/caches/{id}", cache.commitUploadable)
+	cache.mux.HandleFunc("GET /cache", cache.get)
+	cache.mux.HandleFunc("POST /caches", cache.reserveUploadable)
+	cache.mux.HandleFunc("PATCH /caches/{id}", cache.updateUploadable)
+	cache.mux.HandleFunc("POST /caches/{id}", cache.commitUploadable)
 
 	return cache
 }
@@ -210,7 +209,7 @@ func (cache *GHACache) httpCacheURL(key string, version string) string {
 }
 
 func getID(request *http.Request) (int64, bool) {
-	idRaw := chi.URLParam(request, "id")
+	idRaw := request.PathValue("id")
 
 	id, err := strconv.ParseInt(idRaw, 10, 64)
 	if err != nil {
