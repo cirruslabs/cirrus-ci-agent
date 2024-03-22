@@ -160,6 +160,7 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 
 		return
 	}
+	defer cache.uploadables.Delete(id)
 
 	var jsonReq struct {
 		Size int64 `json:"size"`
@@ -200,8 +201,6 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 
 		return
 	}
-
-	cache.uploadables.Delete(id)
 }
 
 func (cache *GHACache) httpCacheURL(key string, version string) string {
