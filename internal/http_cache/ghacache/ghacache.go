@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -204,7 +205,7 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 }
 
 func (cache *GHACache) httpCacheURL(key string, version string) string {
-	return fmt.Sprintf("http://%s/%s-%s", cache.cacheHost, key, version)
+	return fmt.Sprintf("http://%s/%s-%s", cache.cacheHost, url.PathEscape(key), url.PathEscape(version))
 }
 
 func getID(request *http.Request) (int64, bool) {
