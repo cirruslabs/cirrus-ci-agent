@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/client"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache/ghacache"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,7 +44,10 @@ func Start(taskIdentification *api.TaskIdentification) string {
 		Timeout: 10 * time.Minute,
 	}
 
-	http.HandleFunc("/", handler)
+	mux := http.NewServeMux()
+
+	// HTTP cache protocol
+	mux.HandleFunc("/", handler)
 
 	address := "127.0.0.1:12321"
 	listener, err := net.Listen("tcp", address)
@@ -55,7 +59,12 @@ func Start(taskIdentification *api.TaskIdentification) string {
 	if err == nil {
 		address = listener.Addr().String()
 		log.Printf("Starting http cache server %s\n", address)
-		go http.Serve(listener, nil)
+
+		// GitHub Actions cache API
+		mux.Handle(ghacache.APIMountPoint+"/", http.StripPrefix(ghacache.APIMountPoint,
+			ghacache.New(address)))
+
+		go http.Serve(listener, mux)
 	} else {
 		log.Printf("Failed to start http cache server %s: %s\n", address, err)
 	}
