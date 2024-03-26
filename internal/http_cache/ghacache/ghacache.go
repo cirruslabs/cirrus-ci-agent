@@ -145,6 +145,8 @@ func (cache *GHACache) updateUploadable(writer http.ResponseWriter, request *htt
 
 		return
 	}
+
+	writer.WriteHeader(http.StatusOK)
 }
 
 func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *http.Request) {
@@ -210,6 +212,8 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 
 		return
 	}
+
+	writer.WriteHeader(http.StatusCreated)
 }
 
 func (cache *GHACache) httpCacheURL(key string, version string) string {
