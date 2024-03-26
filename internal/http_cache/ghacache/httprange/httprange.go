@@ -32,7 +32,6 @@ package httprange
 
 import (
 	"errors"
-	"fmt"
 	"net/textproto"
 	"strconv"
 	"strings"
@@ -45,17 +44,6 @@ var errNoOverlap = errors.New("invalid range: failed to overlap")
 // HTTPRange specifies the byte range to be sent to the client.
 type HTTPRange struct {
 	Start, Length int64
-}
-
-func (r HTTPRange) contentRange(size int64) string {
-	return fmt.Sprintf("bytes %d-%d/%d", r.Start, r.Start+r.Length-1, size)
-}
-
-func (r HTTPRange) mimeHeader(contentType string, size int64) textproto.MIMEHeader {
-	return textproto.MIMEHeader{
-		"Content-Range": {r.contentRange(size)},
-		"Content-Type":  {contentType},
-	}
 }
 
 // ParseRange parses a Range header string as per RFC 7233.
