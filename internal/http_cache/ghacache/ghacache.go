@@ -1,9 +1,8 @@
 package ghacache
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache/ghacache/uploadable"
 	"github.com/go-chi/render"
 	"github.com/puzpuzpuz/xsync/v3"
 	"io"
@@ -20,20 +19,14 @@ const APIMountPoint = "/_apis/artifactcache"
 type GHACache struct {
 	cacheHost   string
 	mux         *http.ServeMux
-	uploadables *xsync.MapOf[int64, *uploadable]
-}
-
-type uploadable struct {
-	Key     string
-	Version string
-	Buf     *bytes.Buffer
+	uploadables *xsync.MapOf[int64, *uploadable.Uploadable]
 }
 
 func New(cacheHost string) *GHACache {
 	cache := &GHACache{
 		cacheHost:   cacheHost,
 		mux:         http.NewServeMux(),
-		uploadables: xsync.NewMapOf[int64, *uploadable](),
+		uploadables: xsync.NewMapOf[int64, *uploadable.Uploadable](),
 	}
 
 	cache.mux.HandleFunc("GET /cache", cache.get)
@@ -110,11 +103,15 @@ func (cache *GHACache) reserveUploadable(writer http.ResponseWriter, request *ht
 		CacheID: rand.Int63(),
 	}
 
-	cache.uploadables.Store(jsonResp.CacheID, &uploadable{
-		Key:     jsonReq.Key,
-		Version: jsonReq.Version,
-		Buf:     &bytes.Buffer{},
-	})
+	uploadable, err := uploadable.New(jsonReq.Key, jsonReq.Version)
+	if err != nil {
+		log.Printf("GHA cache failed instantiate an uploadable: %v\n", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	cache.uploadables.Store(jsonResp.CacheID, uploadable)
 
 	render.JSON(writer, request, &jsonResp)
 }
@@ -136,12 +133,20 @@ func (cache *GHACache) updateUploadable(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	if _, err := io.Copy(uploadable.Buf, request.Body); err != nil {
-		if errors.Is(err, io.EOF) {
-			return
-		}
-
+	bodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("GHA cache failed to read a chunk from the user for the "+
+			"uploadable %d: %v\n", id, err)
 		writer.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	if err := uploadable.WriteChunk(request.Header.Get("Content-Range"), bodyBytes); err != nil {
+		log.Printf("GHA cache failed to write a chunk to the uploadable %d: %v\n", id, err)
+		writer.WriteHeader(http.StatusBadRequest)
+
+		return
 	}
 }
 
@@ -175,9 +180,17 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	if jsonReq.Size != int64(uploadable.Buf.Len()) {
+	finalizedUploadableReader, finalizedUploadableSize, err := uploadable.Finalize()
+	if err != nil {
+		log.Printf("GHA cache failed to finalize uploadable %d: %v\n", id, err)
+		writer.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	if jsonReq.Size != finalizedUploadableSize {
 		log.Printf("GHA cache detected a cache entry size mismatch for uploadable "+
-			"with ID %d\n", id)
+			"%d: expected %d bytes, got %d bytes\n", id, finalizedUploadableSize, jsonReq.Size)
 		writer.WriteHeader(http.StatusBadRequest)
 
 		return
@@ -186,7 +199,7 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 	resp, err := http.Post(
 		cache.httpCacheURL(uploadable.Key, uploadable.Version),
 		"application/octet-stream",
-		bytes.NewReader(uploadable.Buf.Bytes()),
+		finalizedUploadableReader,
 	)
 	if err != nil {
 		log.Printf("GHA cache failed to upload the uploadable with ID %d: %v\n", id, err)
