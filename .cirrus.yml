@@ -92,10 +92,12 @@ docker_builder:
     - test-macos
     - test-freebsd
   setup_script:
-    - docker buildx create --name multibuilder
+    - docker buildx create --name multibuilder --driver docker-container --driver-opt "network=host"
     - docker buildx use multibuilder
     - docker buildx inspect --bootstrap
-  build_script: docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/cirruslabs/cirrus-ci-agent:latest .
+  build_script: docker buildx build --network=host --cache-to type=gha,url=http://$CIRRUS_HTTP_CACHE_HOST/,token=$TOKEN,scope=image --platform linux/amd64,linux/arm64 --tag ghcr.io/cirruslabs/cirrus-ci-agent:latest .
+  env:
+    TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhYyI6IltdIiwiZXhwIjoxNzQyOTc3MjExLCJuYmYiOjE3MTE0Mzc2MTF9.CTMl4dsu3-ajVTbi_qG9BZsLK1zGjTKbYYr0x9qWINc
 
 task:
   name: Release Binaries
