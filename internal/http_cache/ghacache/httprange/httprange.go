@@ -64,13 +64,29 @@ func parseRange(s string, size int64) ([]httpRange, error) {
 	if s == "" {
 		return nil, nil // header not present
 	}
-	const b = "bytes="
-	if !strings.HasPrefix(s, b) {
+
+	// Support both Range[1] and RFC 7233-style Content-Range[2] headers
+	//
+	// [1]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range
+	// [2]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
+	if after, found := strings.CutPrefix(s, "bytes="); found {
+		s = after
+	} else if after, found := strings.CutPrefix(s, "bytes "); found {
+		s = after
+	} else {
 		return nil, errors.New("invalid range")
 	}
+
+	// Ignore the complete length specifier[1]
+	//
+	// [1]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
+	if before, _, found := strings.Cut(s, "/"); found {
+		s = before
+	}
+
 	var ranges []httpRange
 	noOverlap := false
-	for _, ra := range strings.Split(s[len(b):], ",") {
+	for _, ra := range strings.Split(s, ",") {
 		ra = textproto.TrimString(ra)
 		if ra == "" {
 			continue

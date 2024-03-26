@@ -31,6 +31,7 @@
 package httprange
 
 import (
+	"math"
 	"testing"
 )
 
@@ -80,6 +81,15 @@ var ParseRangeTests = []struct {
 
 	// Match Apache laxity:
 	{"bytes=   1 -2   ,  4- 5, 7 - 8 , ,,", 11, []httpRange{{1, 2}, {4, 2}, {7, 2}}},
+
+	// Ensure support of RFC 7233-style Content-Range headers[1]:
+	//
+	// * "bytes " instead of "bytes="
+	// * complete length specifier after "/"
+	//
+	// [1]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
+	{"bytes 0-33554431/*", math.MaxInt64, []httpRange{{0, 33554432}}},
+	{"bytes 33554432-49336508/*", math.MaxInt64, []httpRange{{33554432, 15782077}}},
 }
 
 func TestParseRange(t *testing.T) {
