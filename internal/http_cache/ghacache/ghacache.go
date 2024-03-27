@@ -206,7 +206,7 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	if resp.StatusCode != http.StatusCreated {
+	if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated) {
 		fail(writer, request, http.StatusInternalServerError, "GHA cache failed to "+
 			"upload the uploadable with ID %d: got HTTP %d", id, resp.StatusCode)
 
