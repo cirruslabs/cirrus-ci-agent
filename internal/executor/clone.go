@@ -55,6 +55,10 @@ func CloneRepository(
 	var repo *git.Repository
 	var err error
 
+	tagsOption := git.NoTags
+	if env.Get("CIRRUS_CLONE_TAGS") == "true" {
+		tagsOption = git.AllTags
+	}
 	if is_pr {
 		repo, err = git.PlainInit(working_dir, false)
 		if err != nil {
@@ -86,7 +90,7 @@ func CloneRepository(
 		fetchOptions := &git.FetchOptions{
 			RemoteName: remoteConfig.Name,
 			RefSpecs:   []config.RefSpec{config.RefSpec(refSpec)},
-			Tags:       git.NoTags,
+			Tags:       tagsOption,
 			Progress:   logUploader,
 			Depth:      clone_depth,
 		}
@@ -135,7 +139,7 @@ func CloneRepository(
 			Depth:    clone_depth,
 		}
 		if !is_tag {
-			cloneOptions.Tags = git.NoTags
+			cloneOptions.Tags = tagsOption
 		}
 
 		if is_tag {
