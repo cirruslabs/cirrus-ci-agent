@@ -14,7 +14,14 @@ import (
 	"strings"
 )
 
-const APIMountPoint = "/_apis/artifactcache"
+const (
+	APIMountPoint = "/_apis/artifactcache"
+
+	// JavaScript's Number is limited to 2^53-1[1]
+	//
+	// [1]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
+	jsNumberMaxSafeInteger = 9007199254740991
+)
 
 type GHACache struct {
 	cacheHost   string
@@ -98,7 +105,7 @@ func (cache *GHACache) reserveUploadable(writer http.ResponseWriter, request *ht
 	jsonResp := struct {
 		CacheID int64 `json:"cacheId"`
 	}{
-		CacheID: rand.Int63(),
+		CacheID: rand.Int63n(jsNumberMaxSafeInteger),
 	}
 
 	uploadable, err := uploadable.New(jsonReq.Key, jsonReq.Version)
