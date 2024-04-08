@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/cirruslabs/cirrus-ci-agent/api"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -72,7 +73,15 @@ func (mock *cirrusCIMock) DownloadCache(request *api.DownloadCacheRequest, strea
 			request.CacheKey)
 	}
 
-	return stream.Send(&api.DataChunk{Data: buf.Bytes()})
+	// Chunk the buffer to prevent the "grpc: received message larger than
+	// max (X vs. 4194304)" error
+	for _, chunk := range lo.Chunk(buf.Bytes(), 1*1024*1024) {
+		if err := stream.Send(&api.DataChunk{Data: chunk}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (mock *cirrusCIMock) CacheInfo(ctx context.Context, request *api.CacheInfoRequest) (*api.CacheInfoResponse, error) {
