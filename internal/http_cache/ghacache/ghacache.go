@@ -194,11 +194,25 @@ func (cache *GHACache) commitUploadable(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	resp, err := http.Post(
-		cache.httpCacheURL(uploadable.Key, uploadable.Version),
-		"application/octet-stream",
-		finalizedUploadableReader,
-	)
+	req, err := http.NewRequestWithContext(request.Context(), http.MethodPost, cache.httpCacheURL(uploadable.Key,
+		uploadable.Version), finalizedUploadableReader)
+	if err != nil {
+		fail(writer, request, http.StatusInternalServerError, "GHA cache failed to "+
+			"upload the uploadable with ID %d: %v", id, err)
+
+		return
+	}
+
+	// Explicitly set the Content-Length header,
+	// otherwise HTTP 411 Length Required from
+	// the upstream S3-compatible server
+	req.ContentLength = finalizedUploadableSize
+
+	// Set the Content-Type header to indicate
+	// that we're sending arbitrary binary data
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fail(writer, request, http.StatusInternalServerError, "GHA cache failed to "+
 			"upload the uploadable with ID %d: %v", id, err)
