@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/avast/retry-go/v4"
@@ -13,7 +14,6 @@ import (
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/updatebatcher"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/executor/vaultunboxer"
 	"github.com/cirruslabs/cirrus-ci-agent/internal/http_cache"
-	"golang.org/x/net/context"
 	"log"
 	"os"
 	"os/exec"
@@ -375,19 +375,20 @@ func (executor *Executor) RunBuild(ctx context.Context) {
 
 	if err = retry.Do(
 		func() error {
-			_, err = client.CirrusClient.ReportAgentFinished(ctx, &api.ReportAgentFinishedRequest{
-				TaskIdentification:     executor.taskIdentification,
-				CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
-				ResourceUtilization:    resourceUtilization,
-				CommandResults:         ub.History(),
-			})
+			_, err = client.CirrusClient.ReportAgentFinished(context.WithoutCancel(ctx),
+				&api.ReportAgentFinishedRequest{
+					TaskIdentification:     executor.taskIdentification,
+					CacheRetrievalAttempts: executor.cacheAttempts.ToProto(),
+					ResourceUtilization:    resourceUtilization,
+					CommandResults:         ub.History(),
+				})
 			return err
 		}, retry.OnRetry(func(n uint, err error) {
 			log.Printf("Failed to report that the agent has finished: %v\nRetrying...\n", err)
 		}),
 		retry.Delay(10*time.Second),
 		retry.Attempts(2),
-		retry.Context(ctx),
+		retry.Context(context.WithoutCancel(ctx)),
 	); err != nil {
 		log.Printf("Failed to report that the agent has finished: %v\n", err)
 	}
