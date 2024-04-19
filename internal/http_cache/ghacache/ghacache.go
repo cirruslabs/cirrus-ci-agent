@@ -53,7 +53,6 @@ func (cache *GHACache) get(writer http.ResponseWriter, request *http.Request) {
 	version := request.URL.Query().Get("version")
 
 	for _, key := range keys {
-		// The first key is used for exact matching which we support
 		httpCacheURL := cache.httpCacheURL(key, version)
 
 		resp, err := http.Head(httpCacheURL)
