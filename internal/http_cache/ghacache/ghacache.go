@@ -52,41 +52,34 @@ func (cache *GHACache) get(writer http.ResponseWriter, request *http.Request) {
 	keys := strings.Split(request.URL.Query().Get("keys"), ",")
 	version := request.URL.Query().Get("version")
 
-	// The first key is used for exact matching which we support
-	httpCacheURL := cache.httpCacheURL(keys[0], version)
+	for _, key := range keys {
+		// The first key is used for exact matching which we support
+		httpCacheURL := cache.httpCacheURL(key, version)
 
-	resp, err := http.Head(httpCacheURL)
-	if err != nil {
-		fail(writer, request, http.StatusInternalServerError, "GHA cache failed to "+
-			"retrieve %q: %v", httpCacheURL, err)
+		resp, err := http.Head(httpCacheURL)
+		if err != nil {
+			fail(writer, request, http.StatusInternalServerError, "GHA cache failed to "+
+				"retrieve %q: %v", httpCacheURL, err)
 
-		return
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		jsonResp := struct {
-			Key string `json:"cacheKey"`
-			URL string `json:"archiveLocation"`
-		}{
-			Key: keys[0],
-			URL: httpCacheURL,
+			return
 		}
 
-		render.JSON(writer, request, &jsonResp)
+		if resp.StatusCode == http.StatusOK {
+			jsonResp := struct {
+				Key string `json:"cacheKey"`
+				URL string `json:"archiveLocation"`
+			}{
+				Key: key,
+				URL: httpCacheURL,
+			}
 
-		return
+			render.JSON(writer, request, &jsonResp)
+
+			return
+		}
 	}
 
-	// The rest of the keys are used for prefix matching
-	// (fallback mechanism) which we do not support
-	if len(keys[1:]) != 0 {
-		fail(writer, request, http.StatusNotFound, "GHA cache does not support prefix "+
-			"matching, was needed for (%v, %v)", keys, version)
-
-		return
-	}
-
-	writer.WriteHeader(http.StatusNoContent)
+	writer.WriteHeader(http.StatusNotFound)
 }
 
 func (cache *GHACache) reserveUploadable(writer http.ResponseWriter, request *http.Request) {
