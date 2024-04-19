@@ -80,7 +80,7 @@ func (cache *GHACache) get(writer http.ResponseWriter, request *http.Request) {
 	// The rest of the keys are used for prefix matching
 	// (fallback mechanism) which we do not support
 	if len(keys[1:]) != 0 {
-		fail(writer, request, http.StatusBadRequest, "GHA cache does not support prefix "+
+		fail(writer, request, http.StatusNotFound, "GHA cache does not support prefix "+
 			"matching, was needed for (%v, %v)", keys, version)
 
 		return
