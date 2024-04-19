@@ -78,7 +78,7 @@ func (cache *GHACache) get(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	writer.WriteHeader(http.StatusNotFound)
+	writer.WriteHeader(http.StatusNoContent)
 }
 
 func (cache *GHACache) reserveUploadable(writer http.ResponseWriter, request *http.Request) {
