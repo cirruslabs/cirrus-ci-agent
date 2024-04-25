@@ -69,7 +69,7 @@ func ShellCommandsAndWait(
 			handler([]byte(fmt.Sprintf("\nFailed to kill a timed out shell session: %s", err)))
 		}
 
-		return cmd, ctx.Err()
+		return cmd, context.Cause(ctx)
 	case <-done:
 		var forcePiperClosure bool
 
