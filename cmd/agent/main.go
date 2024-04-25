@@ -209,7 +209,6 @@ func main() {
 			sig := <-signalChannel
 
 			if sig == os.Interrupt || sig == syscall.SIGTERM {
-				log.Printf("execution canceled by '%v' signal!", sig)
 				cancel()
 			}
 
