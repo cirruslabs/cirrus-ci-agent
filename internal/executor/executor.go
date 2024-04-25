@@ -501,7 +501,7 @@ func (executor *Executor) performStep(ctx context.Context, currentStep *api.Comm
 				signaledToExit = ws.Signaled()
 			}
 		}
-		if err == ErrTimedOut {
+		if errors.Is(err, ErrTimedOut) {
 			signaledToExit = false
 		}
 	case *api.Command_BackgroundScriptInstruction:
