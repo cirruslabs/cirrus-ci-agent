@@ -116,7 +116,7 @@ func Test_ShellCommands_Timeout_Unix(t *testing.T) {
 	defer cancel()
 
 	_, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60"}, nil)
-	if output == "sleep 60\n\ninterrupted: timed out" {
+	if output == "sleep 60\n\nTimed out!" {
 		t.Log("Passed")
 	} else {
 		t.Errorf("Wrong output: '%s'", output)
@@ -130,7 +130,7 @@ func TestChildrenProcessesAreCancelled(t *testing.T) {
 	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 60 & sleep 10"}, nil)
 
 	assert.False(t, success)
-	assert.Contains(t, output, "timed out")
+	assert.Contains(t, output, "Timed out!")
 }
 
 func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
@@ -143,7 +143,7 @@ func TestChildrenProcessesAreNotWaitedFor(t *testing.T) {
 	}
 
 	assert.True(t, success)
-	assert.NotContains(t, output, "timed out")
+	assert.NotContains(t, output, "Timed out!")
 }
 
 func TestShellStartFailureDoesNotHang(t *testing.T) {

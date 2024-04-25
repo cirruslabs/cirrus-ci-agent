@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -59,7 +60,8 @@ func ShellCommandsAndWait(
 
 	select {
 	case <-ctx.Done():
-		handler([]byte(fmt.Sprintf("\ninterrupted: %v", ctx.Err())))
+		errorMessage := strings.ToUpper(fmt.Sprintf(" %v!", ctx.Err()))
+		handler([]byte("\n" + errorMessage))
 
 		processdumper.Dump()
 

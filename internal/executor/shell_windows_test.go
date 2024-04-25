@@ -60,7 +60,7 @@ func TestJobObjectTermination(t *testing.T) {
 		environment.New(map[string]string{"MODE": modeProcessTreeSpawner}))
 
 	assert.False(t, success, "the command should fail due to time out error")
-	assert.Contains(t, output, "timed out", "the command should time out")
+	assert.Contains(t, output, "Timed out!", "the command should time out")
 
 	re := regexp.MustCompile(".*target PID is ([0-9]+).*")
 	matches := re.FindStringSubmatch(output)

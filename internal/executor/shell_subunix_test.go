@@ -22,7 +22,7 @@ func TestProcessGroupTermination(t *testing.T) {
 	success, output := ShellCommandsAndGetOutput(ctx, []string{"sleep 86400 & echo target PID is $! ; sleep 60"}, nil)
 
 	assert.False(t, success, "the command should fail due to time out error")
-	assert.Contains(t, output, "timed out", "the command should time out")
+	assert.Contains(t, output, "Timed out!", "the command should time out")
 
 	re := regexp.MustCompile(".*target PID is ([0-9]+).*")
 	matches := re.FindStringSubmatch(output)
