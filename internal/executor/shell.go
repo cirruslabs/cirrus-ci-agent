@@ -23,8 +23,6 @@ type ShellOutputWriter struct {
 	handler ShellOutputHandler
 }
 
-var TimeOutError = errors.New("timed out")
-
 func (writer ShellOutputWriter) Write(bytes []byte) (int, error) {
 	return writer.handler(bytes)
 }
@@ -61,7 +59,7 @@ func ShellCommandsAndWait(
 
 	select {
 	case <-ctx.Done():
-		handler([]byte("\nTimed out!"))
+		handler([]byte(fmt.Sprintf("\ninterrupted: %v", ctx.Err())))
 
 		processdumper.Dump()
 
@@ -69,7 +67,7 @@ func ShellCommandsAndWait(
 			handler([]byte(fmt.Sprintf("\nFailed to kill a timed out shell session: %s", err)))
 		}
 
-		return cmd, TimeOutError
+		return cmd, ctx.Err()
 	case <-done:
 		var forcePiperClosure bool
 

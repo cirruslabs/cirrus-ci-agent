@@ -53,14 +53,14 @@ func TestMain(m *testing.M) {
 // TestProcessGroupTermination ensures that we terminate all processes we've automatically
 // tainted by assigning a job object to a shell spawned in ShellCommandsAndGetOutput().
 func TestJobObjectTermination(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeoutCause(context.Background(), 10*time.Second, ErrTimedOut)
 	defer cancel()
 
 	success, output := ShellCommandsAndGetOutput(ctx, []string{os.Args[0]},
 		environment.New(map[string]string{"MODE": modeProcessTreeSpawner}))
 
 	assert.False(t, success, "the command should fail due to time out error")
-	assert.Contains(t, output, "Timed out!", "the command should time out")
+	assert.Contains(t, output, "timed out", "the command should time out")
 
 	re := regexp.MustCompile(".*target PID is ([0-9]+).*")
 	matches := re.FindStringSubmatch(output)
