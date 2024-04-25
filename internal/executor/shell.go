@@ -60,8 +60,8 @@ func ShellCommandsAndWait(
 
 	select {
 	case <-ctx.Done():
-		errorMessage := strings.ToUpper(fmt.Sprintf("%v!", context.Cause(ctx)))
-		handler([]byte("\n" + errorMessage))
+		errorMessage := fmt.Sprintf("%v!", context.Cause(ctx))
+		handler([]byte("\n" + strings.ToUpper(errorMessage[:1]) + errorMessage[1:]))
 
 		processdumper.Dump()
 
