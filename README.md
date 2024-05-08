@@ -1,3 +1,5 @@
+**NOTE**: The agent now resides in the [Cirrus CLI's repository](https://github.com/cirruslabs/cirrus-cli) and can be invoked as `cirrus agent`.
+
 # Agent to execute Cirrus CI tasks
 
 [![Build Status](https://api.cirrus-ci.com/github/cirruslabs/cirrus-ci-agent.svg)](https://cirrus-ci.com/github/cirruslabs/cirrus-ci-agent)
